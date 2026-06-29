@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(try { $r = Invoke-WebRequest -Uri \"https://www.stahl-unterfahrschutz.eu/unterfahrschutz-sitemap\" -UseBasicParsing -TimeoutSec 25; \"STATUS: $\\($r.StatusCode\\)\"; \"LEN: $\\($r.Content.Length\\)\"; \"--- first 1500 chars ---\"; $r.Content.Substring\\(0, [Math]::Min\\(1500, $r.Content.Length\\)\\) } catch { \"ERR: $\\($_.Exception.Message\\)\" })",
+      "Bash(php -v)",
+      "PowerShell(php D:\\\\laragon\\\\www\\\\PIM\\\\scrap_stahl.php 5)",
+      "PowerShell($paths = @\\(\"C:\\\\laragon\\\\bin\\\\php\",\"D:\\\\laragon\\\\bin\\\\php\"\\); $found = @\\(\\); foreach \\($p in $paths\\) { if \\(Test-Path $p\\) { Get-ChildItem $p -Directory | ForEach-Object { $exe = Join-Path $_.FullName 'php.exe'; if \\(Test-Path $exe\\) { $found += $exe } } } }; if \\($found\\) { $found } else { \"NONE in laragon/bin; szukam szerzej...\"; Get-ChildItem -Path C:\\\\,D:\\\\ -Filter php.exe -Recurse -Depth 4 -ErrorAction SilentlyContinue | Select-Object -First 5 -ExpandProperty FullName })",
+      "WebFetch(domain:developer.ebay.com)"
+    ]
+  }
+}

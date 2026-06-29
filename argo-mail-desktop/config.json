@@ -1,0 +1,22 @@
+{
+  "appName": "Argo Mail",
+
+  "url": "https://pim.bsplate.eu/admin/argo-mail",
+  "allowInsecureTLS": false,
+  "disableGpu": true,
+
+  "_NOTKA": "Produkcja jest pod adresem GLOWNYM (nie /pim/). Aby celowac w lokalny Laragon, podmien url i allowInsecureTLS na ponizsze:",
+  "_url_lokalnie": "https://pim.test/admin/argo-mail",
+  "_allowInsecureTLS_lokalnie": true,
+
+  "startMinimized": false,
+  "autoStart": true,
+  "hideSidebar": true,
+  "hideTopbar": true,
+
+  "poll": {
+    "enabled": false,
+    "endpoint": "/admin/argo-mail/desktop/poll",
+    "intervalSeconds": 60
+  }
+}

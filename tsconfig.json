@@ -1,0 +1,25 @@
+{
+    "compilerOptions": {
+        "target": "esnext",
+        "useDefineForClassFields": true,
+        "module": "esnext",
+        "moduleResolution": "node",
+        "strict": true,
+        "jsx": "preserve",
+        "sourceMap": true,
+        "resolveJsonModule": true,
+        "esModuleInterop": true,
+        "lib": ["esnext", "dom"],
+        "baseUrl": "./",
+        "paths": {
+            "@/*": ["resources/js/*"],
+            "crafter/*": ["/resources/js/crafter/*"]
+        }
+    },
+    "include": [
+        "resources/js/crafter/**/*.ts",
+        "resources/js/crafter/**/*.d.ts",
+        "resources/js/crafter/**/*.tsx",
+        "resources/js/crafter/**/*.vue"
+    ]
+}

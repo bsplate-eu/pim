@@ -1,0 +1,35 @@
+{
+  "name": "argo-mail-desktop",
+  "productName": "Argo Mail",
+  "version": "0.1.2",
+  "description": "Argo Mail — lustro poczty PIM jako program Windows (zasobnik + powiadomienia o nowych mailach).",
+  "main": "src/main.js",
+  "author": "Argo / PIM Local",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "start:hidden": "electron . --hidden",
+    "dist": "electron-builder --win nsis"
+  },
+  "build": {
+    "appId": "com.argo.mail.desktop",
+    "productName": "Argo Mail",
+    "files": ["src/**/*", "assets/**/*", "config.json"],
+    "win": {
+      "target": ["nsis"],
+      "icon": "assets/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Argo Mail"
+    }
+  },
+  "devDependencies": {
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8"
+  }
+}

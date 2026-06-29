@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8"/>
+<title>Argo Mail — Architektura techniczna</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:ui-sans-serif,system-ui,-apple-system,sans-serif;background:#0f172a;color:#e2e8f0;font-size:14px;line-height:1.6}
+a{color:#60a5fa;text-decoration:none}
+a:hover{text-decoration:underline}
+
+/* NAV */
+nav{position:fixed;top:0;left:0;width:220px;height:100vh;background:#1e293b;border-right:1px solid #334155;overflow-y:auto;padding:20px 0;z-index:10}
+nav h2{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#64748b;padding:0 16px 8px}
+nav a{display:block;padding:5px 16px;font-size:13px;color:#94a3b8;border-left:2px solid transparent}
+nav a:hover{color:#e2e8f0;background:#334155;text-decoration:none}
+nav a.active{color:#60a5fa;border-left-color:#60a5fa;background:#1e3a5f22}
+nav .sep{height:1px;background:#334155;margin:8px 0}
+
+/* MAIN */
+main{margin-left:220px;padding:32px 40px;max-width:1100px}
+h1{font-size:26px;font-weight:800;color:#f1f5f9;margin-bottom:4px}
+.subtitle{color:#64748b;font-size:13px;margin-bottom:40px}
+
+h2{font-size:18px;font-weight:700;color:#f1f5f9;margin:48px 0 16px;padding-top:8px;border-top:1px solid #1e293b}
+h2:first-of-type{margin-top:24px}
+h3{font-size:14px;font-weight:700;color:#94a3b8;margin:24px 0 10px;text-transform:uppercase;letter-spacing:.05em}
+
+/* DIAGRAM BOX */
+.diagram{background:#1e293b;border:1px solid #334155;border-radius:12px;padding:24px;margin:16px 0;overflow-x:auto}
+.diagram pre{font-family:'Cascadia Code','Fira Code',monospace;font-size:13px;line-height:1.8;color:#e2e8f0;white-space:pre}
+
+/* CARDS GRID */
+.grid{display:grid;gap:12px;margin:16px 0}
+.grid-2{grid-template-columns:repeat(2,1fr)}
+.grid-3{grid-template-columns:repeat(3,1fr)}
+.card{background:#1e293b;border:1px solid #334155;border-radius:10px;padding:16px}
+.card-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#64748b;margin-bottom:10px}
+.card ul{list-style:none;display:flex;flex-direction:column;gap:4px}
+.card li{font-size:13px;color:#cbd5e1;display:flex;align-items:flex-start;gap:6px}
+.card li::before{content:'▸';color:#475569;flex-shrink:0;margin-top:1px}
+.badge{display:inline-block;border-radius:4px;padding:1px 7px;font-size:11px;font-weight:600}
+.badge-blue{background:#1e3a5f;color:#60a5fa}
+.badge-green{background:#14532d;color:#4ade80}
+.badge-purple{background:#2e1065;color:#c084fc}
+.badge-orange{background:#431407;color:#fb923c}
+.badge-red{background:#450a0a;color:#f87171}
+.badge-gray{background:#1e293b;color:#94a3b8;border:1px solid #334155}
+
+/* TABLE */
+table{width:100%;border-collapse:collapse;margin:16px 0;font-size:13px}
+th{background:#1e293b;color:#94a3b8;font-weight:600;text-align:left;padding:8px 12px;border-bottom:1px solid #334155;font-size:11px;text-transform:uppercase;letter-spacing:.05em}
+td{padding:8px 12px;border-bottom:1px solid #1e293b;color:#cbd5e1;vertical-align:top}
+tr:hover td{background:#1e293b55}
+td code,th code{background:#0f172a;border:1px solid #334155;border-radius:4px;padding:1px 6px;font-family:monospace;font-size:12px;color:#a5b4fc}
+td .m{color:#60a5fa;font-family:monospace;font-size:12px}
+td .arrow{color:#475569}
+
+/* FLOW */
+.flow{display:flex;align-items:flex-start;gap:0;margin:16px 0;flex-wrap:wrap}
+.flow-step{background:#1e293b;border:1px solid #334155;border-radius:8px;padding:12px 16px;min-width:140px;text-align:center}
+.flow-step .step-label{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#64748b;margin-bottom:4px}
+.flow-step .step-name{font-size:13px;font-weight:600;color:#e2e8f0}
+.flow-step .step-sub{font-size:11px;color:#64748b;margin-top:2px}
+.flow-arrow{display:flex;align-items:center;padding:0 4px;color:#475569;font-size:18px;align-self:center}
+.flow-note{font-size:11px;color:#64748b;text-align:center;margin-top:4px}
+
+/* ROUTE TABLE */
+.method{font-size:11px;font-weight:700;padding:2px 7px;border-radius:4px;font-family:monospace}
+.get{background:#14532d22;color:#4ade80;border:1px solid #14532d}
+.post{background:#1e3a5f22;color:#60a5fa;border:1px solid #1e3a5f}
+.put{background:#431407;color:#fb923c;border:1px solid #431407}
+.del{background:#450a0a;color:#f87171;border:1px solid #450a0a}
+
+/* MODEL DIAGRAM */
+.model-box{background:#0f172a;border:1px solid #334155;border-radius:8px;padding:0;overflow:hidden;font-family:monospace;font-size:12px}
+.model-header{background:#1e293b;padding:8px 14px;font-weight:700;color:#a5b4fc;border-bottom:1px solid #334155;font-size:13px}
+.model-fields{padding:10px 14px;display:flex;flex-direction:column;gap:3px}
+.mf{color:#94a3b8}
+.mf .fname{color:#e2e8f0}
+.mf .ftype{color:#4ade80}
+.mf .fnote{color:#475569;font-size:11px}
+.mf .fkey{color:#fb923c}
+.model-rel{padding:8px 14px;border-top:1px solid #1e293b;display:flex;flex-direction:column;gap:3px}
+.rel{font-size:11px;color:#64748b}
+.rel .rtype{color:#c084fc}
+.rel .rtarget{color:#60a5fa}
+
+/* CODE */
+.code{background:#0f172a;border:1px solid #334155;border-radius:8px;padding:16px;margin:12px 0;font-family:'Cascadia Code','Fira Code',monospace;font-size:12.5px;line-height:1.7;overflow-x:auto}
+.kw{color:#c084fc}
+.fn{color:#60a5fa}
+.str{color:#4ade80}
+.cm{color:#475569}
+.var{color:#fb923c}
+.cls{color:#fbbf24}
+
+/* HIGHLIGHT BOX */
+.info{background:#1e3a5f;border:1px solid #1d4ed8;border-radius:8px;padding:14px 16px;margin:12px 0;font-size:13px;color:#bfdbfe}
+.warn{background:#431407;border:1px solid #9a3412;border-radius:8px;padding:14px 16px;margin:12px 0;font-size:13px;color:#fed7aa}
+.ok{background:#14532d;border:1px solid #15803d;border-radius:8px;padding:14px 16px;margin:12px 0;font-size:13px;color:#bbf7d0}
+
+@media(max-width:800px){nav{display:none}main{margin-left:0;padding:20px}}
+</style>
+</head>
+<body>
+
+<nav>
+  <h2>Argo Mail</h2>
+  <a href="#overview">Ogólny schemat</a>
+  <a href="#models">Modele / tabele</a>
+  <a href="#controllers">Kontrolery</a>
+  <a href="#services">Serwisy</a>
+  <a href="#routes">Trasy (API)</a>
+  <div class="sep"></div>
+  <a href="#flow-read">Przepływ: odbiór</a>
+  <a href="#flow-send">Przepływ: wysyłka</a>
+  <a href="#flow-ui">Przepływ: UI→API</a>
+  <div class="sep"></div>
+  <a href="#imap">IMAP — szczegóły</a>
+  <a href="#smtp">SMTP — szczegóły</a>
+  <a href="#spam">SPAM — mechanizm</a>
+  <a href="#dnd">Drag & drop</a>
+  <a href="#colors">Filtr kolorów</a>
+  <a href="#security">Bezpieczeństwo</a>
+  <a href="#deps">Zależności</a>
+</nav>
+
+<main>
+<h1>Argo Mail — Architektura techniczna</h1>
+<div class="subtitle">2026-06-01 · Powiązane: <a href="argo-mail.md">argo-mail.md</a> · <a href="funkcje-mail.md">funkcje-mail.md</a></div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2 id="overview">1. Ogólny schemat</h2>
+
+<div class="diagram"><pre>
+ ┌───────────────────────────────────────────────────────────────────────┐
+ │  ZEWNĘTRZNE SERWERY POCZTOWE  (Gmail, SMTP innych dostawców)          │
+ │  Poczta fizycznie siedzi u dostawców — PIM JEST TYLKO KLIENTEM.       │
+ └────────────────┬──────────────────────────┬──────────────────────────┘
+                  │ IMAP (odbiór)             │ SMTP (wysyłka)
+                  ▼                           ▼
+ ┌───────────────────────────────────────────────────────────────────────┐
+ │  BACKEND — Laravel 10 / PHP 8.3                                       │
+ │                                                                       │
+ │  ┌─────────────────────┐    ┌──────────────────────────────────────┐  │
+ │  │  MailSyncService    │    │  MailController                      │  │
+ │  │  webklex/imap       │    │  + AccountController                 │  │
+ │  │  sync() co minutę   │───▶│  + CatalogController                 │  │
+ │  └─────────────────────┘    │  + MailUserController                │  │
+ │           │                 └──────────────┬───────────────────────┘  │
+ │           ▼                               │ Inertia / JSON            │
+ │  ┌─────────────────────────────────────┐  │                           │
+ │  │  MySQL — tabele mail_*              │◀─┘                           │
+ │  │  mail_messages · mail_accounts      │                              │
+ │  │  mail_catalogs · mail_categories    │                              │
+ │  │  mail_sender_rules · mail_spam_…    │                              │
+ │  └─────────────────────────────────────┘                              │
+ │                                                                       │
+ │  Scheduler: mail:sync everyMinute() / mail-sync-loop.bat (lokalnie)   │
+ └───────────────────────────────────┬───────────────────────────────────┘
+                                     │ Inertia props (SSR) / Axios JSON
+                                     ▼
+ ┌───────────────────────────────────────────────────────────────────────┐
+ │  FRONTEND — Vue 3 + Inertia 0.6 + Tailwind CSS                       │
+ │                                                                       │
+ │  ArgoMail/Index.vue        panel główny (3 kolumny)                   │
+ │  ArgoMail/Settings.vue     ustawienia (katalogi/kategorie/osoby/spam) │
+ │  ArgoMail/Accounts/*.vue   CRUD skrzynek                              │
+ │  AiAgents/Tools/Mail/*.vue narzędzia AI (auto-kategoryzacja)          │
+ └───────────────────────────────────────────────────────────────────────┘
+</pre></div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2 id="models">2. Modele i tabele</h2>
+
+<div class="grid grid-2">
+
+<div class="model-box">
+  <div class="model-header">📬 mail_accounts</div>
+  <div class="model-fields">
+    <div class="mf"><span class="fkey">id</span></div>
+    <div class="mf"><span class="fname">label, email, color</span></div>
+    <div class="mf"><span class="fname">imap_host, imap_port</span> <span class="ftype">string</span></div>
+    <div class="mf"><span class="fname">imap_encryption</span> <span class="fnote">ssl|tls</span></div>
+    <div class="mf"><span class="fname">smtp_host, smtp_port, smtp_encryption</span></div>
+    <div class="mf"><span class="fname">username, password</span> <span class="ftype">encrypted</span></div>
+    <div class="mf"><span class="fname">oauth_token</span> <span class="ftype">encrypted</span></div>
+    <div class="mf"><span class="fname">signature</span> <span class="fnote">stopka HTML</span></div>
+    <div class="mf"><span class="fname">sync_status, sync_error</span></div>
+    <div class="mf"><span class="fname">last_sync_at, sync_window_months</span></div>
+    <div class="mf"><span class="fname">is_active</span> <span class="ftype">boolean</span></div>
+  </div>
+  <div class="model-rel">
+    <div class="rel"><span class="rtype">hasMany</span> → <span class="rtarget">mail_folders</span></div>
+    <div class="rel"><span class="rtype">hasMany</span> → <span class="rtarget">mail_messages</span></div>
+  </div>
+</div>
+
+<div class="model-box">
+  <div class="model-header">📨 mail_messages</div>
+  <div class="model-fields">
+    <div class="mf"><span class="fkey">id, uid, message_id</span></div>
+    <div class="mf"><span class="fkey">account_id, folder_id</span></div>
+    <div class="mf"><span class="fname">from_email, from_name</span></div>
+    <div class="mf"><span class="fname">to_recipients, cc_recipients</span> <span class="ftype">JSON[]</span></div>
+    <div class="mf"><span class="fname">subject, date, snippet</span></div>
+    <div class="mf"><span class="fname">body_html, body_text</span></div>
+    <div class="mf"><span class="fname">has_attachments, size</span></div>
+    <div class="mf"><span class="fname">is_read, is_flagged</span> <span class="ftype">bool</span></div>
+    <div class="mf"><span class="fname">is_trashed, trashed_at</span></div>
+    <div class="mf"><span class="fname">is_sent, is_spam</span></div>
+    <div class="mf"><span class="fname">color_flag</span> <span class="fnote">red|green|blue|orange|null</span></div>
+    <div class="mf"><span class="fname">categorized_by</span> <span class="fnote">ai|manual|rule</span></div>
+    <div class="mf"><span class="fkey">category_id, catalog_id</span></div>
+    <div class="mf"><span class="fkey">assigned_admin_user_id</span></div>
+  </div>
+  <div class="model-rel">
+    <div class="rel"><span class="rtype">belongsTo</span> → <span class="rtarget">Account, Folder, Category, Catalog</span></div>
+    <div class="rel"><span class="rtype">belongsTo</span> → <span class="rtarget">AdminUser (assigned)</span></div>
+    <div class="rel"><span class="rtype">hasMany</span> → <span class="rtarget">mail_attachments</span></div>
+  </div>
+</div>
+
+<div class="model-box">
+  <div class="model-header">📁 mail_catalogs</div>
+  <div class="model-fields">
+    <div class="mf"><span class="fkey">id, parent_id</span> <span class="fnote">adjacency list</span></div>
+    <div class="mf"><span class="fname">name, color, sort</span></div>
+    <div class="mf"><span class="fnote">depth liczony na backendzie przy budowaniu drzewa</span></div>
+    <div class="mf"><span class="fnote">unread/total — agregowane z mail_messages</span></div>
+  </div>
+  <div class="model-rel">
+    <div class="rel"><span class="rtype">hasMany</span> → <span class="rtarget">mail_messages (catalog_id)</span></div>
+    <div class="rel"><span class="rtype">belongsTo</span> → <span class="rtarget">self (parent)</span></div>
+    <div class="rel"><span class="rtype">hasMany</span> → <span class="rtarget">self (children)</span></div>
+  </div>
+</div>
+
+<div class="model-box">
+  <div class="model-header">🏷 mail_categories</div>
+  <div class="model-fields">
+    <div class="mf"><span class="fkey">id</span></div>
+    <div class="mf"><span class="fname">name</span> <span class="ftype">unique</span></div>
+    <div class="mf"><span class="fname">color, sort</span></div>
+    <div class="mf"><span class="fname">is_system</span> <span class="fnote">8 domyślnych (AI)</span></div>
+  </div>
+  <div class="model-rel">
+    <div class="rel"><span class="rtype">hasMany</span> → <span class="rtarget">mail_messages</span></div>
+  </div>
+</div>
+
+<div class="model-box">
+  <div class="model-header">👤 mail_users + mail_sender_rules</div>
+  <div class="model-fields">
+    <div class="mf"><span class="fname">mail_users:</span></div>
+    <div class="mf"><span class="fkey">admin_user_id</span> <span class="ftype">unique</span></div>
+    <div class="mf"><span class="fname">color, sort</span></div>
+    <div class="mf" style="margin-top:8px"><span class="fname">mail_sender_rules:</span></div>
+    <div class="mf"><span class="fname">from_email</span> <span class="ftype">unique</span></div>
+    <div class="mf"><span class="fkey">assigned_admin_user_id</span> <span class="fnote">nullable</span></div>
+    <div class="mf"><span class="fkey">catalog_id</span> <span class="fnote">nullable</span></div>
+  </div>
+  <div class="model-rel">
+    <div class="rel"><span class="fnote">Reguła: nowy mail od nadawcy → auto-przypisanie osoby/katalogu</span></div>
+  </div>
+</div>
+
+<div class="model-box">
+  <div class="model-header">🚫 mail_spam_senders · 📎 mail_attachments</div>
+  <div class="model-fields">
+    <div class="mf"><span class="fname">mail_spam_senders:</span></div>
+    <div class="mf"><span class="fname">from_email</span> <span class="ftype">unique, lowercase</span></div>
+    <div class="mf" style="margin-top:8px"><span class="fname">mail_attachments:</span></div>
+    <div class="mf"><span class="fkey">message_id</span></div>
+    <div class="mf"><span class="fname">part_index, filename, mime, size</span></div>
+    <div class="mf"><span class="fnote">⚠ treść NIE jest w bazie — pobierana z IMAP na żądanie (download)</span></div>
+  </div>
+</div>
+
+</div><!-- /grid -->
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2 id="controllers">3. Kontrolery</h2>
+
+<table>
+<tr><th>Metoda</th><th>Opis / co robi</th><th>Zwraca</th></tr>
+<tr><td><code>index(Request)</code></td><td>Buduje filtry (account/user/category/catalog/unread/trash/spam/color/q), wykonuje query na mail_messages, liczy colorCounts przez (clone $query), liczy liczniki unread dla tabów, buduje catalogTree()</td><td class="m">Inertia → Index.vue</td></tr>
+<tr><td><code>settings()</code></td><td>Zwraca catalogs+tree, categories+messages_count, users, availableUsers (admin_users bez mailUser), spamSenders+count</td><td class="m">Inertia → Settings.vue</td></tr>
+<tr><td><code>showMessage(Message)</code></td><td>Ładuje message z relacjami (attachments, category, catalog, assignedUser); ustawia is_read=true</td><td class="m">JSON</td></tr>
+<tr><td><code>assignUser()</code></td><td>Przypisuje osobę do maila; opcjonalnie tworzy SenderRule (permanent=true)</td><td class="m">JSON</td></tr>
+<tr><td><code>assignCategory()</code></td><td>Przypisuje kategorię; ustawia categorized_by='manual'</td><td class="m">JSON</td></tr>
+<tr><td><code>assignCatalog()</code></td><td>Przypisuje katalog do jednej wiadomości</td><td class="m">JSON</td></tr>
+<tr><td><code>fileSenderToCatalog()</code></td><td><strong>Drag&drop:</strong> catalog_id!=null → upsert SenderRule + masowe update wszystkich maili nadawcy; catalog_id=null → kasuj regułę + zdejmij katalog</td><td class="m">JSON</td></tr>
+<tr><td><code>trashMessage()</code></td><td>is_trashed toggle (+ trashed_at)</td><td class="m">JSON</td></tr>
+<tr><td><code>markSpam(Message)</code></td><td>SpamSender::firstOrCreate + masowe is_spam=true dla wszystkich maili nadawcy</td><td class="m">JSON</td></tr>
+<tr><td><code>unspamMessage(Message)</code></td><td>Usuń SpamSender + is_spam=false dla wszystkich maili nadawcy</td><td class="m">JSON</td></tr>
+<tr><td><code>storeSpamSender()</code></td><td>Ręczne dodanie do spamu z formularza (Ustawienia)</td><td class="m">redirect</td></tr>
+<tr><td><code>destroySpamSender()</code></td><td>Usuń z listy spamu + przywróć maile</td><td class="m">redirect</td></tr>
+<tr><td><code>bulk(Request)</code></td><td>Masowe akcje: trash/restore/read/unread/category/catalog/user — WHERE id IN ([ids])</td><td class="m">JSON</td></tr>
+<tr><td><code>setColor(Request)</code></td><td>Ustawia color_flag na liście ID</td><td class="m">JSON</td></tr>
+<tr><td><code>send(Request)</code></td><td>Odbiera FormData (attachments[]); buduje Email (Symfony Mime); attachFromPath() dla plików; wysyła przez EsmtpTransport; zapisuje kopię is_sent=true do katalogu SEND/[label]</td><td class="m">JSON</td></tr>
+<tr><td><code>syncAccount()</code></td><td>Ręczna synchronizacja jednej skrzynki przez MailSyncService</td><td class="m">JSON</td></tr>
+<tr><td><code>downloadAttachment()</code></td><td>Łączy się z IMAP, pobiera konkretny part_index wiadomości, serwuje jako Content-Disposition: attachment</td><td class="m">Response</td></tr>
+</table>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2 id="services">4. Serwisy</h2>
+
+<h3>MailSyncService — sync(Account, cap=200)</h3>
+<div class="diagram"><pre>
+  Client::make(account->imapConfig()) → connect()
+       │
+       ├── getFolders(false) → pętla po WSZYSTKICH zwykłych folderach (od 03.06; bez Wysłane/Kosz/Spam/[Gmail])
+       │
+       ├── first sync (per folder)?  since(now()->subMonths(N))     N = sync_window_months
+       │   incremental: since(now()->subDays(3))        ← "łap ostatnie 3 dni"
+       │
+       ├── $spam = SpamSender::pluck()->flip()          ← załaduj listę spamu
+       ├── $rules = SenderRule::all()->keyBy(from_email) ← załaduj reguły
+       │
+       └── foreach $messages as $message:
+               uid = $message->uid
+               from = addresses($message->from)[0]
+               │
+               Message::updateOrCreate(
+                 [account_id, folder_id, uid],           ← klucz
+                 [subject, from_email, body_html, body_text,
+                  is_read, is_spam, in_reply_to, ...]
+               )
+               │
+               if wasRecentlyCreated (NOWY mail):
+                 ├── spam.has(LOWER(from_email))  → is_spam = true
+                 └── rule = rules.get(from_email)
+                       ├── rule.catalog_id           → catalog_id
+                       └── rule.assigned_admin_user_id → assigned_…
+               │
+               if hasAttachments:
+                 attachments().delete()  +  foreach att → mail_attachments.create()
+                 (TYLKO metadane — treść pobierana z IMAP dopiero przy downloadAttachment)
+</pre></div>
+
+<h3>MailAiCategorizer — AI auto-kategoryzacja</h3>
+<div class="diagram"><pre>
+  Message::whereNull('category_id')->limit(25)->get()
+       │
+       ├── buildPrompt(messages, categories)
+       │     "Przypisz każdemu mailowi kategorię: {lista kategorii}"
+       │
+       ├── HTTP POST api.openai.com/v1/chat/completions
+       │   (przez AiContentRuntimeConfig::openAiKey())
+       │
+       └── foreach response → Message::update({category_id, categorized_by:'ai'})
+</pre></div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2 id="routes">5. Trasy (API)</h2>
+
+<table>
+<tr><th>Metoda</th><th>URL</th><th>Handler</th><th>Opis</th></tr>
+<tr><td><span class="method get">GET</span></td><td><code>argo-mail</code></td><td class="m">Mail@index</td><td>Panel główny</td></tr>
+<tr><td><span class="method get">GET</span></td><td><code>argo-mail/settings</code></td><td class="m">Mail@settings</td><td>Ustawienia</td></tr>
+<tr><td><span class="method get">GET</span></td><td><code>argo-mail/accounts</code></td><td class="m">Account@index</td><td>Lista skrzynek</td></tr>
+<tr><td><span class="method post">POST</span></td><td><code>argo-mail/accounts</code></td><td class="m">Account@store</td><td>Dodaj skrzynkę</td></tr>
+<tr><td><span class="method put">PUT</span></td><td><code>argo-mail/accounts/{id}</code></td><td class="m">Account@update</td><td>Edytuj</td></tr>
+<tr><td><span class="method del">DELETE</span></td><td><code>argo-mail/accounts/{id}</code></td><td class="m">Account@destroy</td><td>Usuń</td></tr>
+<tr><td><span class="method post">POST</span></td><td><code>argo-mail/accounts/test</code></td><td class="m">Account@test</td><td>Test IMAP+SMTP</td></tr>
+<tr><td><span class="method post">POST</span></td><td><code>argo-mail/accounts/{id}/sync</code></td><td class="m">Mail@syncAccount</td><td>Sync ręczny</td></tr>
+<tr><td><span class="method get">GET</span></td><td><code>argo-mail/messages/{id}</code></td><td class="m">Mail@showMessage</td><td>Pełna wiadomość JSON</td></tr>
+<tr><td><span class="method get">GET</span></td><td><code>argo-mail/messages/{id}/attachments/{att}</code></td><td class="m">Mail@downloadAttachment</td><td>Pobierz plik (z IMAP)</td></tr>
+<tr><td><span class="method post">POST</span></td><td><code>argo-mail/messages/{id}/catalog</code></td><td class="m">Mail@assignCatalog</td><td>Przypisz katalog (1 mail)</td></tr>
+<tr><td><span class="method post">POST</span></td><td><code>argo-mail/messages/{id}/file-sender</code></td><td class="m">Mail@fileSenderToCatalog</td><td>Drag&drop → reguła nadawcy</td></tr>
+<tr><td><span class="method post">POST</span></td><td><code>argo-mail/messages/{id}/user</code></td><td class="m">Mail@assignUser</td><td>Przypisz osobę (+ SenderRule)</td></tr>
+<tr><td><span class="method post">POST</span></td><td><code>argo-mail/messages/{id}/category</code></td><td class="m">Mail@assignCategory</td><td>Przypisz kategorię</td></tr>
+<tr><td><span class="method post">POST</span></td><td><code>argo-mail/messages/{id}/trash</code></td><td class="m">Mail@trashMessage</td><td>Do kosza / przywróć</td></tr>
+<tr><td><span class="method post">POST</span></td><td><code>argo-mail/messages/{id}/spam</code></td><td class="m">Mail@markSpam</td><td>Nadawca → spam</td></tr>
+<tr><td><span class="method post">POST</span></td><td><code>argo-mail/messages/{id}/unspam</code></td><td class="m">Mail@unspamMessage</td><td>Przywróć nadawcę</td></tr>
+<tr><td><span class="method post">POST</span></td><td><code>argo-mail/messages/bulk</code></td><td class="m">Mail@bulk</td><td>Akcje masowe</td></tr>
+<tr><td><span class="method post">POST</span></td><td><code>argo-mail/messages/color</code></td><td class="m">Mail@setColor</td><td>Kolor flag (1/2/3/4)</td></tr>
+<tr><td><span class="method post">POST</span></td><td><code>argo-mail/send</code></td><td class="m">Mail@send</td><td>Wyślij (FormData+pliki)</td></tr>
+<tr><td><span class="method post">POST</span></td><td><code>argo-mail/spam</code></td><td class="m">Mail@storeSpamSender</td><td>Dodaj do spamu (Ustawienia)</td></tr>
+<tr><td><span class="method del">DELETE</span></td><td><code>argo-mail/spam/{id}</code></td><td class="m">Mail@destroySpamSender</td><td>Usuń z listy spamu</td></tr>
+<tr><td><span class="method post">POST</span></td><td><code>argo-mail/catalogs</code></td><td class="m">Catalog@store</td><td>Nowy katalog</td></tr>
+<tr><td><span class="method put">PUT</span></td><td><code>argo-mail/catalogs/{id}</code></td><td class="m">Catalog@update</td><td>Zmień nazwę</td></tr>
+<tr><td><span class="method del">DELETE</span></td><td><code>argo-mail/catalogs/{id}</code></td><td class="m">Catalog@destroy</td><td>Usuń katalog</td></tr>
+<tr><td><span class="method post">POST</span></td><td><code>argo-mail/mail-users</code></td><td class="m">MailUser@store</td><td>Dodaj osobę</td></tr>
+<tr><td><span class="method del">DELETE</span></td><td><code>argo-mail/mail-users/{id}</code></td><td class="m">MailUser@destroy</td><td>Usuń osobę</td></tr>
+</table>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2 id="flow-read">6. Przepływ: odbiór maili (IMAP sync)</h2>
+
+<div class="diagram"><pre>
+  [Scheduler co minutę] → php artisan mail:sync
+  [Lokalnie]            → mail-sync-loop.bat (php artisan mail:sync + timeout 60s)
+
+       MailSync@handle()
+            │
+            └── foreach Account where is_active=true:
+                    MailSyncService::sync(account)
+                          │
+                          ├─ 1. set sync_status = 'syncing'
+                          ├─ 2. Client::make(imapConfig())->connect()
+                          ├─ 3. getFolders(false) → pętla po zwykłych folderach (od 03.06; bez Wysłane/Kosz/Spam/[Gmail])
+                          ├─ 4. per folder: query.since(date)->limit(200)->get()
+                          │
+                          ├─ 5. $spam  = SpamSender::pluck()->flip()
+                          ├─ 6. $rules = SenderRule::all()->keyBy()
+                          │
+                          ├─ 7. foreach message:
+                          │       Message::updateOrCreate([uid]) ← pomija istniejące
+                          │       if nowy → stosuj spam + reguły nadawcy
+                          │       if hasAttachments → mail_attachments (metadane)
+                          │
+                          ├─ 8. Folder::update(last_uid, counts, last_synced_at)
+                          └─ 9. Account::update(sync_status='idle', last_sync_at)
+</pre></div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2 id="flow-send">7. Przepływ: wysyłka maila (SMTP)</h2>
+
+<div class="diagram"><pre>
+  [Front — sendMail()]
+       │
+       ├── new FormData()
+       │     account_id, to, cc, subject, body, is_html
+       │     attachments[] ← File objects
+       │
+       └── axios.POST('argo-mail/send', fd)
+
+  [Backend — MailController@send()]
+       │
+       ├── validate (attachments.* max:15MB, max:20 plików)
+       ├── parseEmails(to) + parseEmails(cc)
+       │
+       ├── $email = new Symfony\Mime\Email()
+       │     ->from(new Address(account.email, account.label))
+       │     ->addTo() ->addCc()
+       │     ->subject() ->text() ->html()
+       │     ->getHeaders()->addTextHeader('In-Reply-To', ...)  ← reply
+       │     ->attachFromPath(file->getRealPath(), name, mime)  ← pliki
+       │
+       ├── EsmtpTransport(host, port, tls=ssl?)
+       │     ->setUsername() ->setPassword()
+       │     ->send($email)
+       │
+       │   Gmail: automatycznie zapisuje do Sent na Gmailu
+       │
+       └── Message::create(is_sent=true, catalog_id=sendCatalogId())
+                    sendCatalogId() → SEND (root) / [label skrzynki] (sub)
+                    oba firstOrCreate → auto-tworzenie przy pierwszej wysyłce
+</pre></div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2 id="flow-ui">8. Przepływ: UI ↔ backend</h2>
+
+<div class="diagram"><pre>
+  ┌─────────────────────────────────────────────────────────────────┐
+  │  INERTIA (pełny re-render + partial reload)                     │
+  ├─────────────────────────────────────────────────────────────────┤
+  │                                                                 │
+  │  router.get(route, {filters})                                   │
+  │    → MailController@index() zwraca WSZYSTKIE props              │
+  │    → Vue: defineProps — całe drzewo danych                      │
+  │                                                                 │
+  │  router.reload({only:[messages, colorCounts, ...]})             │
+  │    → PARTIAL reload — odświeża tylko wybrane props              │
+  │    → reloadAll() wywołany po każdej akcji                       │
+  │    → auto-polling co 60s: window.setInterval → router.reload()  │
+  │                                                                 │
+  └─────────────────────────────────────────────────────────────────┘
+
+  ┌─────────────────────────────────────────────────────────────────┐
+  │  AXIOS (bez przeładowania strony, JSON)                         │
+  ├─────────────────────────────────────────────────────────────────┤
+  │                                                                 │
+  │  [klik w mail]                                                  │
+  │    axios.GET messages/{id} → selected.value = data              │
+  │    iframe.srcdoc = computed bodyDoc                             │
+  │    (base target="_blank" + no-referrer prepended)               │
+  │                                                                 │
+  │  [drag&drop na katalog]                                         │
+  │    axios.POST messages/{id}/file-sender {catalog_id}            │
+  │    → toast + reloadAll()                                        │
+  │                                                                 │
+  │  [kolor klawiszem 1/2/3/4/0]                                    │
+  │    onKeydown → applyColor(ids, color) → setColor()              │
+  │    axios.POST messages/color {ids, color}                       │
+  │    → optimistic update props.messages.data (bez reload)         │
+  │    → router.reload({only:['colorCounts']})                      │
+  │                                                                 │
+  │  [bulk akcja]                                                   │
+  │    axios.POST messages/bulk {ids, action, value?}               │
+  │    → reloadAll()                                                │
+  │                                                                 │
+  └─────────────────────────────────────────────────────────────────┘
+</pre></div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2 id="imap">9. IMAP — szczegóły techniczne</h2>
+
+<div class="grid grid-2">
+<div class="card">
+  <div class="card-title">Biblioteka</div>
+  <ul>
+    <li><code>webklex/laravel-imap ^6.2</code></li>
+    <li>Pure PHP — bez ext-imap</li>
+    <li>Połączenie: <code>Client::make(imapConfig())</code></li>
+    <li>imapConfig() buduje tablicę z danych konta</li>
+  </ul>
+</div>
+<div class="card">
+  <div class="card-title">Okno pobierania</div>
+  <ul>
+    <li>Pierwsze połączenie: <code>since(now()->subMonths(N))</code></li>
+    <li>Każde kolejne: <code>since(now()->subDays(3))</code></li>
+    <li>Limit: 200 wiadomości / run</li>
+    <li>updateOrCreate po uid — duplikaty pomijane</li>
+  </ul>
+</div>
+<div class="card">
+  <div class="card-title">Atrybuty wiadomości</div>
+  <ul>
+    <li><code>$m->uid</code> — unikalny ID w skrzynce</li>
+    <li><code>$m->subject, $m->date->toDate()</code></li>
+    <li><code>$m->from->toArray()</code> → Address[]</li>
+    <li><code>$m->getHTMLBody(), getTextBody()</code></li>
+    <li><code>$m->getFlags()->toArray()</code> → Seen|Flagged</li>
+    <li><code>$m->getAttachments()</code> → kolekcja</li>
+  </ul>
+</div>
+<div class="card">
+  <div class="card-title">Załączniki (lazy load)</div>
+  <ul>
+    <li>Przy syncu: TYLKO metadane w mail_attachments</li>
+    <li>Treść NIE jest w bazie danych</li>
+    <li>Przy downloadAttachment(): reconnect IMAP → whereUid → getAttachments()[part_index] → content</li>
+    <li>Oszczędność dysku dla dużych załączników</li>
+  </ul>
+</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2 id="smtp">10. SMTP — szczegóły techniczne</h2>
+
+<div class="grid grid-2">
+<div class="card">
+  <div class="card-title">Transport</div>
+  <ul>
+    <li><code>Symfony\Mailer\Transport\Smtp\EsmtpTransport</code></li>
+    <li>port 465 + encryption=ssl → <code>$tls = true</code></li>
+    <li>port 587 + STARTTLS → <code>$tls = false</code></li>
+    <li>setUsername / setPassword z konta</li>
+  </ul>
+</div>
+<div class="card">
+  <div class="card-title">Wiadomość (Symfony Mime)</div>
+  <ul>
+    <li><code>new Address(email, label)</code></li>
+    <li>addTo(), addCc(), subject()</li>
+    <li>text() + html() — zawsze oba</li>
+    <li>In-Reply-To / References (reply)</li>
+    <li><code>attachFromPath(getRealPath(), name, mime)</code></li>
+  </ul>
+</div>
+<div class="card">
+  <div class="card-title">Kopia wysłanego</div>
+  <ul>
+    <li>Gmail: auto-zapisuje do Sent na Gmailu</li>
+    <li>PIM: Message::create is_sent=true</li>
+    <li>folder __SENT_LOCAL (nie synchronizowany)</li>
+    <li>catalog_id = SEND / [label skrzynki]</li>
+    <li>SEND + podkatalogi — auto-tworzone firstOrCreate</li>
+  </ul>
+</div>
+<div class="card">
+  <div class="card-title">FormData (wysyłka z plikami)</div>
+  <ul>
+    <li>Front: <code>new FormData()</code> + <code>fd.append('attachments[]', file)</code></li>
+    <li>Walidacja: max 20 plików, max 15 MB / plik</li>
+    <li>Backend: <code>$request->file('attachments', [])</code></li>
+    <li>$file->isValid() sprawdzany przed attach</li>
+  </ul>
+</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2 id="spam">11. SPAM — mechanizm</h2>
+
+<div class="diagram"><pre>
+  [Użytkownik klika SPAM na nadawcy]
+  axios.POST messages/{id}/spam
+       │
+       ├── SpamSender::firstOrCreate({from_email: LOWER(email)})
+       └── Message::whereRaw('LOWER(from_email)=?')->update({is_spam:true})
+           ← WSZYSTKIE dotychczasowe maile tego nadawcy
+
+  [Nowy mail przy synchronizacji]
+  MailSyncService::sync()
+       │
+       ├── $spam = SpamSender::pluck('from_email')->map(LOWER)->flip()
+       └── foreach message:
+               is_spam = $spam->has(LOWER(from_email))
+
+  [Filtrowanie w index()]
+       │
+       ├── filters.spam = true  → WHERE is_spam=1  (widok Spam)
+       └── filters.spam = false → WHERE is_spam=0  (wszędzie indziej)
+
+       Liczniki (accUnread, catUnread, itd.) → AND is_spam=0  ← spam nie wchodzi do liczników
+
+  [Przywróć z listy spamu]
+  axios.POST messages/{id}/unspam
+       ├── SpamSender::where(from_email)->delete()
+       └── Message::whereRaw('LOWER(from_email)=?')->update({is_spam:false})
+</pre></div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2 id="dnd">12. Drag & drop — mechanizm</h2>
+
+<div class="diagram"><pre>
+  [FRONT]
+
+  &lt;li draggable="true"
+      @dragstart="onDragStart(e, m)"&gt;
+       │
+       └── dragMessage.value = {id, from}
+           e.dataTransfer.setData('text/plain', m.id)
+           dragHint.show = true  ("Upuść na katalog → przypisze nadawcę")
+
+  &lt;button  ← katalog
+      @dragover.prevent="onCatalogDragOver(c.id)"
+      @dragleave="onCatalogDragLeave(c.id)"
+      @drop="onCatalogDrop(c.id)"&gt;           ← c.id = number
+  &lt;button  ← "Wszystkie"
+      @drop="onCatalogDrop(null)"&gt;            ← null = cofnięcie
+
+  [BACKEND] POST argo-mail/messages/{id}/file-sender
+  {catalog_id: number | null}
+
+  catalog_id != null  (upuścił na konkretny katalog):
+       SenderRule::updateOrCreate(
+         {from_email},
+         {catalog_id}
+       )
+       Message::whereRaw('LOWER(from_email)=?')
+               ->update({catalog_id})      ← WSZYSTKIE maile nadawcy
+
+  catalog_id = null   (upuścił na "Wszystkie"):
+       rule = SenderRule::where(from_email)->first()
+       if rule && rule.assigned_admin_user_id:
+           rule.update({catalog_id: null}) ← zostaw osobę, zdejmij tylko katalog
+       else:
+           rule.delete()                  ← kasuj całą regułę
+       Message::whereRaw('LOWER(from_email)=?')
+               ->update({catalog_id: null})
+</pre></div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2 id="colors">13. Filtr po kolorach — mechanizm</h2>
+
+<div class="diagram"><pre>
+  [Backend — colorCounts]
+
+  $colorCounts = (clone $query)       ← KLON query (ten sam zakres: konto/katalog/itd.)
+      ->reorder()                     ← usuń ORDER BY (GROUP BY nie lubi ORDER)
+      ->whereNotNull('color_flag')
+      ->selectRaw('color_flag, COUNT(*) as c')
+      ->groupBy('color_flag')
+      ->pluck('c', 'color_flag')
+  → {red:5, green:3, blue:3, orange:3}
+
+  [Backend — filtr koloru vs "nieprzeczytane"]
+
+  if (filters.unread && !filters.color):
+      $query->where('is_read', false)     ← unread TYLKO gdy NIE ma filtru koloru
+
+  if (filters.color):
+      $query->where('color_flag', filters.color)
+      ← kolor > unread (pokazuj też przeczytane — bo maile kolorujesz po otwarciu)
+
+  [Front — selectColor(color)]
+
+  const next = filters.color === color ? null : color   ← toggle
+  if (next) localFilters.unread = false                 ← zdejmij "tylko nieprzeczytane"
+  navigate({color: next})
+
+  [Front — po setColor()]
+  router.reload({only:['colorCounts']})    ← tylko kwadraciki, bez przeładowania listy
+</pre></div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2 id="security">14. Bezpieczeństwo</h2>
+
+<div class="grid grid-2">
+<div class="card">
+  <div class="card-title">Hasła i tokeny</div>
+  <ul>
+    <li>cast <code>'password' =&gt; 'encrypted'</code> (AES-256, APP_KEY)</li>
+    <li><code>$hidden = ['password', 'oauth_token']</code> → nigdy nie wychodzą do front-endu</li>
+    <li>App Password (Gmail 2FA) — spacje usuwane automatycznie przy zapisie</li>
+    <li>OAuth2 — planowane (faza 3)</li>
+  </ul>
+</div>
+<div class="card">
+  <div class="card-title">Treść maili (XSS)</div>
+  <ul>
+    <li>Renderowana w <code>&lt;iframe :srcdoc="bodyDoc"&gt;</code></li>
+    <li><code>sandbox="allow-popups allow-popups-to-escape-sandbox"</code></li>
+    <li>Brak <code>allow-scripts</code> → JS z maila zablokowany</li>
+    <li>Prepended: <code>&lt;base target="_blank"&gt;</code> → linki w nowej karcie</li>
+    <li><code>referrerpolicy="no-referrer"</code></li>
+  </ul>
+</div>
+<div class="card">
+  <div class="card-title">Załączniki</div>
+  <ul>
+    <li>Treść NIE jest składowana na dysku PIM</li>
+    <li>Pobierana z IMAP live przy downloadAttachment()</li>
+    <li>abort_unless(attachment.message_id === message.id)</li>
+    <li>Content-Disposition: attachment (nie inline)</li>
+  </ul>
+</div>
+<div class="card">
+  <div class="card-title">Ogólne</div>
+  <ul>
+    <li>Brak serwera pocztowego = mniejsza powierzchnia ataku</li>
+    <li>Poczta zostaje na Gmail — PIM jest tylko klientem</li>
+    <li>Wszystkie endpointy pod middleware: web + auth + crafter.verified</li>
+    <li>CSRF: Inertia + Axios X-XSRF-Token</li>
+  </ul>
+</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2 id="deps">15. Zależności zewnętrzne</h2>
+
+<table>
+<tr><th>Paczka</th><th>Rola</th><th>Gdzie używana</th></tr>
+<tr><td><code>webklex/laravel-imap ^6.2</code></td><td>Odbiór IMAP (pure PHP, bez ext-imap)</td><td>MailSyncService, downloadAttachment</td></tr>
+<tr><td><code>symfony/mailer</code></td><td>Wysyłka SMTP — EsmtpTransport</td><td>MailController@send</td></tr>
+<tr><td><code>symfony/mime</code></td><td>Budowanie wiadomości — Email, Address</td><td>MailController@send</td></tr>
+<tr><td><code>openai-php/laravel</code></td><td>Kategoryzacja AI przez OpenAI API</td><td>MailAiCategorizer, AiToolsMailController</td></tr>
+<tr><td><code>@inertiajs/vue3</code></td><td>SPA routing Laravel ↔ Vue (bez API JSON)</td><td>wszystkie widoki</td></tr>
+<tr><td><code>@tiptap/*</code> (Wysiwyg)</td><td>Edytor HTML w kompozytorze</td><td>Index.vue (compose.html)</td></tr>
+<tr><td><code>axios</code></td><td>Zapytania JSON bez przeładowania strony</td><td>Index.vue — wszystkie akcje</td></tr>
+<tr><td><code>lodash.debounce</code></td><td>Debouncowanie szukajki (400ms)</td><td>Index.vue — debouncedApply</td></tr>
+<tr><td><code>@brackets/vue-toastification</code></td><td>Powiadomienia toast</td><td>Index.vue, Settings.vue</td></tr>
+<tr><td><code>@heroicons/vue</code></td><td>Ikony (outline + solid)</td><td>wszystkie komponenty</td></tr>
+</table>
+
+</main>
+
+<script>
+// Aktywny link w nav
+const sections = document.querySelectorAll('h2[id]');
+const links = document.querySelectorAll('nav a');
+const obs = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      links.forEach(l => l.classList.remove('active'));
+      const a = document.querySelector('nav a[href="#'+e.target.id+'"]');
+      if (a) a.classList.add('active');
+    }
+  });
+}, {rootMargin: '-20% 0px -70% 0px'});
+sections.forEach(s => obs.observe(s));
+</script>
+</body>
+</html>

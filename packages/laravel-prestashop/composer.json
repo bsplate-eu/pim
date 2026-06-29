@@ -1,0 +1,73 @@
+{
+    "name": "mdev/laravel-prestashop",
+    "description": "Package for use PrestaShop Webservice on Laravel.",
+    "keywords": [
+        "lucasgiovanny",
+        "pdik",
+        "laravel",
+        "laravel-prestashop"
+    ],
+    "homepage": "https://github.com/lucasgiovanny/laravel-prestashop",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Lucas Giovanny",
+            "email": "lucasgiovanny@gmail.com",
+            "role": "Developer"
+        },
+        {
+            "name": "Pepijn dik",
+            "email": "pepijn@pdik.nl",
+            "role": "Developer"
+        }
+    ],
+    "require": {
+        "php": "^8.1",
+        "guzzlehttp/guzzle": "^7.5",
+        "illuminate/contracts": "^9.0|^10.0",
+        "spatie/laravel-package-tools": "^1.4.3"
+    },
+    "require-dev": {
+        "laravel/pint": "^1.7",
+        "mockery/mockery": "^1.5",
+        "nunomaduro/collision": "^7.0",
+        "nunomaduro/larastan": "^2.0.1",
+        "orchestra/testbench": "^8.00",
+        "pestphp/pest": "^2.00",
+        "spatie/laravel-ray": "^1.9"
+    },
+    "autoload": {
+        "psr-4": {
+            "Mdev\\LaravelPrestashop\\": "src",
+            "Mdev\\LaravelPrestashop\\Database\\Factories\\": "database/factories"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Mdev\\LaravelPrestashop\\Tests\\": "tests"
+        }
+    },
+    "scripts": {
+        "psalm": "vendor/bin/psalm",
+        "test": "./vendor/bin/testbench package:test --parallel --no-coverage",
+        "test-coverage": "vendor/bin/phpunit --coverage-html coverage"
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Mdev\\LaravelPrestashop\\LaravelPrestashopServiceProvider"
+            ],
+            "aliases": {
+                "LaravelPrestashop": "Mdev\\LaravelPrestashop\\LaravelPrestashopFacade"
+            }
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}

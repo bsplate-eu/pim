@@ -1,0 +1,11 @@
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Keep certificate validation paths untouched
+    RewriteRule ^\.well-known/ - [L]
+
+    # Route all requests to Laravel public directory
+    RewriteCond %{REQUEST_URI} !^/public/
+    RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>
+ 

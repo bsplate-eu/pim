@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8" />
+<title>Argo Mail — makieta UI</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; background: #f3f4f6; color: #111827; font-size: 14px; }
+
+  /* --- HEADER --- */
+  .header { background: #fff; border-bottom: 1px solid #e5e7eb; padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; }
+  .header-title { font-size: 20px; font-weight: 700; color: #111827; }
+  .header-actions { display: flex; gap: 8px; }
+  .btn { display: inline-flex; align-items: center; gap: 6px; border-radius: 8px; padding: 7px 14px; font-size: 13px; font-weight: 500; cursor: pointer; border: 1px solid transparent; transition: background .15s; }
+  .btn-primary { background: #1e293b; color: #fff; }
+  .btn-primary:hover { background: #0f172a; }
+  .btn-outline { background: #fff; border-color: #d1d5db; color: #374151; }
+  .btn-outline:hover { background: #f9fafb; }
+
+  /* --- PAGE CONTENT --- */
+  .page { padding: 16px 24px; display: flex; flex-direction: column; gap: 12px; min-height: calc(100vh - 57px); }
+
+  /* --- FILTER TABS --- */
+  .filters-block { background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 10px 14px; display: flex; flex-direction: column; gap: 6px; }
+  .filter-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .filter-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #9ca3af; width: 64px; flex-shrink: 0; }
+  .pill { display: inline-flex; align-items: center; gap: 5px; border-radius: 9999px; border: 1px solid #e5e7eb; padding: 4px 10px; font-size: 12px; cursor: pointer; background: #fff; color: #4b5563; white-space: nowrap; }
+  .pill.active { border-color: #93c5fd; background: #eff6ff; color: #1d4ed8; }
+  .pill:hover:not(.active) { background: #f9fafb; }
+  .dot { width: 8px; height: 8px; border-radius: 9999px; flex-shrink: 0; }
+  .badge { background: #e5e7eb; color: #374151; border-radius: 9999px; font-size: 10px; font-weight: 700; padding: 0 5px; margin-left: 2px; }
+
+  /* --- TOOLBAR --- */
+  .toolbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .search-wrap { position: relative; flex: 1; max-width: 360px; }
+  .search-wrap input { width: 100%; border: 1px solid #d1d5db; border-radius: 8px; padding: 7px 12px 7px 34px; font-size: 13px; color: #111; outline: none; }
+  .search-wrap input:focus { border-color: #6366f1; box-shadow: 0 0 0 3px #e0e7ff; }
+  .search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #9ca3af; }
+  .checkbox-label { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #4b5563; cursor: pointer; }
+  .checkbox-label input { accent-color: #6366f1; width: 15px; height: 15px; }
+  .color-filters { display: flex; align-items: center; gap: 6px; border-left: 1px solid #e5e7eb; padding-left: 12px; }
+  .color-filters span { font-size: 11px; color: #9ca3af; }
+  .csq { width: 20px; height: 20px; border-radius: 4px; cursor: pointer; border: 1px solid rgba(0,0,0,.15); transition: transform .1s; }
+  .csq:hover { transform: scale(1.15); }
+  .csq.active { outline: 2px solid #1e293b; outline-offset: 2px; }
+  .msg-count { margin-left: auto; font-size: 12px; color: #9ca3af; }
+
+  /* --- 3 COLUMNS --- */
+  .columns { display: flex; gap: 12px; flex: 1; }
+
+  /* --- KATALOGI --- */
+  .col-catalogs { width: 160px; flex-shrink: 0; background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; overflow: hidden; display: flex; flex-direction: column; }
+  .col-head { display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; border-bottom: 1px solid #f3f4f6; }
+  .col-head-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #9ca3af; }
+  .col-head-icon { color: #d1d5db; cursor: pointer; font-size: 14px; }
+  .col-head-icon:hover { color: #6b7280; }
+  .catalog-list { overflow-y: auto; flex: 1; padding: 4px 0; }
+  .cat-node { display: flex; align-items: center; gap: 6px; width: 100%; padding: 6px 10px; font-size: 13px; cursor: pointer; border: none; background: none; text-align: left; color: #4b5563; border-left: 3px solid transparent; }
+  .cat-node:hover { background: #f9fafb; }
+  .cat-node.active { background: #eff6ff; color: #1d4ed8; }
+  .cat-node.drag-over { background: #dbeafe; outline: 2px solid #60a5fa; outline-offset: -2px; }
+  .cat-icon { font-size: 13px; flex-shrink: 0; }
+  .cat-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cat-badge { background: #e5e7eb; color: #374151; border-radius: 9999px; font-size: 10px; font-weight: 700; padding: 0 5px; }
+  .cat-unread { font-weight: 700; color: #111827; }
+  .cat-divider { border-top: 1px solid #f3f4f6; margin: 4px 0; }
+
+  /* --- LISTA --- */
+  .col-list { width: 38%; flex-shrink: 0; background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; overflow: hidden; display: flex; flex-direction: column; }
+  .mail-list { overflow-y: auto; flex: 1; }
+  .mail-row { padding: 10px 14px; border-bottom: 1px solid #f3f4f6; cursor: pointer; border-left: 4px solid transparent; transition: background .1s; }
+  .mail-row:hover { background: #f9fafb; }
+  .mail-row.selected { background: #eff6ff; }
+  .mail-row.open { background: #dbeafe; }
+  .mail-row.color-red { border-left-color: #ef4444; }
+  .mail-row.color-green { border-left-color: #22c55e; }
+  .mail-row.color-blue { border-left-color: #3b82f6; }
+  .mail-row.color-orange { border-left-color: #f97316; }
+  .mail-row-top { display: flex; align-items: center; gap: 6px; }
+  .unread-dot { width: 9px; height: 9px; border-radius: 9999px; background: #3b82f6; flex-shrink: 0; }
+  .read-dot { width: 9px; height: 9px; flex-shrink: 0; }
+  .sender { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+  .sender.unread { font-size: 14px; font-weight: 700; color: #111827; }
+  .sender.read { font-size: 13px; color: #111827; }
+  .date { font-size: 11px; color: #9ca3af; flex-shrink: 0; }
+  .date.unread { color: #6b7280; }
+  .subject { font-size: 13px; color: #111827; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 1px; }
+  .subject.unread { font-weight: 600; }
+  .snippet { font-size: 12px; color: #6b7280; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 1px; }
+  .chips { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; }
+  .chip { display: inline-flex; align-items: center; border-radius: 9999px; padding: 1px 7px; font-size: 10px; font-weight: 500; }
+  .mail-pagination { display: flex; align-items: center; justify-content: space-between; padding: 8px 14px; border-top: 1px solid #f3f4f6; font-size: 12px; }
+  .pag-btn { color: #6b7280; cursor: pointer; }
+  .pag-btn:hover { color: #111; }
+  .pag-info { color: #9ca3af; }
+
+  /* --- PODGLĄD --- */
+  .col-preview { flex: 1; min-width: 0; background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; overflow: hidden; display: flex; flex-direction: column; }
+  .preview-head { padding: 14px 16px; border-bottom: 1px solid #e5e7eb; }
+  .preview-actions { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+  .preview-icon-btn { padding: 6px 8px; border-radius: 7px; border: none; background: none; cursor: pointer; color: #9ca3af; }
+  .preview-icon-btn:hover { background: #f3f4f6; color: #374151; }
+  .preview-subject { font-size: 16px; font-weight: 700; color: #111827; }
+  .preview-meta { font-size: 13px; color: #6b7280; margin-top: 4px; }
+  .preview-meta strong { color: #374151; }
+  .preview-body { flex: 1; overflow-y: auto; padding: 20px; background: #fff; font-size: 14px; line-height: 1.7; color: #1f2937; }
+  .preview-body a { color: #2563eb; text-decoration: underline; }
+  .preview-footer { display: flex; gap: 8px; padding: 10px 16px; border-top: 1px solid #e5e7eb; }
+  .att-list { padding: 0 16px 12px; display: flex; gap: 8px; flex-wrap: wrap; }
+  .att-item { display: inline-flex; align-items: center; gap: 6px; border: 1px solid #e5e7eb; border-radius: 7px; padding: 5px 10px; font-size: 12px; color: #374151; cursor: pointer; }
+  .att-item:hover { background: #f9fafb; }
+  .preview-chips { padding: 0 16px 8px; display: flex; gap: 6px; }
+
+  /* --- CONTEXT MENU --- */
+  .ctx-menu { position: fixed; z-index: 200; width: 220px; background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,.15); padding: 4px 0; display: none; }
+  .ctx-menu.show { display: block; }
+  .ctx-section { padding: 4px 12px 2px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #9ca3af; }
+  .ctx-divider { border-top: 1px solid #f3f4f6; margin: 3px 0; }
+  .ctx-item { display: flex; align-items: center; gap: 8px; width: 100%; padding: 7px 12px; font-size: 13px; color: #374151; cursor: pointer; border: none; background: none; text-align: left; }
+  .ctx-item:hover { background: #f9fafb; }
+  .ctx-item.danger { color: #dc2626; }
+  .ctx-item.warn { color: #d97706; }
+  .ctx-item.green { color: #16a34a; }
+
+  /* --- COMPOSER --- */
+  .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.3); z-index: 100; display: none; }
+  .overlay.show { display: block; }
+  .composer { position: fixed; z-index: 101; right: 24px; bottom: 24px; width: 640px; max-height: 92vh; background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,.2); display: none; flex-direction: column; }
+  .composer.show { display: flex; }
+  .composer-head { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; border-bottom: 1px solid #e5e7eb; }
+  .composer-title { font-size: 14px; font-weight: 600; }
+  .composer-head-btns { display: flex; gap: 4px; }
+  .icon-btn { padding: 4px; border: none; background: none; cursor: pointer; color: #9ca3af; border-radius: 5px; font-size: 16px; }
+  .icon-btn:hover { background: #f3f4f6; color: #374151; }
+  .composer-body { padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; flex: 1; }
+  .composer-field { display: flex; align-items: center; gap: 8px; }
+  .composer-field label { width: 48px; font-size: 12px; color: #9ca3af; flex-shrink: 0; }
+  .composer-field select, .composer-field input { flex: 1; border: 1px solid #d1d5db; border-radius: 7px; padding: 6px 10px; font-size: 13px; outline: none; }
+  .composer-field select:focus, .composer-field input:focus { border-color: #6366f1; }
+  .composer-html-toggle { display: flex; align-items: center; justify-content: flex-end; gap: 6px; font-size: 12px; color: #6b7280; }
+  .composer-html-toggle input { accent-color: #6366f1; }
+  .html-editor { border: 1px solid #d1d5db; border-radius: 7px; min-height: 200px; padding: 10px; font-size: 13px; color: #111827; line-height: 1.6; overflow-y: auto; }
+  .html-editor:focus { outline: none; border-color: #6366f1; }
+  .html-editor-toolbar { display: flex; gap: 4px; padding: 4px 8px; border: 1px solid #d1d5db; border-bottom: none; border-radius: 7px 7px 0 0; background: #f9fafb; }
+  .html-editor-toolbar button { padding: 3px 8px; font-size: 12px; border: 1px solid #e5e7eb; border-radius: 4px; background: #fff; cursor: pointer; }
+  .html-editor-toolbar button:hover { background: #f3f4f6; }
+  .att-picker { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .att-mock { display: inline-flex; align-items: center; gap: 4px; background: #f3f4f6; border-radius: 6px; padding: 3px 8px; font-size: 12px; color: #374151; }
+  .att-mock .rm { cursor: pointer; color: #9ca3af; margin-left: 2px; }
+  .att-mock .rm:hover { color: #dc2626; }
+  .add-att-btn { font-size: 12px; color: #6366f1; cursor: pointer; border: 1px dashed #c7d2fe; padding: 3px 10px; border-radius: 6px; }
+  .add-att-btn:hover { background: #eff2ff; }
+  .composer-footer { display: flex; align-items: center; justify-content: flex-end; gap: 8px; padding: 10px 16px; border-top: 1px solid #e5e7eb; }
+
+  /* --- REMINDER --- */
+  .reminder { position: fixed; right: 16px; bottom: 16px; z-index: 50; width: 272px; background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,.12); overflow: hidden; }
+  .reminder-head { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: #fffbeb; border-bottom: 1px solid #fde68a; }
+  .reminder-head span { font-size: 13px; font-weight: 600; color: #1f2937; flex: 1; }
+  .reminder-head button { font-size: 16px; color: #9ca3af; background: none; border: none; cursor: pointer; }
+  .reminder-body { padding: 10px 12px; }
+  .reminder-body p { font-size: 13px; color: #374151; }
+  .reminder-body p strong { color: #d97706; }
+  .reminder-show-btn { display: block; width: 100%; margin-top: 8px; background: #f59e0b; color: #fff; border: none; border-radius: 7px; padding: 8px; font-size: 13px; font-weight: 500; cursor: pointer; }
+  .reminder-show-btn:hover { background: #d97706; }
+
+  /* --- EMPTY --- */
+  .empty-preview { flex: 1; display: flex; align-items: center; justify-content: center; color: #9ca3af; font-size: 13px; }
+
+  /* --- DRAG HINT --- */
+  .drag-hint { padding: 4px 10px; font-size: 11px; font-weight: 500; color: #4f46e5; background: #eef2ff; border-bottom: 1px solid #c7d2fe; display: none; }
+  .drag-hint.show { display: block; }
+
+  /* --- BADGE BULK --- */
+  .bulk-bar { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 7px 12px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12px; display: none; }
+  .bulk-bar.show { display: flex; }
+  .bulk-bar strong { color: #1d4ed8; }
+  .bulk-action { padding: 3px 10px; border: 1px solid #d1d5db; background: #fff; border-radius: 6px; cursor: pointer; font-size: 12px; }
+  .bulk-action:hover { background: #f9fafb; }
+  .bulk-action.danger { color: #dc2626; }
+  .bulk-csq { width: 18px; height: 18px; border-radius: 3px; cursor: pointer; border: 1px solid rgba(0,0,0,.15); }
+  .bulk-clear { margin-left: auto; color: #6b7280; cursor: pointer; font-size: 12px; }
+  .bulk-clear:hover { color: #111; }
+  .color-text-red { color: #ef4444; }
+  .color-text-green { color: #22c55e; }
+  .color-text-blue { color: #3b82f6; }
+  .color-text-orange { color: #f97316; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-title">Argo Mail</div>
+  <div class="header-actions">
+    <button class="btn btn-primary" onclick="openComposer('new')">✏️ Nowa wiadomość</button>
+    <button class="btn btn-outline">⚙️ Ustawienia</button>
+    <button class="btn btn-outline">✉️ Skrzynki</button>
+  </div>
+</div>
+
+<!-- PAGE -->
+<div class="page">
+
+  <!-- FILTER TABS -->
+  <div class="filters-block">
+    <div class="filter-row">
+      <span class="filter-label">Konta</span>
+      <button class="pill active">Wszystkie <span class="badge">59</span></button>
+      <button class="pill"><span class="dot" style="background:#6366f1"></span>Argo Agency <span class="badge">59</span></button>
+      <button class="pill"><span class="dot" style="background:#10b981"></span>info@argotrade24.pl <span class="badge">12</span></button>
+    </div>
+    <div class="filter-row">
+      <span class="filter-label">Osoby</span>
+      <button class="pill active">Wszyscy</button>
+      <button class="pill"><span class="dot" style="background:#3b82f6"></span>info@argotrade24.pl <span class="badge">1</span></button>
+      <button class="pill"><span class="dot" style="background:#f59e0b"></span>mikolajskubina@gmail.com</button>
+    </div>
+    <div class="filter-row">
+      <span class="filter-label">Kategorie</span>
+      <button class="pill active">Wszystkie</button>
+      <button class="pill"><span class="dot" style="background:#2563eb"></span>Klienci</button>
+      <button class="pill"><span class="dot" style="background:#16a34a"></span>Zamówienia <span class="badge">1</span></button>
+      <button class="pill"><span class="dot" style="background:#9333ea"></span>Faktury i płatności</button>
+      <button class="pill"><span class="dot" style="background:#dc2626"></span>Reklamacje</button>
+      <button class="pill"><span class="dot" style="background:#ca8a04"></span>Dostawcy</button>
+      <button class="pill"><span class="dot" style="background:#0891b2"></span>Marketing / Newslettery</button>
+      <button class="pill"><span class="dot" style="background:#64748b"></span>Wewnętrzne</button>
+      <button class="pill"><span class="dot" style="background:#9ca3af"></span>Inne <span class="badge">1</span></button>
+    </div>
+  </div>
+
+  <!-- TOOLBAR -->
+  <div class="toolbar">
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input type="text" placeholder="Szukaj: temat lub nadawca…" />
+    </div>
+    <label class="checkbox-label">
+      <input type="checkbox" id="chkUnread" onchange="toggleUnread()" /> Tylko nieprzeczytane
+    </label>
+    <div class="color-filters">
+      <span>Kolor:</span>
+      <div class="csq" style="background:#ef4444" title="Czerwony (5) — pokaż tylko te" onclick="filterColor(this,'red')"></div>
+      <div class="csq" style="background:#22c55e" title="Zielony (3)" onclick="filterColor(this,'green')"></div>
+      <div class="csq" style="background:#3b82f6" title="Niebieski (3)" onclick="filterColor(this,'blue')"></div>
+      <div class="csq" style="background:#f97316" title="Pomarańczowy (3)" onclick="filterColor(this,'orange')"></div>
+      <span id="clearColor" style="cursor:pointer;color:#9ca3af;display:none" onclick="clearColorFilter()">✕</span>
+    </div>
+    <span class="msg-count">59 wiadomości</span>
+  </div>
+
+  <!-- BULK BAR -->
+  <div class="bulk-bar" id="bulkBar">
+    <strong>Zaznaczono 3</strong>
+    <button class="bulk-action danger">🗑 Do kosza</button>
+    <button class="bulk-action">✓ Przeczytane</button>
+    <button class="bulk-action">◌ Nieprzeczytane</button>
+    <button class="bulk-action">📁 Katalog…</button>
+    <button class="bulk-action">🏷 Kategoria…</button>
+    <span style="color:#6b7280;font-size:11px">Kolor:</span>
+    <div class="bulk-csq" style="background:#ef4444"></div>
+    <div class="bulk-csq" style="background:#22c55e"></div>
+    <div class="bulk-csq" style="background:#3b82f6"></div>
+    <div class="bulk-csq" style="background:#f97316"></div>
+    <div class="bulk-csq" style="background:#fff;border:1px solid #d1d5db;display:flex;align-items:center;justify-content:center;font-size:10px;color:#9ca3af">✕</div>
+    <span class="bulk-clear" onclick="hideBulk()">Wyczyść</span>
+  </div>
+
+  <!-- 3 COLUMNS -->
+  <div class="columns">
+
+    <!-- KATALOGI -->
+    <div class="col-catalogs">
+      <div class="col-head">
+        <span class="col-head-label">Katalogi</span>
+        <span class="col-head-icon">⚙</span>
+      </div>
+      <div class="drag-hint" id="dragHint">Upuść na katalog → przypisze nadawcę</div>
+      <div class="catalog-list" id="catalogList">
+        <div class="cat-node active" id="cat-all" onclick="selectCat('all')" ondragover="catDragOver(event,'all')" ondragleave="catDragLeave(event,'all')" ondrop="catDrop(event,null)">
+          <span class="cat-name">Wszystkie</span>
+        </div>
+        <div class="cat-node" onclick="selectCat('sklep')" ondragover="catDragOver(event,'sklep')" ondragleave="catDragLeave(event,'sklep')" ondrop="catDrop(event,'Sklep')">
+          <span class="cat-icon">📁</span><span class="cat-name">Sklep</span>
+        </div>
+        <div class="cat-node" onclick="selectCat('rekl')" style="padding-left:24px" ondragover="catDragOver(event,'rekl')" ondragleave="catDragLeave(event,'rekl')" ondrop="catDrop(event,'Reklamacje')">
+          <span class="cat-icon">📁</span><span class="cat-name">Reklamacje</span>
+        </div>
+        <div class="cat-node" onclick="selectCat('hurt')" ondragover="catDragOver(event,'hurt')" ondragleave="catDragLeave(event,'hurt')" ondrop="catDrop(event,'Hurtownie')">
+          <span class="cat-icon">📁</span><span class="cat-name cat-unread">Hurtownie</span>
+          <span class="cat-badge">2</span>
+        </div>
+        <div class="cat-node" onclick="selectCat('log')" ondragover="catDragOver(event,'log')" ondragleave="catDragLeave(event,'log')" ondrop="catDrop(event,'Logistyka')">
+          <span class="cat-icon">📁</span><span class="cat-name cat-unread">Logistyka</span>
+          <span class="cat-badge">10</span>
+        </div>
+        <div class="cat-node" onclick="selectCat('send')" ondragover="catDragOver(event,'send')" ondragleave="catDragLeave(event,'send')" ondrop="catDrop(event,'SEND')">
+          <span class="cat-icon">📁</span><span class="cat-name">SEND</span>
+        </div>
+        <div class="cat-node" onclick="selectCat('send-aa')" style="padding-left:24px">
+          <span class="cat-icon">📁</span><span class="cat-name">Argo Agency</span>
+        </div>
+        <div class="cat-divider"></div>
+        <div class="cat-node" onclick="selectCat('kosz')" ondragover="catDragOver(event,'kosz')" ondragleave="catDragLeave(event,'kosz')" ondrop="catDrop(event,'Kosz')">
+          <span class="cat-icon">🗑</span><span class="cat-name">Kosz</span>
+        </div>
+        <div class="cat-node" onclick="selectCat('spam')">
+          <span class="cat-icon">🚫</span><span class="cat-name">Spam</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- LISTA MAILI -->
+    <div class="col-list">
+      <div class="mail-list" id="mailList">
+
+        <!-- mail 1 — nieprzeczytany, pomarańczowy -->
+        <div class="mail-row color-orange" draggable="true" ondragstart="startDrag(event,'Google Search Console Team')"
+             onclick="openMail(this,'gsc')" oncontextmenu="showCtx(event)">
+          <div class="mail-row-top">
+            <span class="unread-dot"></span>
+            <span class="sender unread color-text-orange">Google Search Console Team</span>
+            <span class="date unread color-text-orange">31.05</span>
+          </div>
+          <div class="subject unread color-text-orange">Problemy indeksowania w witrynie https://st-bud.pl/ zostały rozwiązane</div>
+          <div class="snippet color-text-orange">Problemy indeksowania w witrynie https://st-bud.pl/ zostały rozwiązane. Do właściciela…</div>
+          <div class="chips">
+            <span class="chip" style="background:#dbeafe;color:#1d4ed8">info@argotrade24.pl</span>
+          </div>
+        </div>
+
+        <!-- mail 2 — nieprzeczytany, czerwony -->
+        <div class="mail-row color-red" id="rowGP" draggable="true" ondragstart="startDrag(event,'Google Play')"
+             onclick="openMail(this,'gp')" oncontextmenu="showCtx(event)">
+          <div class="mail-row-top">
+            <span class="unread-dot"></span>
+            <span class="sender unread color-text-red">Google Play 📎</span>
+            <span class="date unread color-text-red">28.05</span>
+          </div>
+          <div class="subject unread color-text-red">Potwierdzenie zamówienia w Google Play z 28 maj 2026</div>
+          <div class="snippet color-text-red">Google Play Dziękujemy Nadal korzystasz z subskrypcji usługi Google Commerce…</div>
+          <div class="chips">
+            <span class="chip" style="background:#dcfce7;color:#16a34a">Zamówienia</span>
+          </div>
+        </div>
+
+        <!-- mail 3 — przeczytany, zielony -->
+        <div class="mail-row color-green selected" draggable="true" ondragstart="startDrag(event,'Aftermarket.pl')"
+             onclick="openMail(this,'am')" oncontextmenu="showCtx(event)">
+          <div class="mail-row-top">
+            <span class="read-dot"></span>
+            <span class="sender read color-text-green">Aftermarket.pl :: Konto</span>
+            <span class="date color-text-green">23.05</span>
+          </div>
+          <div class="subject color-text-green">Pomyślne logowanie z nowego adresu 93.159.4.29</div>
+          <div class="snippet color-text-green">Dzień dobry, user_554736! Na Twoje konto nastąpiło pomyślne logowanie z nowego…</div>
+        </div>
+
+        <!-- mail 4 — nieprzeczytany -->
+        <div class="mail-row" draggable="true" ondragstart="startDrag(event,'Ahrefs')"
+             onclick="openMail(this,'ahrefs')" oncontextmenu="showCtx(event)">
+          <div class="mail-row-top">
+            <span class="unread-dot"></span>
+            <span class="sender unread">Ahrefs Site Audit</span>
+            <span class="date unread">28.05</span>
+          </div>
+          <div class="subject unread">(Cigognedecorationdejardin) Slow page: 128 URLs</div>
+          <div class="snippet">New crawl for Cigognedecorationdejardin /* --------------- RESPONSIVE AND MOBILE FRI…</div>
+          <div class="chips">
+            <span class="chip" style="background:#f3f4f6;color:#6b7280">Inne</span>
+          </div>
+        </div>
+
+        <!-- mail 5 — przeczytany, niebieski -->
+        <div class="mail-row color-blue" draggable="true" ondragstart="startDrag(event,'Ubersuggest')"
+             onclick="openMail(this,'ubs')" oncontextmenu="showCtx(event)">
+          <div class="mail-row-top">
+            <span class="read-dot"></span>
+            <span class="sender read color-text-blue">Ubersuggest</span>
+            <span class="date color-text-blue">23.05</span>
+          </div>
+          <div class="subject color-text-blue">There's still work to be done on your SEO 😎</div>
+          <div class="snippet color-text-blue">May 15, 2026 – May 22, 2026 You got the ball rolling on taking action on…</div>
+          <div class="chips">
+            <span class="chip" style="background:#f3f4f6;color:#374151">📁 Logistyka</span>
+          </div>
+        </div>
+
+        <!-- mail 6 -->
+        <div class="mail-row" draggable="true" ondragstart="startDrag(event,'support@ubersuggest.com')"
+             onclick="openMail(this,'ubs2')" oncontextmenu="showCtx(event)">
+          <div class="mail-row-top">
+            <span class="unread-dot"></span>
+            <span class="sender unread">support@ubersuggest.com</span>
+            <span class="date unread">22.05</span>
+          </div>
+          <div class="subject unread">Your Subscription Has Expired</div>
+          <div class="snippet">Your subscription has expired. We're sorry to see you go, but you can still…</div>
+          <div class="chips">
+            <span class="chip" style="background:#f3f4f6;color:#374151">📁 Logistyka</span>
+          </div>
+        </div>
+
+        <!-- mail 7 -->
+        <div class="mail-row" draggable="true" ondragstart="startDrag(event,'Mailer Daemon')"
+             onclick="openMail(this,'md')" oncontextmenu="showCtx(event)">
+          <div class="mail-row-top">
+            <span class="read-dot"></span>
+            <span class="sender read">Baselinker Sp. z o.o.</span>
+            <span class="date">20.05</span>
+          </div>
+          <div class="subject">Faktura VAT FV-2026/05/1234</div>
+          <div class="snippet">W załączeniu faktura za korzystanie z platformy BaseLinker za maj 2026…</div>
+          <div class="chips">
+            <span class="chip" style="background:#f3e8ff;color:#7e22ce">Faktury i płatności</span>
+          </div>
+        </div>
+
+      </div>
+      <div class="mail-pagination">
+        <span class="pag-btn">← Nowsze</span>
+        <span class="pag-info">1 / 3</span>
+        <span class="pag-btn">Starsze →</span>
+      </div>
+    </div>
+
+    <!-- PODGLĄD -->
+    <div class="col-preview" id="colPreview">
+      <div class="empty-preview" id="emptyPreview">Wybierz wiadomość z listy</div>
+
+      <div id="previewContent" style="display:none;flex-direction:column;flex:1;overflow:hidden">
+        <div class="preview-head">
+          <div class="preview-actions">
+            <button class="btn btn-primary" onclick="openComposer('reply')">↩ Odpowiedz</button>
+            <button class="btn btn-outline">↪ Przekaż</button>
+            <button class="btn btn-outline">⤢ Full size</button>
+            <button class="preview-icon-btn" title="Oznacz jako SPAM">🚫</button>
+            <button class="preview-icon-btn" title="Do kosza">🗑</button>
+            <select style="border:1px solid #d1d5db;border-radius:7px;font-size:12px;padding:4px 8px;color:#374151">
+              <option>📁 katalog…</option>
+              <option>Sklep</option>
+              <option>Hurtownie</option>
+              <option>Logistyka</option>
+            </select>
+          </div>
+          <div class="preview-subject" id="prevSubject">Pomyślne logowanie z nowego adresu 93.159.4.29</div>
+          <div class="preview-meta">
+            <strong id="prevFrom">Aftermarket.pl :: Konto</strong>
+            <span id="prevFromEmail"> &lt;notify-account@aftermarket.pl&gt;</span><br/>
+            <span id="prevDate">23.05.2026, 08:00</span> · do: argoagencyit@gmail.com
+          </div>
+        </div>
+        <div class="preview-chips" id="prevChips">
+          <span class="chip" style="background:#dbeafe;color:#1d4ed8">info@argotrade24.pl</span>
+        </div>
+        <div class="att-list" id="prevAtts" style="display:none">
+          <div class="att-item">📎 faktura-2026-05.pdf <span style="color:#9ca3af">(142 KB)</span></div>
+        </div>
+        <div class="preview-body" id="prevBody">
+          <p>Dzień dobry, <strong>user_554736!</strong></p><br/>
+          <p>Na Twoje konto nastąpiło pomyślne logowanie z nowego komputera.</p><br/>
+          <p><strong>Data i czas logowania:</strong> 2026-05-23 15:53:25</p>
+          <p><strong>Adres IP komputera:</strong> 93.159.4.29</p>
+          <p><strong>Przeglądarka:</strong> Chrome 124 / Windows 10</p><br/>
+          <p>Jeśli to nie byłeś Ty, zmień hasło jak najszybciej na stronie
+            <a href="#" onclick="return false">aftermarket.pl</a>.</p><br/>
+          <p>Z pozdrowieniami,<br/><em>Aftermarket.pl</em></p>
+        </div>
+        <div class="preview-footer">
+          <button class="btn btn-primary" onclick="openComposer('reply')">↩ Odpowiedz</button>
+          <button class="btn btn-outline">↪ Przekaż</button>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /columns -->
+
+</div><!-- /page -->
+
+<!-- CONTEXT MENU -->
+<div class="ctx-menu" id="ctxMenu">
+  <div class="ctx-section">Działania</div>
+  <button class="ctx-item">✉️ Oznacz jako nieodczytany</button>
+  <button class="ctx-item">📭 Oznacz jako przeczytany</button>
+  <div class="ctx-divider"></div>
+  <div class="ctx-section">Przypisz osobę</div>
+  <label style="display:flex;align-items:center;gap:6px;padding:4px 12px;font-size:12px;color:#6b7280;cursor:pointer">
+    <input type="checkbox" style="accent-color:#6366f1"/> Na stałe (kolejne od tego nadawcy)
+  </label>
+  <button class="ctx-item"><span class="dot" style="background:#3b82f6;display:inline-block"></span> info@argotrade24.pl</button>
+  <button class="ctx-item"><span class="dot" style="background:#f59e0b;display:inline-block"></span> mikolajskubina@gmail.com</button>
+  <button class="ctx-item" style="color:#9ca3af">— bez osoby —</button>
+  <div class="ctx-divider"></div>
+  <div class="ctx-section">Kategoria</div>
+  <button class="ctx-item"><span class="dot" style="background:#dc2626;display:inline-block"></span> Reklamacje</button>
+  <button class="ctx-item"><span class="dot" style="background:#16a34a;display:inline-block"></span> Zamówienia</button>
+  <button class="ctx-item" style="color:#9ca3af">— bez kategorii —</button>
+  <div class="ctx-divider"></div>
+  <div class="ctx-section">Katalog</div>
+  <button class="ctx-item">📁 Sklep</button>
+  <button class="ctx-item">📁 Logistyka</button>
+  <button class="ctx-item" style="color:#9ca3af">— bez katalogu —</button>
+  <div class="ctx-divider"></div>
+  <button class="ctx-item warn">🚫 Oznacz jako SPAM (nadawca)</button>
+  <button class="ctx-item danger">🗑 Do kosza</button>
+</div>
+
+<!-- OVERLAY -->
+<div class="overlay" id="overlay" onclick="closeComposer()"></div>
+
+<!-- COMPOSER -->
+<div class="composer" id="composer">
+  <div class="composer-head">
+    <span class="composer-title" id="composerTitle">Nowa wiadomość</span>
+    <div class="composer-head-btns">
+      <button class="icon-btn" title="Full size">⤢</button>
+      <button class="icon-btn" onclick="closeComposer()">✕</button>
+    </div>
+  </div>
+  <div class="composer-body">
+    <div class="composer-field">
+      <label>Od</label>
+      <select>
+        <option>Argo Agency &lt;argoagencyit@gmail.com&gt;</option>
+        <option>info@argotrade24.pl</option>
+      </select>
+    </div>
+    <div class="composer-field">
+      <label>Do</label>
+      <input type="text" id="composerTo" placeholder="adres@firma.pl, drugi@…" />
+    </div>
+    <div class="composer-field">
+      <label>DW</label>
+      <input type="text" placeholder="kopia (opcjonalnie)" />
+    </div>
+    <div class="composer-field">
+      <label>Temat</label>
+      <input type="text" id="composerSubject" />
+    </div>
+    <div class="composer-html-toggle">
+      <input type="checkbox" checked id="chkHtml" onchange="toggleHtmlEditor()"/> Edytor HTML
+    </div>
+    <div id="htmlEditorWrap">
+      <div class="html-editor-toolbar">
+        <button><b>B</b></button>
+        <button><i>I</i></button>
+        <button><u>U</u></button>
+        <button>🔗</button>
+        <button>≡</button>
+      </div>
+      <div class="html-editor" contenteditable="true" id="htmlEditor"></div>
+    </div>
+    <textarea id="plainEditor" style="display:none;border:1px solid #d1d5db;border-radius:7px;padding:10px;font-size:13px;resize:vertical;min-height:160px;width:100%"></textarea>
+    <div class="att-picker">
+      <div class="att-mock">📎 prezentacja.pdf (2.1 MB) <span class="rm">✕</span></div>
+      <div class="add-att-btn">+ Dodaj załącznik</div>
+    </div>
+  </div>
+  <div class="composer-footer">
+    <button class="btn btn-outline" onclick="closeComposer()">Anuluj</button>
+    <button class="btn btn-primary">✈ Wyślij</button>
+  </div>
+</div>
+
+<!-- REMINDER -->
+<div class="reminder" id="reminder">
+  <div class="reminder-head">
+    <span>🔔</span>
+    <span>Przypomnienie</span>
+    <button onclick="document.getElementById('reminder').style.display='none'">✕</button>
+  </div>
+  <div class="reminder-body">
+    <p>Nieprzeczytane wiadomości: <strong>59</strong></p>
+    <button class="reminder-show-btn">Pokaż nieprzeczytane</button>
+  </div>
+</div>
+
+<script>
+  // --- CONTEXT MENU ---
+  const ctx = document.getElementById('ctxMenu');
+  function showCtx(e) {
+    e.preventDefault();
+    ctx.style.left = Math.min(e.clientX, window.innerWidth - 230) + 'px';
+    ctx.style.top = Math.min(e.clientY, window.innerHeight - 440) + 'px';
+    ctx.classList.add('show');
+  }
+  document.addEventListener('click', () => ctx.classList.remove('show'));
+  document.addEventListener('keydown', e => { if(e.key==='Escape') ctx.classList.remove('show'); });
+
+  // --- PREVIEW ---
+  const mails = {
+    gsc: { from:'Google Search Console Team', email:'sc-noreply@google.com', date:'31.05.2026, 09:14', subject:'Problemy indeksowania w witrynie https://st-bud.pl/ zostały rozwiązane', body:`<p>Witaj, właścicielu witryny!</p><br/><p>Wykryliśmy i rozwiązaliśmy problemy z indeksowaniem strony <a href="#" onclick="return false">https://st-bud.pl/</a>.</p><br/><p>Strony dostępne do indeksowania: <strong>482 / 482</strong></p><br/><p>Zespół Google Search Console</p>`, chips:'<span class="chip" style="background:#dbeafe;color:#1d4ed8">info@argotrade24.pl</span>', atts:false },
+    gp:  { from:'Google Play', email:'googleplay-noreply@google.com', date:'28.05.2026, 14:31', subject:'Potwierdzenie zamówienia w Google Play z 28 maj 2026', body:`<p>Dziękujemy! Nadal korzystasz z subskrypcji usługi <strong>Google One 100 GB</strong>.</p><br/><p><strong>Kwota:</strong> 3,99 PLN / mies.<br/><strong>Następna płatność:</strong> 28.06.2026</p><br/><p>Google Play</p>`, chips:'<span class="chip" style="background:#dcfce7;color:#16a34a">Zamówienia</span>', atts:false },
+    am:  { from:'Aftermarket.pl :: Konto', email:'notify-account@aftermarket.pl', date:'23.05.2026, 08:00', subject:'Pomyślne logowanie z nowego adresu 93.159.4.29', body:`<p>Dzień dobry, <strong>user_554736!</strong></p><br/><p>Na Twoje konto nastąpiło pomyślne logowanie z nowego komputera.</p><br/><p><strong>Data i czas logowania:</strong> 2026-05-23 15:53:25</p><p><strong>Adres IP komputera:</strong> 93.159.4.29</p><p><strong>Przeglądarka:</strong> Chrome 124 / Windows 10</p><br/><p>Jeśli to nie byłeś Ty, zmień hasło na stronie <a href="#" onclick="return false">aftermarket.pl</a>.</p><br/><p>Z pozdrowieniami,<br/><em>Aftermarket.pl</em></p>`, chips:'<span class="chip" style="background:#dbeafe;color:#1d4ed8">info@argotrade24.pl</span>', atts:false },
+    ahrefs: { from:'Ahrefs Site Audit', email:'notifications@ahrefs.com', date:'28.05.2026, 11:22', subject:'(Cigognedecorationdejardin) Slow page: 128 URLs', body:`<p>Raport audytu dla <strong>Cigognedecorationdejardin</strong></p><br/><p>Liczba wolnych stron: <strong>128</strong><br/>Czas ładowania &gt; 3s: <strong>72</strong><br/>Mobile-friendly: <strong>✓</strong></p><br/><p>Pełny raport: <a href="#" onclick="return false">app.ahrefs.com</a></p>`, chips:'<span class="chip" style="background:#f3f4f6;color:#374151">Inne</span>', atts:false },
+    ubs:  { from:'Ubersuggest (Neil Patel)', email:'support@ubersuggest.com', date:'23.05.2026, 08:00', subject:"There's still work to be done on your SEO 😎", body:`<p>May 15 – May 22, 2026</p><br/><p>You got the ball rolling on taking action on your SEO. Here are your weekly updates:</p><br/><ul style="padding-left:20px"><li>bocianki.com.pl: 4 new keywords</li><li>cigognedecorationdejardin.fr: 1 new keyword #1</li></ul><br/><p>Keep going! — Neil Patel</p>`, chips:'<span class="chip" style="background:#f3f4f6;color:#374151">📁 Logistyka</span>', atts:false },
+    ubs2: { from:'support@ubersuggest.com', email:'support@ubersuggest.com', date:'22.05.2026, 10:11', subject:'Your Subscription Has Expired', body:`<p>Hi there,</p><br/><p>Your Ubersuggest subscription has expired. We're sorry to see you go, but you can still access basic features for free.</p><br/><p>Ready to come back? <a href="#" onclick="return false">Renew now →</a></p>`, chips:'<span class="chip" style="background:#f3f4f6;color:#374151">📁 Logistyka</span>', atts:false },
+    md:   { from:'Baselinker Sp. z o.o.', email:'faktury@baselinker.com', date:'20.05.2026, 09:00', subject:'Faktura VAT FV-2026/05/1234', body:`<p>Dzień dobry,</p><br/><p>W załączeniu przesyłamy fakturę VAT za korzystanie z platformy BaseLinker za okres <strong>maj 2026</strong>.</p><br/><p>Kwota: <strong>349,00 PLN netto + VAT</strong></p><br/><p>Termin płatności: <strong>03.06.2026</strong></p><br/><p>Pozdrawiamy,<br/>Zespół Baselinker</p>`, chips:'<span class="chip" style="background:#f3e8ff;color:#7e22ce">Faktury i płatności</span>', atts:true }
+  };
+  function openMail(row, id) {
+    document.querySelectorAll('.mail-row').forEach(r => r.classList.remove('open'));
+    row.classList.add('open');
+    const m = mails[id] || mails['am'];
+    document.getElementById('emptyPreview').style.display = 'none';
+    const pc = document.getElementById('previewContent');
+    pc.style.display = 'flex';
+    document.getElementById('prevSubject').textContent = m.subject;
+    document.getElementById('prevFrom').textContent = m.from;
+    document.getElementById('prevFromEmail').textContent = ' <' + m.email + '>';
+    document.getElementById('prevDate').textContent = m.date;
+    document.getElementById('prevBody').innerHTML = m.body;
+    document.getElementById('prevChips').innerHTML = m.chips;
+    const attDiv = document.getElementById('prevAtts');
+    attDiv.style.display = m.atts ? 'flex' : 'none';
+  }
+
+  // --- CATALOG SELECT ---
+  function selectCat(id) {
+    document.querySelectorAll('.cat-node').forEach(n => n.classList.remove('active'));
+    document.getElementById('cat-' + id) && document.getElementById('cat-' + id).classList.add('active');
+  }
+
+  // --- DRAG & DROP ---
+  let dragging = null;
+  function startDrag(e, sender) {
+    dragging = sender;
+    e.dataTransfer.effectAllowed = 'move';
+    document.getElementById('dragHint').classList.add('show');
+  }
+  document.addEventListener('dragend', () => {
+    dragging = null;
+    document.getElementById('dragHint').classList.remove('show');
+    document.querySelectorAll('.cat-node').forEach(n => n.classList.remove('drag-over'));
+  });
+  function catDragOver(e, key) {
+    if (!dragging) return;
+    e.preventDefault();
+    document.querySelectorAll('.cat-node').forEach(n => n.classList.remove('drag-over'));
+    e.currentTarget.classList.add('drag-over');
+  }
+  function catDragLeave(e, key) { e.currentTarget.classList.remove('drag-over'); }
+  function catDrop(e, catalog) {
+    e.currentTarget.classList.remove('drag-over');
+    if (!dragging) return;
+    if (catalog) {
+      showToast(`✅ Przeniesiono maile od „${dragging}" do „${catalog}" — nadawca przypisany na stałe.`);
+    } else {
+      showToast(`↩ Zdjęto katalog z maili od „${dragging}" — nadawca wrócił do „Wszystkie".`);
+    }
+    dragging = null;
+  }
+
+  // --- COMPOSER ---
+  function openComposer(mode) {
+    const titles = { new:'Nowa wiadomość', reply:'Odpowiedz', forward:'Przekaż' };
+    document.getElementById('composerTitle').textContent = titles[mode] || 'Nowa wiadomość';
+    document.getElementById('composerTo').value = mode === 'reply' ? 'notify-account@aftermarket.pl' : '';
+    document.getElementById('composerSubject').value = mode === 'reply' ? 'Re: Pomyślne logowanie z nowego adresu 93.159.4.29' : mode === 'forward' ? 'Fwd: Pomyślne logowanie z nowego adresu 93.159.4.29' : '';
+    document.getElementById('htmlEditor').innerHTML = mode !== 'new' ? '<br/><br/>-- <br/>Z pozdrowieniami,<br/>Argo Agency<br/><br/>--- Oryginalna wiadomość ---<br/>Od: Aftermarket.pl :: Konto<br/>Data: 23.05.2026<br/><br/>Na Twoje konto nastąpiło pomyślne logowanie...' : '<br/><br/>-- <br/>Z pozdrowieniami,<br/>Argo Agency';
+    document.getElementById('overlay').classList.add('show');
+    document.getElementById('composer').classList.add('show');
+    document.getElementById('reminder').style.display = 'none';
+  }
+  function closeComposer() {
+    document.getElementById('overlay').classList.remove('show');
+    document.getElementById('composer').classList.remove('show');
+  }
+  function toggleHtmlEditor() {
+    const html = document.getElementById('chkHtml').checked;
+    document.getElementById('htmlEditorWrap').style.display = html ? 'block' : 'none';
+    document.getElementById('plainEditor').style.display = html ? 'none' : 'block';
+  }
+
+  // --- UNREAD FILTER ---
+  function toggleUnread() {
+    const checked = document.getElementById('chkUnread').checked;
+    document.querySelectorAll('.mail-row').forEach(r => {
+      const isUnread = r.querySelector('.unread-dot');
+      r.style.display = checked ? (isUnread ? '' : 'none') : '';
+    });
+  }
+
+  // --- COLOR FILTER ---
+  function filterColor(el, color) {
+    const wasActive = el.classList.contains('active');
+    document.querySelectorAll('.csq').forEach(q => q.classList.remove('active'));
+    document.getElementById('clearColor').style.display = 'none';
+    document.querySelectorAll('.mail-row').forEach(r => r.style.display = '');
+    if (!wasActive) {
+      el.classList.add('active');
+      document.getElementById('clearColor').style.display = 'inline';
+      document.getElementById('chkUnread').checked = false;
+      document.querySelectorAll('.mail-row').forEach(r => {
+        r.style.display = r.classList.contains('color-' + color) ? '' : 'none';
+      });
+    }
+  }
+  function clearColorFilter() {
+    document.querySelectorAll('.csq').forEach(q => q.classList.remove('active'));
+    document.getElementById('clearColor').style.display = 'none';
+    document.querySelectorAll('.mail-row').forEach(r => r.style.display = '');
+  }
+
+  // --- BULK ---
+  let multi = false;
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Control') { multi = true; document.getElementById('bulkBar').classList.add('show'); }
+  });
+  document.addEventListener('keyup', e => { if (e.key === 'Control') multi = false; });
+  function hideBulk() { document.getElementById('bulkBar').classList.remove('show'); }
+
+  // --- TOAST ---
+  function showToast(msg) {
+    const t = document.createElement('div');
+    t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1e293b;color:#fff;padding:10px 20px;border-radius:8px;font-size:13px;z-index:999;box-shadow:0 4px 20px rgba(0,0,0,.3);max-width:500px;text-align:center';
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 3500);
+  }
+</script>
+</body>
+</html>
