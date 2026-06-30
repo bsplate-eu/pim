@@ -51,3 +51,16 @@ Dzień pracy: dashboardowy kafelek „Do zapłaty", powiadomienia WhatsApp o fak
 - **Limit darmowego CallMeBota** („Too many requests") przy intensywnym testowaniu — przy 2 wysyłkach/dobę nie problem; ewentualnie plan płatny lub **Telegram** (bez limitów).
 - Korekty (ujemne kwoty) w liście opóźnionych — obecnie wchodzą i netują się w `Razem` (do ew. wykluczenia).
 - Limit 40 pozycji listy opóźnionych (potem „…i jeszcze N FV").
+
+---
+
+## Git — jak szybko znaleźć tę pracę
+- **Tag:** `chatbot-ksef-2026-06-30` → commit `58a5d31` (repo github.com/bsplate-eu/pim).
+- To podsumowanie (100% po ludzku):
+  `git show chatbot-ksef-2026-06-30:docs/2026-06-30-powiadomienia-whatsapp-raport-sprzedazy.md`
+- Najnowsze zmiany: `git show chatbot-ksef-2026-06-30 --stat` (lista) · `git show chatbot-ksef-2026-06-30` (pełny diff).
+- Szukanie po treści/nazwie: `git log -S "chatbot_reports"` · `git grep "OVERDUE_SINCE"` · `git log --oneline -- app/Services/Ksef/DuePaymentsService.php`.
+- GitHub: [commit 58a5d31](https://github.com/bsplate-eu/pim/commit/58a5d31) · [ten plik na tagu](https://github.com/bsplate-eu/pim/blob/chatbot-ksef-2026-06-30/docs/2026-06-30-powiadomienia-whatsapp-raport-sprzedazy.md).
+
+> UWAGA: większość NOWYCH plików sesji wpadła do dużego „Initial commit" `f212a95` (cały projekt), a `58a5d31`/tag = najnowsze poprawki + WIP eBay. Nie ma jednego czystego diffa „cała sesja" — **to podsumowanie spina całość** (lista plików w sekcjach wyżej).
+
