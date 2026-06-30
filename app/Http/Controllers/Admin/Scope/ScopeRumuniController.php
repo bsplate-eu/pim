@@ -384,6 +384,29 @@ class ScopeRumuniController extends Controller
         return ScrapSource::firstOrCreate(['source' => $source]);
     }
 
+    /** Meta dowolnego kanału. eBay: integracja z EbaySettings (creds), statystyki z scrap_sources. Sklep: shopMeta. */
+    private function channelMeta(string $source, ?EbaySettings $settings): array
+    {
+        if (! EbayScrapService::isMarket($source)) {
+            return $this->shopMeta($source);
+        }
+
+        $s = ScrapSource::firstWhere('source', $source);
+
+        return [
+            'has_integration' => (bool) ($settings && $settings->hasCredentials()),
+            'seller' => self::TAB_LABELS[$source] ?? $source,
+            'last_sync_at' => $s?->last_sync_at?->toIso8601String(),
+            'last_sync_count' => $s?->last_sync_count,
+            'prev_offer_count' => $s?->prev_offer_count,
+            'new_count' => $s?->last_new_count,
+            'removed_count' => $s?->last_removed_count,
+            'price_up' => $s?->last_price_up,
+            'price_down' => $s?->last_price_down,
+            'status' => $s?->last_status,
+        ];
+    }
+
     /** Meta kanału (kafelki monitoringu) z scrap_sources; etykieta z konfiguracji sklepu. */
     private function shopMeta(string $source): array
     {

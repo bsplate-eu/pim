@@ -7,7 +7,7 @@
             @click="pobierz"
             :loading="syncing"
         >
-            {{ activeTab === 'ebay' ? 'Pełny pomiar' : `Pobierz z ${currentLabel}` }}
+            {{ isEbay ? 'Pełny pomiar' : `Pobierz z ${currentLabel}` }}
         </Button>
     </PageHeader>
 
@@ -15,14 +15,19 @@
         <div class="mb-4 text-sm text-gray-500">Scrapy → <span class="font-medium text-gray-700">Rumuni</span> (Scut Protection)</div>
 
         <div class="mb-5 border-b border-gray-200">
-            <nav class="-mb-px flex gap-6">
-                <button v-for="t in tabs" :key="t.key" type="button" @click="activeTab = t.key"
+            <nav class="-mb-px flex gap-6 items-center">
+                <button v-for="t in visibleTabs" :key="t.key" type="button" @click="activeTab = t.key"
                     :class="[
                         'border-b-2 px-1 py-3 text-sm font-medium',
                         activeTab === t.key ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300',
                     ]">
                     {{ t.label }}
                     <span v-if="t.count != null" class="ml-1 text-xs text-gray-400">({{ t.count }})</span>
+                </button>
+                <button v-if="hiddenCount > 0" type="button" @click="showEmpty = !showEmpty"
+                    class="ml-auto shrink-0 text-xs font-medium text-gray-400 hover:text-primary-600 whitespace-nowrap"
+                    :title="showEmpty ? 'Ukryj kanały bez ofert' : 'Pokaż też kanały bez ofert (0)'">
+                    {{ showEmpty ? "− Ukryj puste" : `Pokaż wszystkie (${hiddenCount})` }}
                 </button>
             </nav>
         </div>
@@ -67,7 +72,7 @@
                 Ostatni pomiar: {{ formatDate(currentMeta.last_sync_at) }} · ofert: {{ currentMeta.last_sync_count ?? '—' }}
             </div>
 
-            <div v-if="activeTab === 'ebay' && !meta.ebay.has_integration"
+            <div v-if="isEbay && currentMeta && !currentMeta.has_integration"
                 class="mb-4 rounded-md bg-yellow-50 border border-yellow-200 p-3 text-sm text-yellow-800">
                 Brak integracji eBay.
                 <Link :href="route('crafter.connect.integrations.ebay.index')" class="underline font-medium">
@@ -167,7 +172,7 @@
                             <button type="button" @click="clearFilters" class="ml-1 text-primary-600 hover:underline">✕ Wyczyść</button>
                         </template>
                         <template v-else>
-                            Brak ofert. Kliknij „{{ activeTab === 'ebay' ? 'Pełny pomiar' : `Pobierz z ${currentLabel}` }}".
+                            Brak ofert. Kliknij „{{ isEbay ? 'Pełny pomiar' : `Pobierz z ${currentLabel}` }}".
                         </template>
                     </div>
                     <div v-else class="overflow-x-auto">
@@ -334,14 +339,10 @@ interface EbayMeta {
     price_down: number | null;
 }
 interface Props {
-    ebay: Paginated<ProductRow>;
-    stahl: Paginated<ProductRow>;
-    wegry: Paginated<ProductRow>;
-    rumunia: Paginated<ProductRow>;
-    francja: Paginated<ProductRow>;
-    czechy: Paginated<ProductRow>;
-    hiszpania: Paginated<ProductRow>;
-    meta: { ebay: EbayMeta; stahl: EbayMeta; wegry: EbayMeta; rumunia: EbayMeta; francja: EbayMeta; czechy: EbayMeta; hiszpania: EbayMeta };
+    channels: Record<string, Paginated<ProductRow>>;
+    meta: Record<string, EbayMeta>;
+    order: string[];
+    labels: Record<string, string>;
     sort: string;
     filters: { search: string | null; mapped: string | null; has_hn: string | null; has_compare: string | null };
     pricelists: Array<{ id: number; name: string; currency: string }>;
@@ -353,57 +354,38 @@ interface Props {
 const props = defineProps<Props>();
 const toast = useToast();
 
-const activeTab = ref<"raport" | "ebay" | "stahl" | "rumunia" | "wegry" | "francja" | "czechy" | "hiszpania">("ebay");
+const activeTab = ref<string>("ebay");
 const syncing = ref(false);
 const search = ref(props.filters?.search ?? "");
 const perPage = ref<number>(props.per_page ?? 50);
 
+const EMPTY_PAGE: Paginated<ProductRow> = { data: [], total: 0, last_page: 1, links: [] };
+
+// Taby data-driven: Raport + kanały w kolejności z backendu (order), etykiety z labels, licznik z channels.
 const tabs = computed(() => [
     { key: "raport", label: "Raport", count: null as number | null },
-    { key: "ebay", label: "Ebay", count: props.ebay.total },
-    { key: "stahl", label: "Niemcy", count: props.stahl.total },
-    { key: "rumunia", label: "Rumunia", count: props.rumunia.total },
-    { key: "wegry", label: "Węgry", count: props.wegry.total },
-    { key: "francja", label: "Francja", count: props.francja.total },
-    { key: "czechy", label: "Czechy", count: props.czechy.total },
-    { key: "hiszpania", label: "Hiszpania", count: props.hiszpania.total },
+    ...props.order.map((k) => ({ key: k, label: props.labels[k] ?? k, count: props.channels[k]?.total ?? 0 })),
 ]);
 
-const current = computed<Paginated<ProductRow>>(() => {
-    if (activeTab.value === "stahl") return props.stahl;
-    if (activeTab.value === "rumunia") return props.rumunia;
-    if (activeTab.value === "wegry") return props.wegry;
-    if (activeTab.value === "francja") return props.francja;
-    if (activeTab.value === "czechy") return props.czechy;
-    if (activeTab.value === "hiszpania") return props.hiszpania;
-    return props.ebay;
-});
+// Puste kanały (count 0) domyślnie schowane. Raport i AKTYWNY tab zawsze widoczne; „Pokaż wszystkie" odsłania resztę.
+const showEmpty = ref(false);
+const hiddenCount = computed(() => tabs.value.filter((t) => t.count === 0 && t.key !== activeTab.value).length);
+const visibleTabs = computed(() =>
+    tabs.value.filter((t) => showEmpty.value || t.count === null || (t.count ?? 0) > 0 || t.key === activeTab.value),
+);
 
+const current = computed<Paginated<ProductRow>>(() => props.channels[activeTab.value] ?? EMPTY_PAGE);
+
+/** Czy bieżący tab to rynek eBay (ebay, ebay_fr, …) — odróżnia „Pełny pomiar" od „Pobierz z …". */
+const isEbay = computed(() => activeTab.value === "ebay" || activeTab.value.startsWith("ebay_"));
 
 /** Liczba ofert bez przypisanego naszego produktu w bieżącym kanale (do przycisku „Pokaż nieprzypisane"). */
 const currentUnmapped = computed(() => props.unmapped?.[activeTab.value] ?? 0);
 
-const currentLabel = computed(() => {
-    if (activeTab.value === "stahl") return "Niemcy";
-    if (activeTab.value === "rumunia") return "Rumunia";
-    if (activeTab.value === "wegry") return "Węgry";
-    if (activeTab.value === "francja") return "Francja";
-    if (activeTab.value === "czechy") return "Czechy";
-    if (activeTab.value === "hiszpania") return "Hiszpania";
-    return "eBay";
-});
+const currentLabel = computed(() => props.labels[activeTab.value] ?? "eBay");
 
 /** Meta monitoringu bieżącego kanału (kafelki nowe/wycofane/ceny). null = kanał bez statystyk. */
-const currentMeta = computed<EbayMeta | null>(() => {
-    if (activeTab.value === "ebay") return props.meta.ebay;
-    if (activeTab.value === "stahl") return props.meta.stahl;
-    if (activeTab.value === "rumunia") return props.meta.rumunia;
-    if (activeTab.value === "wegry") return props.meta.wegry;
-    if (activeTab.value === "francja") return props.meta.francja;
-    if (activeTab.value === "czechy") return props.meta.czechy;
-    if (activeTab.value === "hiszpania") return props.meta.hiszpania;
-    return null;
-});
+const currentMeta = computed<EbayMeta | null>(() => props.meta[activeTab.value] ?? null);
 
 const newPct = computed<number | null>(() => {
     const prev = currentMeta.value?.prev_offer_count;
@@ -575,7 +557,7 @@ async function saveCompare() {
             pricelist_id: compareForm.pricelist_id,
             vat: compareForm.vat,
         });
-        router.reload({ only: ["ebay", "stahl", "wegry", "rumunia", "francja", "czechy", "hiszpania", "configs"] });
+        router.reload({ only: ["channels", "meta", "configs"] });
     } catch (e: any) {
         toast.error(e?.response?.data?.message ?? "Błąd zapisu cennika porównawczego.");
     }
@@ -730,7 +712,7 @@ async function matchSku() {
         const { data } = await axios.post(route("crafter.scope.rumuni.match"), { source: activeTab.value });
         if (data.ok) {
             toast.success(data.message);
-            router.reload({ only: ["ebay", "stahl", "wegry", "rumunia", "francja", "czechy", "hiszpania", "unmapped"] });
+            router.reload({ only: ["channels", "meta", "unmapped"] });
         } else {
             toast.error(data.message);
         }

@@ -87,8 +87,14 @@ class Kernel extends ConsoleKernel
         $schedule->command('mail:prune-logs')->dailyAt('02:30');
 
         // Argo Scope → Rumuni — pomiary konkurencji.
-        // eBay: codziennie.
-        $schedule->command('scope:sync-ebay')->dailyAt('03:00')->withoutOverlapping()->name('scope_sync_ebay');
+        // eBay: 6 rynków (każdy osobny katalog ~1,5 tys. ofert × getItem). DE codziennie (rynek główny);
+        // pozostałe 5 rozłożone ~2 dziennie (rotacja dayOfYear % 3), by nie przekroczyć dziennego limitu Browse API.
+        $schedule->command('scope:sync-ebay ebay')->dailyAt('03:00')->withoutOverlapping()->name('scope_sync_ebay_de');
+        $schedule->command('scope:sync-ebay ebay_fr')->dailyAt('03:20')->when(fn () => now()->dayOfYear % 3 === 0)->withoutOverlapping()->name('scope_sync_ebay_fr');
+        $schedule->command('scope:sync-ebay ebay_es')->dailyAt('03:50')->when(fn () => now()->dayOfYear % 3 === 0)->withoutOverlapping()->name('scope_sync_ebay_es');
+        $schedule->command('scope:sync-ebay ebay_it')->dailyAt('03:20')->when(fn () => now()->dayOfYear % 3 === 1)->withoutOverlapping()->name('scope_sync_ebay_it');
+        $schedule->command('scope:sync-ebay ebay_gb')->dailyAt('03:50')->when(fn () => now()->dayOfYear % 3 === 1)->withoutOverlapping()->name('scope_sync_ebay_gb');
+        $schedule->command('scope:sync-ebay ebay_ch')->dailyAt('03:20')->when(fn () => now()->dayOfYear % 3 === 2)->withoutOverlapping()->name('scope_sync_ebay_ch');
 
         // Sklepy WWW: każdy 1× na 3 dni (rotacja dayOfYear % 3), rozłożone — max 2 dziennie o różnych
         // godzinach (04:00 i 05:30), nigdy wszystkie naraz. Każdy sklep wraca co 3 dni.

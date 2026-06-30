@@ -1,5 +1,5 @@
 <template>
-    <PageHeader title="eBay — Oferta (nasze aukcje)">
+    <PageHeader title="Marketplace — eBay (nasze aukcje)">
         <div class="flex items-center gap-2">
             <Link :href="route('crafter.connect.integrations.ebay.index')">
                 <Button variant="outline" color="gray">← Ustawienia</Button>
@@ -11,7 +11,7 @@
     </PageHeader>
 
     <PageContent fluid>
-        <div class="mb-4 text-sm text-gray-500">Argo Connect → Integracja eBay → <span class="font-medium text-gray-700">Oferta</span></div>
+        <div class="mb-4 text-sm text-gray-500">Argo Connect → Marketplace → <span class="font-medium text-gray-700">Ebay</span></div>
 
         <div v-if="!meta.oauth_connected"
             class="mb-4 rounded-md bg-yellow-50 border border-yellow-200 p-3 text-sm text-yellow-800">
@@ -447,7 +447,7 @@ function opPayload(): Record<string, any> {
 
 async function doPreview() {
     if (!opForm.pricelist_id) { toast.error("Wybierz cennik."); return; }
-    if (!selectAllMatching.value && selected.value.size === 0) { toast.error("Zaznacz oferty lub „wszystkie pasujące"."); return; }
+    if (!selectAllMatching.value && selected.value.size === 0) { toast.error("Zaznacz oferty lub „wszystkie pasujące”."); return; }
     previewing.value = true;
     try {
         const { data } = await axios.post(route("crafter.connect.integrations.ebay.offers.price-preview"), opPayload());
