@@ -30,7 +30,7 @@ class KsefSignalSettings extends Model
     ];
 
     /** Domyślny szablon — obie firmy, sama kwota „na dziś". */
-    public const DEFAULT_TEMPLATE = "Cześć Maks. Dziś do zapłaty:\nPARETO: {pareto}\nBSP: {bsp}";
+    public const DEFAULT_TEMPLATE = "Cześć Maks. Dziś do zapłaty:\nPARETO: {pareto}\nBSP: {bsp}\n\nLista opóźnionych płatności:\n{przeterminowane}\nRazem: {przeterminowane_razem}";
 
     /** Jedyny wiersz konfiguracji; jeśli brak — instancja z domyślnymi (niezapisana). */
     public static function current(): self

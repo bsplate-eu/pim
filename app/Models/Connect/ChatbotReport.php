@@ -34,7 +34,7 @@ class ChatbotReport extends Model
     public const KEY_SALES = 'sales';
 
     /** Domyślny szablon raportu sprzedaży (placeholdery rozwijane przez SalesReportService). */
-    public const DEFAULT_SALES_TEMPLATE = "Dzisiejsza sprzedaż ({data}):\n{sprzedaz_per_kraj}\nRazem: {razem_dzis}\n\nObrót w tym tygodniu: {obrot_tydzien}\nObrót w tym miesiącu: {obrot_miesiac}";
+    public const DEFAULT_SALES_TEMPLATE = "Sprzedaż {data}:\n{sprzedaz_per_kraj}\nRazem: {razem_dzis}\n\nObrót w tym tygodniu: {obrot_tydzien}\nObrót w tym miesiącu: {obrot_miesiac}";
 
     /** Wiersz konfiguracji raportu; jeśli brak — instancja z domyślnymi (niezapisana). */
     public static function forKey(string $key): self

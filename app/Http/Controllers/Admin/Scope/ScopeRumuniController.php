@@ -29,17 +29,29 @@ use Spatie\QueryBuilder\QueryBuilder;
  */
 class ScopeRumuniController extends Controller
 {
-    /** Źródła (kanały) konkurenta — kolejne dokładamy tutaj. */
-    private const SOURCES = ['ebay', 'stahl', 'wegry', 'rumunia', 'francja', 'czechy', 'hiszpania'];
+    /** Źródła (kanały) konkurenta — kolejne dokładamy tutaj. eBay: 6 rynków (każdy osobny katalog). */
+    private const SOURCES = [
+        'ebay', 'ebay_fr', 'ebay_it', 'ebay_es', 'ebay_gb', 'ebay_ch',
+        'stahl', 'wegry', 'rumunia', 'francja', 'czechy', 'hiszpania',
+    ];
+
+    /** Krótkie etykiety tabów (długie nazwy sklepów są w ShopScrapService::SHOPS). */
+    private const TAB_LABELS = [
+        'ebay' => 'eBay.de', 'ebay_fr' => 'eBay.fr', 'ebay_it' => 'eBay.it',
+        'ebay_es' => 'eBay.es', 'ebay_gb' => 'eBay.co.uk', 'ebay_ch' => 'eBay.ch',
+        'stahl' => 'Niemcy', 'wegry' => 'Węgry', 'rumunia' => 'Rumunia',
+        'francja' => 'Francja', 'czechy' => 'Czechy', 'hiszpania' => 'Hiszpania',
+    ];
 
     public function index(Request $request): Response
     {
         $settings = EbaySettings::first();
         $perPage = $this->resolvePerPage($request);
 
-        // Config cennika PER KANAŁ (compare/vat/target z scrap_sources).
+        // Wszystkie kanały data-driven: config cennika + ceny porównawcze + oferty + meta + nieprzypisane per source.
+        $channels = [];
         $configs = [];
-        $cmp = [];
+        $meta = [];
         $unmapped = [];
         foreach (self::SOURCES as $src) {
             $cfg = $this->channelConfig($src);
@@ -48,18 +60,18 @@ class ScopeRumuniController extends Controller
                 'vat' => $cfg->compare_vat,
                 'target_pricelist_id' => $cfg->target_pricelist_id,
             ];
-            $cmp[$src] = $this->comparePrices($cfg);
+            $channels[$src] = $this->channelProducts($src, $request, $this->comparePrices($cfg), $cfg->compare_pricelist_id, $cfg->compare_vat, $perPage);
+            $meta[$src] = $this->channelMeta($src, $settings);
             $unmapped[$src] = ScrapProduct::where('source', $src)->whereNull('product_id')->count();
         }
 
         return Inertia::render('Scope/Scrapy/Rumuni/Index', [
-            'ebay' => $this->channelProducts('ebay', $request, $cmp['ebay'], $configs['ebay']['pricelist_id'], $configs['ebay']['vat'], $perPage),
-            'stahl' => $this->channelProducts('stahl', $request, $cmp['stahl'], $configs['stahl']['pricelist_id'], $configs['stahl']['vat'], $perPage),
-            'wegry' => $this->channelProducts('wegry', $request, $cmp['wegry'], $configs['wegry']['pricelist_id'], $configs['wegry']['vat'], $perPage),
-            'rumunia' => $this->channelProducts('rumunia', $request, $cmp['rumunia'], $configs['rumunia']['pricelist_id'], $configs['rumunia']['vat'], $perPage),
-            'francja' => $this->channelProducts('francja', $request, $cmp['francja'], $configs['francja']['pricelist_id'], $configs['francja']['vat'], $perPage),
-            'czechy' => $this->channelProducts('czechy', $request, $cmp['czechy'], $configs['czechy']['pricelist_id'], $configs['czechy']['vat'], $perPage),
-            'hiszpania' => $this->channelProducts('hiszpania', $request, $cmp['hiszpania'], $configs['hiszpania']['pricelist_id'], $configs['hiszpania']['vat'], $perPage),
+            'channels' => $channels,
+            'meta' => $meta,
+            'configs' => $configs,
+            'unmapped' => $unmapped,
+            'order' => self::SOURCES,
+            'labels' => self::TAB_LABELS,
             'sort' => $request->input('sort', 'title'),
             'per_page' => $perPage,
             'filters' => [
@@ -69,27 +81,6 @@ class ScopeRumuniController extends Controller
                 'has_compare' => $request->input('filter.has_compare'),
             ],
             'pricelists' => Pricelist::orderBy('name')->get(['id', 'name', 'currency']),
-            'configs' => $configs,
-            'unmapped' => $unmapped,
-            'meta' => [
-                'ebay' => [
-                    'has_integration' => $settings && $settings->hasCredentials(),
-                    'seller' => $settings?->seller,
-                    'last_sync_at' => $settings?->last_sync_at?->toIso8601String(),
-                    'last_sync_count' => $settings?->last_sync_count,
-                    'prev_offer_count' => $settings?->prev_offer_count,
-                    'new_count' => $settings?->last_new_count,
-                    'removed_count' => $settings?->last_removed_count,
-                    'price_up' => $settings?->last_price_up,
-                    'price_down' => $settings?->last_price_down,
-                ],
-                'stahl' => $this->shopMeta('stahl'),
-                'wegry' => $this->shopMeta('wegry'),
-                'rumunia' => $this->shopMeta('rumunia'),
-                'francja' => $this->shopMeta('francja'),
-                'czechy' => $this->shopMeta('czechy'),
-                'hiszpania' => $this->shopMeta('hiszpania'),
-            ],
         ]);
     }
 
@@ -202,7 +193,7 @@ class ScopeRumuniController extends Controller
             return response()->json(['ok' => false, 'message' => "Nieznany kanał: {$source}."], 404);
         }
 
-        if ($source === 'ebay') {
+        if (EbayScrapService::isMarket($source)) {
             $settings = EbaySettings::first();
             if (! $settings || ! $settings->hasCredentials()) {
                 return response()->json([
@@ -210,10 +201,12 @@ class ScopeRumuniController extends Controller
                     'message' => 'Brak integracji eBay. Skonfiguruj ją w Connect → Integracje → Ebay.',
                 ], 422);
             }
-            \App\Jobs\RunEbayFullSync::dispatch();
+            \App\Jobs\RunEbayFullSync::dispatch($source);
+            $label = EbayScrapService::MARKETS[$source]['label'] ?? $source;
+
             return response()->json([
                 'ok' => true,
-                'message' => 'Pełny pomiar uruchomiony w tle (~kilka minut: ceny + kody + porównanie + cennik). Odśwież stronę za chwilę.',
+                'message' => "Pełny pomiar {$label} uruchomiony w tle (~kilka minut: ceny + kody + porównanie). Odśwież stronę za chwilę.",
             ]);
         }
 
@@ -424,10 +417,12 @@ class ScopeRumuniController extends Controller
         return app(CurrencyConverter::class)->toEur($cur);
     }
 
-    /** Kurs waluty oferty danego kanału → EUR (HUF/RON → EUR). EUR/brak kursu → 1.0. */
+    /** Kurs waluty oferty danego kanału → EUR (GBP/CHF/HUF/RON → EUR). EUR/brak kursu → 1.0. */
     private function channelEurRate(string $source): float
     {
-        $cur = strtoupper((string) (ShopScrapService::SHOPS[$source]['currency'] ?? 'EUR'));
+        $cur = EbayScrapService::isMarket($source)
+            ? strtoupper(EbayScrapService::MARKETS[$source]['currency'])
+            : strtoupper((string) (ShopScrapService::SHOPS[$source]['currency'] ?? 'EUR'));
         if ($cur === 'EUR') {
             return 1.0;
         }

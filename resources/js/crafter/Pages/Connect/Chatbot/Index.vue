@@ -20,8 +20,8 @@
                 <CardHeader>
                     <h2 class="text-lg font-semibold">Raport sprzedaży</h2>
                     <p class="text-sm text-gray-500">
-                        Codzienny raport sprzedaży (z zamówień Argo Connect) wysyłany na WhatsApp.
-                        Kwoty per kraj w walucie zamówienia, przeliczone na PLN, z sumą i obrotem tydzień/miesiąc.
+                        Codzienny raport sprzedaży <strong>za poprzedni dzień</strong> (z zamówień Argo Connect) wysyłany na WhatsApp.
+                        Kwoty per kraj w walucie zamówienia, przeliczone na PLN, z sumą i obrotem tydzień/miesiąc (bieżące).
                     </p>
                 </CardHeader>
                 <CardContent>
@@ -133,7 +133,8 @@
                             <textarea v-model="ksef.template" rows="4"
                                 class="block w-full rounded-md border-gray-300 text-sm font-mono focus:border-primary-500 focus:ring-primary-500"></textarea>
                             <p class="mt-1 text-xs text-gray-500">
-                                Placeholdery: <code>{pareto}</code>, <code>{bsp}</code>, <code>{data}</code> — wstawiają kwoty na dziś i datę.
+                                Placeholdery: <code>{pareto}</code>, <code>{bsp}</code>, <code>{data}</code> (kwoty na dziś i data);
+                                <code>{przeterminowane}</code> (lista: „- dni / kontrahent / kwota"), <code>{przeterminowane_razem}</code> (suma opóźnionych).
                             </p>
                         </div>
 

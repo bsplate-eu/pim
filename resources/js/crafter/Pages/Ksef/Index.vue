@@ -115,7 +115,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <tr v-for="row in rows" :key="row.id" class="border-b hover:bg-gray-50">
+                        <tr v-for="row in rows" :key="row.id" class="border-b odd:bg-white even:bg-gray-50 hover:bg-gray-100">
                             <td class="px-3 py-1.5 whitespace-nowrap">{{ formatDate(row.issue_date) }}</td>
 
                             <td class="px-2 py-1">

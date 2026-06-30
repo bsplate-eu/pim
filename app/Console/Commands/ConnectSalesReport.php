@@ -21,7 +21,7 @@ class ConnectSalesReport extends Command
         {--force : Wyślij nawet gdy wyłączone lub już wysłano dziś}
         {--dry-run : Pokaż treść bez wysyłki}';
 
-    protected $description = 'Dzienny raport sprzedaży Argo Connect na WhatsApp.';
+    protected $description = 'Dzienny raport sprzedaży Argo Connect (za dzień poprzedni) na WhatsApp.';
 
     public function handle(SalesReportService $sales, SignalSender $sender): int
     {

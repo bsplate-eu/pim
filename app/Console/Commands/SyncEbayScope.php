@@ -7,30 +7,46 @@ use App\Services\Ebay\EbayScrapService;
 use Illuminate\Console\Command;
 
 /**
- * Pełny pomiar eBay (Scut Protection): oferty + Herstellernummer/EAN + diff + cennik.
- * Uruchamiać ręcznie:  php artisan scope:sync-ebay
- * Albo z crona (Laravel scheduler, np. 1×/dobę).
+ * Pełny pomiar eBay (Scut Protection) — PER RYNEK: oferty + Herstellernummer/EAN + diff.
+ * Uruchamianie:
+ *   php artisan scope:sync-ebay             → wszystkie rynki po kolei
+ *   php artisan scope:sync-ebay ebay_fr     → tylko jeden rynek
+ * Cron uruchamia rynki rozłożone w czasie (Kernel) — patrz harmonogram.
  */
 class SyncEbayScope extends Command
 {
-    protected $signature = 'scope:sync-ebay';
+    protected $signature = 'scope:sync-ebay {source? : klucz rynku (ebay, ebay_fr, ebay_it, ebay_es, ebay_gb, ebay_ch); brak = wszystkie}';
 
-    protected $description = 'Pełny pomiar eBay (Rumuni): oferty + HN/EAN + diff (nowe/wycofane/ceny) + cennik';
+    protected $description = 'Pełny pomiar eBay (Rumuni) per rynek: oferty + HN/EAN + diff (nowe/wycofane/ceny)';
 
     public function handle(): int
     {
         $settings = EbaySettings::first();
         if (! $settings || ! $settings->hasCredentials()) {
             $this->error('Brak integracji eBay — skonfiguruj App ID / Cert ID w Connect → Integracje → Ebay.');
+
             return self::FAILURE;
         }
 
-        $this->info('Pełny pomiar eBay (' . $settings->seller . ')…');
-        $stats = EbayScrapService::fromSettings($settings)->fullSync();
-        $this->info(sprintf(
-            'Gotowe: pobrano %d | nowe +%d | wycofane -%d | ceny ↑%d ↓%d.',
-            $stats['fetched'], $stats['new'], $stats['removed'], $stats['price_up'], $stats['price_down']
-        ));
+        $arg = $this->argument('source');
+        $sources = $arg ? [$arg] : EbayScrapService::marketKeys();
+
+        foreach ($sources as $src) {
+            if (! EbayScrapService::isMarket($src)) {
+                $this->warn("Pomijam nieznany rynek: {$src}");
+                continue;
+            }
+
+            $label = EbayScrapService::MARKETS[$src]['label'];
+            $this->info("Pełny pomiar {$label} ({$settings->seller})…");
+
+            $stats = EbayScrapService::forMarket($settings, $src)->fullSync();
+
+            $this->info(sprintf(
+                '  %s: pobrano %d | nowe +%d | wycofane -%d | ceny ↑%d ↓%d.',
+                $label, $stats['fetched'], $stats['new'], $stats['removed'], $stats['price_up'], $stats['price_down']
+            ));
+        }
 
         return self::SUCCESS;
     }

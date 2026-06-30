@@ -73,16 +73,20 @@ class EbayBrowseClient
     }
 
     /**
-     * Wszystkie oferty sprzedawcy (paginacja).
+     * Wszystkie oferty sprzedawcy na rynku tego klienta (paginacja).
+     * Słowa-zalążki MUSZĄ być w języku rynku — np. EBAY_FR łapie tylko „protection sous moteur",
+     * a nie niemieckie „Unterfahrschutz". Dlatego keywordy przychodzą z konfiguracji rynku (EbayScrapService::MARKETS).
+     * @param  list<string>  $keywords  słowa kluczowe rynku (różne rankingi „Best Match" → szersza pokrywa)
      * @return array<int,array{external_id:string,title:?string,price:?string,currency:string,url:?string}>
      */
-    public function searchSeller(string $seller, string $keyword = 'Unterfahrschutz'): array
+    public function searchSeller(string $seller, array $keywords): array
     {
         // Domyślny sort „Best Match" przy głębokiej paginacji GUBI część ofert (nie trafiają na żadną stronę).
-        // Dlatego pytamy kilkoma słowami kluczowymi (różne rankingi) i scalamy wynik (dedup po itemId).
-        $keywords = array_values(array_unique(array_filter([
-            $keyword, 'Unterfahrschutz', 'Stahl', 'Aluminium', 'Getriebe', 'Motor',
-        ])));
+        // Dlatego pytamy kilkoma słowami (różne rankingi) i scalamy wynik (dedup po itemId).
+        $keywords = array_values(array_unique(array_filter(array_map('trim', $keywords))));
+        if (empty($keywords)) {
+            $keywords = ['Unterfahrschutz'];
+        }
 
         $out = [];
         $seen = [];

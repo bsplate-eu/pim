@@ -680,6 +680,17 @@ Route::middleware(['crafter.base', 'auth', 'crafter.verified'])->prefix('admin')
         ->name('connect.integrations.ebay.oauth.callback');
     Route::delete('connect/integrations/ebay/oauth', [App\Http\Controllers\Admin\Connect\IntegrationEbayController::class, 'oauthDisconnect'])
         ->name('connect.integrations.ebay.oauth.disconnect');
+    // Oferta — nasze aukcje (Sell API): lista + mapowanie + pobieranie
+    Route::get('connect/integrations/ebay/offers', [App\Http\Controllers\Admin\Connect\EbayOffersController::class, 'index'])
+        ->name('connect.integrations.ebay.offers.index');
+    Route::post('connect/integrations/ebay/offers/fetch', [App\Http\Controllers\Admin\Connect\EbayOffersController::class, 'fetch'])
+        ->name('connect.integrations.ebay.offers.fetch');
+    Route::post('connect/integrations/ebay/offers/{offer}/assign', [App\Http\Controllers\Admin\Connect\EbayOffersController::class, 'assign'])
+        ->name('connect.integrations.ebay.offers.assign');
+    Route::post('connect/integrations/ebay/offers/price-preview', [App\Http\Controllers\Admin\Connect\EbayOffersController::class, 'priceUpdatePreview'])
+        ->name('connect.integrations.ebay.offers.price-preview');
+    Route::post('connect/integrations/ebay/offers/price-apply', [App\Http\Controllers\Admin\Connect\EbayOffersController::class, 'priceUpdateApply'])
+        ->name('connect.integrations.ebay.offers.price-apply');
 });
 
 

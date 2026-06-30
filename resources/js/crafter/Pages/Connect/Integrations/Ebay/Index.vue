@@ -1,5 +1,9 @@
 <template>
-    <PageHeader title="Integracje — eBay" />
+    <PageHeader title="Integracje — eBay">
+        <Link :href="route('crafter.connect.integrations.ebay.offers.index')">
+            <Button variant="outline" color="gray">Oferta (nasze aukcje) →</Button>
+        </Link>
+    </PageHeader>
 
     <PageContent fluid>
         <!-- Zakładki Integracji -->

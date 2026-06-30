@@ -25,13 +25,14 @@ class SalesReportService
     /**
      * Złóż treść raportu z szablonu: {data} {sprzedaz_per_kraj} {razem_dzis} {obrot_tydzien} {obrot_miesiac}.
      *
-     * $dayRef = dzień raportu (domyślnie dziś) — dotyczy bloku „dzisiejsza sprzedaż".
-     * „W tym tygodniu/miesiącu" = BIEŻĄCY tydzień kalendarzowy (pon–niedz) i miesiąc względem DZIŚ,
-     * niezależnie od dnia raportu (np. raport za wczoraj i tak pokaże obrót bieżącego tygodnia).
+     * $dayRef = dzień raportu. DOMYŚLNIE = DZIEŃ POPRZEDNI (cron o 00:01 zamyka miniony dzień;
+     * raportowanie „dziś" o północy dałoby zero). {data} pokazuje datę raportowanego dnia.
+     * „W tym tygodniu/miesiącu" = BIEŻĄCY tydzień kalendarzowy (pon–niedz) i miesiąc względem now(),
+     * niezależnie od dnia raportu.
      */
     public function renderTemplate(string $template, ?Carbon $dayRef = null): string
     {
-        $dayRef = $dayRef ? $dayRef->copy() : now();
+        $dayRef = $dayRef ? $dayRef->copy() : now()->subDay();
         $day = $this->salesByCountry($dayRef->copy()->startOfDay(), $dayRef->copy()->endOfDay());
 
         $now = now();
