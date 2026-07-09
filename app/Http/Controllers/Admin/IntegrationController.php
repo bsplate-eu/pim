@@ -180,9 +180,9 @@ class IntegrationController extends Controller
         // 2. Release stale locks for this integration
         Cache::forget("integration:{$integration->id}:sync");
 
-        if (!in_array($integration->type, ['prestashop', 'litecart'], true)) {
+        if (!in_array($integration->type, ['prestashop', 'litecart', 'opencart'], true)) {
             return redirect()->back()->withErrors([
-                'integration' => ___('crafter', 'Connector actions are available only for PrestaShop and LiteCart integrations.'),
+                'integration' => ___('crafter', 'Connector actions are available only for PrestaShop, LiteCart and OpenCart integrations.'),
             ]);
         }
 

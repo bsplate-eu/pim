@@ -76,7 +76,7 @@ class TranslationsAutoTranslate extends Command
                     if ($proposal['matched']) $stats['matched']++;
                     else $stats['unmatched']++;
                 } else {
-                    $s = $composer->apply($product);
+                    $s = $composer->apply($product, 'command');
                     if ($s['matched']) $stats['matched']++;
                     else $stats['unmatched']++;
                     $stats['applied_locales']      += $s['applied_locales'];

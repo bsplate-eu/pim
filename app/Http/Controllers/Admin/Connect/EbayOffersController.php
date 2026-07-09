@@ -5,6 +5,11 @@ namespace App\Http\Controllers\Admin\Connect;
 use App\Http\Controllers\Admin\Controller;
 use App\Jobs\RunEbayOffersSync;
 use App\Jobs\RunEbayPriceUpdate;
+use App\Jobs\RunEbayQuantityUpdate;
+use App\Services\Ebay\EbayOAuthService;
+use App\Services\Ebay\EbayOfferService;
+use App\Services\Ebay\EbaySellClient;
+use App\Models\Ebay\EbayActionLog;
 use App\Models\Ebay\EbayOffer;
 use App\Models\Pricelist;
 use App\Models\PricelistProduct;
@@ -74,6 +79,11 @@ class EbayOffersController extends Controller
                 'oauth_connected' => $settings && $settings->isOauthConnected(),
                 'has_credentials' => $settings && $settings->hasCredentials(),
             ],
+            'auto' => [
+                'enabled' => (bool) ($settings?->auto_restock_enabled ?? true),
+                'to' => (int) ($settings?->auto_restock_to ?? 5),
+                'assign_enabled' => (bool) ($settings?->auto_assign_enabled ?? true),
+            ],
         ]);
     }
 
@@ -119,10 +129,35 @@ class EbayOffersController extends Controller
         ] : null]);
     }
 
-    /** Pula ofert do operacji: konkretne ids[] albo WSZYSTKIE pasujące filtrowi (all=true). Zawsze tylko ZMAPOWANE. */
-    private function operationOffers(array $data)
+    /** Inline: ustaw ilość pojedynczej oferty i OD RAZU wyślij na eBay (ReviseInventoryStatus). */
+    public function setQuantity(Request $request, EbayOffer $offer): JsonResponse
     {
-        $q = EbayOffer::query()->whereNotNull('product_id');
+        $data = $request->validate(['quantity' => ['required', 'integer', 'min:0']]);
+
+        $settings = EbaySettings::first();
+        if (! $settings || ! $settings->isOauthConnected()) {
+            return response()->json(['ok' => false, 'message' => 'Konto eBay nie jest połączone.'], 422);
+        }
+
+        try {
+            (new EbaySellClient($settings, new EbayOAuthService($settings)))
+                ->reviseQuantity($offer->item_id, (string) $offer->sku, (int) $data['quantity'], $offer->marketplace, (int) $offer->quantity_sold);
+            $offer->forceFill(['quantity' => (int) $data['quantity']])->save();
+        } catch (\Throwable $e) {
+            return response()->json(['ok' => false, 'message' => 'eBay: ' . $e->getMessage()], 500);
+        }
+
+        return response()->json(['ok' => true, 'quantity' => (int) $data['quantity']]);
+    }
+
+    /** Pula ofert do operacji: konkretne ids[] albo WSZYSTKIE pasujące filtrowi (all=true).
+     *  $mappedOnly=true (cena — wymaga produktu z cennika); false (ilość — dowolna oferta). */
+    private function operationOffers(array $data, bool $mappedOnly = true)
+    {
+        $q = EbayOffer::query();
+        if ($mappedOnly) {
+            $q->whereNotNull('product_id');
+        }
 
         if (! empty($data['all'])) {
             if (! empty($data['marketplace'])) {
@@ -202,6 +237,74 @@ class EbayOffersController extends Controller
         ]);
     }
 
+    /** Walidacja wspólna dla operacji ILOŚCI. */
+    private function qtyOpData(Request $request): array
+    {
+        return $request->validate([
+            'mode' => ['required', 'in:increase,decrease,set'],
+            'amount' => ['required', 'integer', 'min:0'],
+            'all' => ['nullable', 'boolean'],
+            'ids' => ['nullable', 'array'],
+            'ids.*' => ['integer'],
+            'marketplace' => ['nullable', 'string'],
+            'search' => ['nullable', 'string'],
+        ]);
+    }
+
+    /** Nowa ilość wg trybu: increase (+), decrease (−, min 0), set (=). */
+    private function newQty(int $current, string $mode, int $amount): int
+    {
+        return match ($mode) {
+            'increase' => $current + $amount,
+            'decrease' => max(0, $current - $amount),
+            'set' => $amount,
+            default => $current,
+        };
+    }
+
+    /** PODGLĄD zmiany ilości. NIE dotyka eBay. */
+    public function quantityUpdatePreview(Request $request): JsonResponse
+    {
+        $data = $this->qtyOpData($request);
+        $offers = $this->operationOffers($data, false)->get(['id', 'sku', 'title', 'quantity']);
+
+        $rows = $offers->map(fn (EbayOffer $o) => [
+            'title' => $o->title,
+            'sku' => $o->sku,
+            'old' => (int) $o->quantity,
+            'new' => $this->newQty((int) $o->quantity, $data['mode'], (int) $data['amount']),
+        ])->values();
+
+        return response()->json([
+            'count' => $rows->count(),
+            'skipped' => 0,
+            'sample' => $rows->take(15),
+        ]);
+    }
+
+    /** WYKONAJ zmianę ilości na eBay (w tle, ReviseInventoryStatus). Wymaga połączonego konta. */
+    public function quantityUpdateApply(Request $request): JsonResponse
+    {
+        $data = $this->qtyOpData($request);
+
+        $settings = EbaySettings::first();
+        if (! $settings || ! $settings->isOauthConnected()) {
+            return response()->json(['ok' => false, 'message' => 'Konto eBay nie jest połączone — nie mogę zmieniać ilości.'], 422);
+        }
+
+        $ids = $this->operationOffers($data, false)->pluck('id')->all();
+        if (empty($ids)) {
+            return response()->json(['ok' => false, 'message' => 'Brak ofert do zmiany.'], 422);
+        }
+
+        RunEbayQuantityUpdate::dispatch($ids, $data['mode'], (int) $data['amount']);
+
+        return response()->json([
+            'ok' => true,
+            'message' => 'Zmiana ilości ' . count($ids) . ' ofert uruchomiona w tle (eBay ReviseInventoryStatus).',
+        ]);
+    }
+
     /** Polska nazwa z pola name (JSON matrycy tłumaczeń) lub surowa. */
     private function namePl(?string $name): string
     {
@@ -227,5 +330,91 @@ class EbayOffersController extends Controller
         $pp = $request->integer('per_page', 50);
 
         return in_array($pp, [50, 100, 250, 500], true) ? $pp : 50;
+    }
+
+    /** Zapis reguł automatycznych: auto-restock (włącz + wartość docelowa) i auto-przypisanie (włącz). */
+    public function saveAutoActions(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'enabled' => ['required', 'boolean'],
+            'to' => ['required', 'integer', 'min:1', 'max:10000'],
+            'assign_enabled' => ['required', 'boolean'],
+        ]);
+
+        $settings = EbaySettings::first();
+        if (! $settings) {
+            return response()->json(['ok' => false, 'message' => 'Brak ustawień eBay.'], 422);
+        }
+        $settings->forceFill([
+            'auto_restock_enabled' => $data['enabled'],
+            'auto_restock_to' => $data['to'],
+            'auto_assign_enabled' => $data['assign_enabled'],
+        ])->save();
+
+        return response()->json(['ok' => true]);
+    }
+
+    /** „Uruchom teraz" (auto-restock) — wykonaj od razu (synchronicznie). Wymaga połączonego konta. */
+    public function runAutoActions(): JsonResponse
+    {
+        $settings = EbaySettings::first();
+        if (! $settings || ! $settings->isOauthConnected()) {
+            return response()->json(['ok' => false, 'message' => 'Konto eBay nie jest połączone.'], 422);
+        }
+
+        $n = EbayOfferService::fromSettings($settings)->applyAutoRestock(EbayActionLog::CONTEXT_MANUAL);
+
+        return response()->json(['ok' => true, 'message' => "Auto-restock: podniesiono {$n} ofert ze stanem 0."]);
+    }
+
+    /** „Uruchom teraz" (auto-przypisanie) — zmapuj nieprzypisane oferty po SKU. Nie wymaga konta (lokalne). */
+    public function runAutoAssign(): JsonResponse
+    {
+        $settings = EbaySettings::first();
+        if (! $settings) {
+            return response()->json(['ok' => false, 'message' => 'Brak ustawień eBay.'], 422);
+        }
+
+        $n = EbayOfferService::fromSettings($settings)->applyAutoAssign(EbayActionLog::CONTEXT_MANUAL);
+
+        return response()->json(['ok' => true, 'message' => "Auto-przypisanie: zmapowano {$n} ofert po SKU."]);
+    }
+
+    /** Dziennik automatycznych akcji (zakładka „Logi") — JSON z paginacją + filtr status/szukaj. */
+    public function logs(Request $request): JsonResponse
+    {
+        $status = (string) $request->input('status', '');
+        $search = trim((string) $request->input('search', ''));
+        $perPage = $this->resolvePerPage($request);
+
+        $q = EbayActionLog::query()->with('product:id,name,product_code')->latest('id');
+
+        if (in_array($status, [EbayActionLog::STATUS_OK, EbayActionLog::STATUS_ERROR], true)) {
+            $q->where('status', $status);
+        }
+        if ($search !== '') {
+            $like = '%' . $search . '%';
+            $q->where(fn ($w) => $w->where('title', 'like', $like)
+                ->orWhere('sku', 'like', $like)
+                ->orWhere('item_id', 'like', $like));
+        }
+
+        $logs = $q->paginate($perPage)->withQueryString();
+
+        // Nazwa przypisanego produktu → forma PL (dla wierszy auto-przypisania).
+        $logs->getCollection()->each(function (EbayActionLog $l) {
+            if ($l->product) {
+                $l->product->name = $this->namePl($l->product->name);
+            }
+        });
+
+        return response()->json([
+            'logs' => $logs,
+            'counts' => [
+                'all' => (int) EbayActionLog::count(),
+                'ok' => (int) EbayActionLog::where('status', EbayActionLog::STATUS_OK)->count(),
+                'error' => (int) EbayActionLog::where('status', EbayActionLog::STATUS_ERROR)->count(),
+            ],
+        ]);
     }
 }

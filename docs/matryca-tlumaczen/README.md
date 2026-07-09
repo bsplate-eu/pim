@@ -35,6 +35,7 @@ mechanizm **ochrony** (lock per pole+locale) + **sklejacz** który automatycznie
 | **[08-v2-klasyfikator.md](08-v2-klasyfikator.md)** | **🔥 WERSJA 2: klasyfikator kanoniczny (537→33 frazy), deriver, composer v2, prostowanie PL** |
 | **[09-review-queue-ui.md](09-review-queue-ui.md)** | **Review queue: wyszukiwarka, sortowanie, operacje masowe, auto-approve** |
 | **[10-rollout-produkcja.md](10-rollout-produkcja.md)** | **Rollout 2026-06-10 + pułapki (parse error, brak git/composer, Google Sheets)** |
+| **[11-incydent-nazwy-2026-07-02.md](11-incydent-nazwy-2026-07-02.md)** | **🚑 Post-mortem: nadpisanie nazw na prodzie + żelazne zasady masowych operacji na `products.name`** |
 
 > ⚠️ **Pliki 01-07 opisują wersję 1 (stripSuffix).** Rdzeń został przebudowany na **klasyfikator kanoniczny**
 > — aktualny opis w **[08-v2-klasyfikator.md](08-v2-klasyfikator.md)**. Stary `stripSuffix` i `BRAND_ALIASES` usunięte.

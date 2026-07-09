@@ -103,6 +103,7 @@ class EbaySellClient
             $url = (string) ($item->ListingDetails->ViewItemURL ?? '');
             $status = (string) ($item->SellingStatus->ListingStatus ?? 'Active');
             $currency = (string) ($item->SellingStatus->CurrentPrice['currencyID'] ?? $item->Currency ?? 'EUR');
+            $mp = $this->siteToMarketplace((string) ($item->Site ?? ''), $marketplace);
 
             $variations = $item->Variations->Variation ?? null;
 
@@ -115,11 +116,12 @@ class EbaySellClient
                     $rows[] = [
                         'item_id' => $itemId,
                         'sku' => (string) ($v->SKU ?? ''),
-                        'marketplace' => $marketplace,
+                        'marketplace' => $mp,
                         'title' => $title,
                         'price' => (float) ($v->StartPrice ?? 0),
                         'currency' => (string) ($v->StartPrice['currencyID'] ?? $currency),
-                        'quantity' => (int) ($v->Quantity ?? 0),
+                        'quantity' => max(0, (int) ($v->Quantity ?? 0) - (int) ($v->SellingStatus->QuantitySold ?? 0)),
+                        'quantity_sold' => (int) ($v->SellingStatus->QuantitySold ?? 0),
                         'listing_status' => $status,
                         'listing_url' => $url,
                         'variation' => $specifics ?: null,
@@ -129,11 +131,12 @@ class EbaySellClient
                 $rows[] = [
                     'item_id' => $itemId,
                     'sku' => (string) ($item->SKU ?? ''),
-                    'marketplace' => $marketplace,
+                    'marketplace' => $mp,
                     'title' => $title,
                     'price' => (float) ($item->SellingStatus->CurrentPrice ?? $item->StartPrice ?? 0),
                     'currency' => $currency,
-                    'quantity' => (int) ($item->QuantityAvailable ?? $item->Quantity ?? 0),
+                    'quantity' => max(0, (int) ($item->Quantity ?? 0) - (int) ($item->SellingStatus->QuantitySold ?? 0)),
+                    'quantity_sold' => (int) ($item->SellingStatus->QuantitySold ?? 0),
                     'listing_status' => $status,
                     'listing_url' => $url,
                     'variation' => null,
@@ -142,6 +145,38 @@ class EbaySellClient
         }
 
         return $rows;
+    }
+
+    /** eBay Site (z GetSellerList Item.Site) → nasz kod marketplace. Fallback: $default (rynek z ustawień). */
+    private function siteToMarketplace(string $site, string $default): string
+    {
+        return [
+            'Germany' => 'EBAY_DE', 'France' => 'EBAY_FR', 'Italy' => 'EBAY_IT',
+            'Spain' => 'EBAY_ES', 'UK' => 'EBAY_GB', 'US' => 'EBAY_US',
+            'Austria' => 'EBAY_AT', 'Netherlands' => 'EBAY_NL', 'Poland' => 'EBAY_PL',
+            'Switzerland' => 'EBAY_CH', 'Ireland' => 'EBAY_IE', 'Australia' => 'EBAY_AU',
+            'Canada' => 'EBAY_CA', 'CanadaFrench' => 'EBAY_CA',
+            'Belgium_French' => 'EBAY_FRBE', 'Belgium_Dutch' => 'EBAY_NLBE',
+        ][$site] ?? $default;
+    }
+
+    /** Ustaw DOSTĘPNĄ ilość pozycji (ReviseInventoryStatus). UWAGA: eBay `Quantity` to ilość
+     *  ŁĄCZNA (dostępne = Quantity − QuantitySold), więc wysyłamy `$available + $sold`, aby realnie
+     *  dostępne wyszło = $available. $sold = już sprzedane (z ostatniego pobrania). $sku puste → cała oferta. */
+    public function reviseQuantity(string $itemId, string $sku, int $available, string $marketplace, int $sold = 0): void
+    {
+        $total = max(0, $available) + max(0, $sold);
+        $skuXml = $sku !== '' ? "<SKU>{$sku}</SKU>" : '';
+        $body = '<?xml version="1.0" encoding="utf-8"?>'
+            . '<ReviseInventoryStatusRequest xmlns="urn:ebay:apis:eBLBaseComponents">'
+            . '<InventoryStatus>'
+            . "<ItemID>{$itemId}</ItemID>"
+            . $skuXml
+            . '<Quantity>' . $total . '</Quantity>'
+            . '</InventoryStatus>'
+            . '</ReviseInventoryStatusRequest>';
+
+        $this->call('ReviseInventoryStatus', $body, $marketplace);
     }
 
     /** Zmiana ceny pojedynczej pozycji (ReviseInventoryStatus). $sku puste → cała oferta (bez wariantów). */

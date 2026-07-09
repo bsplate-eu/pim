@@ -250,7 +250,8 @@ class CatalogDeltaPipeline extends AbstractConnectorPipeline
                         'synced_at'    => now(),
                     ];
                     // Connector mógł odtworzyć produkt (usunięty ze sklepu) → nowy id_product.
-                    $returnedId = $result['data']['product_id'] ?? $result['data']['id_product'] ?? null;
+                    // OpenCart zwraca product_id na top-level; Presta/LiteCart pod 'data'.
+                    $returnedId = $result['product_id'] ?? $result['id_product'] ?? $result['data']['product_id'] ?? $result['data']['id_product'] ?? null;
                     if ($returnedId) {
                         $update['external_id'] = (string) $returnedId;
                     }
@@ -381,6 +382,7 @@ class CatalogDeltaPipeline extends AbstractConnectorPipeline
 
         $item = [
             'sku'                 => $sku,
+            'pim_id'              => (int) $product->id, // wymagane przez connector OpenCart (mapa oc_pim_product_link)
             'external_id'         => $ip->external_id,
             'ean'                 => (string) ($product->ean ?? ''),
             'status'              => (int) ($product->enabled ? 1 : 0),
@@ -429,8 +431,12 @@ class CatalogDeltaPipeline extends AbstractConnectorPipeline
             $valueI18n = array_filter($av->getTranslations('name'), fn ($v) => trim((string) $v) !== '');
 
             $attrs[] = [
+                // Stabilne kody (slug) — dla fasetowego findera po stronie sklepu (Argo Faset):
+                // mapowanie make/model/year-start/year-stop niezależne od języka etykiety.
+                'group_code'      => (string) $attribute->slug,
                 'group_name'      => (string) $attribute->name,
                 'group_name_i18n' => $groupI18n,
+                'value_code'      => (string) $av->slug,
                 'value_name'      => $valueName,
                 'value_name_i18n' => $valueI18n,
             ];

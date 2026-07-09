@@ -98,7 +98,7 @@ class TranslationReviewController extends Controller
 
     public function autoTranslate(Request $request, Product $product, ProductTranslationComposer $composer)
     {
-        $stats = $composer->apply($product->load('attributeValues.attribute'));
+        $stats = $composer->apply($product->load('attributeValues.attribute'), 'review');
 
         if (!$stats['matched']) {
             return redirect()->back()->with([
@@ -189,7 +189,7 @@ class TranslationReviewController extends Controller
                 ->whereIn('id', $chunk)
                 ->get()
                 ->each(function (Product $product) use ($composer, &$matched, &$unmatched) {
-                    $stats = $composer->apply($product);
+                    $stats = $composer->apply($product, 'bulk');
                     $stats['matched'] ? $matched++ : $unmatched++;
                 });
         });

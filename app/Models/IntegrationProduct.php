@@ -48,6 +48,11 @@ class IntegrationProduct extends Model
         $product = $this->product;
         $overrides = $this->overrides ?? [];
         foreach ($overrides as $key => $value) {
+            // null/pusty override = "brak nadpisania", NIE "wyczyść pole".
+            // Bez tego override name:null zerował nazwę produktu i feed słał samą końcówkę szablonu (incydent 2026-07-02).
+            if ($value === null || $value === '') {
+                continue;
+            }
             $product->$key = $value;
         }
 

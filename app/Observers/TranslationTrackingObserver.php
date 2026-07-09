@@ -19,6 +19,9 @@ class TranslationTrackingObserver
     public function saving(Model $model): void
     {
         if (TranslationOverride::$suppressObserver) return;
+        // Nowy rekord nie ma jeszcze id → mark() wstawiłby translatable_id=null (23000).
+        // Świeżo utworzony rekord i tak nie ma nic do ochrony przed nadpisaniem.
+        if (!$model->exists) return;
         if (!property_exists($model, 'translatable') || !is_array($model->translatable)) return;
 
         $userId = auth()->check() ? auth()->id() : null;

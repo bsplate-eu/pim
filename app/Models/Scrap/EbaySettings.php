@@ -32,6 +32,9 @@ class EbaySettings extends Model
         'oauth_scopes',
         'ebay_user_id',
         'oauth_connected_at',
+        'auto_restock_enabled',
+        'auto_restock_to',
+        'auto_assign_enabled',
     ];
 
     protected $casts = [
@@ -42,6 +45,9 @@ class EbaySettings extends Model
         'compare_vat' => 'decimal:2',
         'oauth_refresh_expires_at' => 'datetime',
         'oauth_connected_at' => 'datetime',
+        'auto_restock_enabled' => 'boolean',
+        'auto_restock_to' => 'integer',
+        'auto_assign_enabled' => 'boolean',
     ];
 
     protected $hidden = ['client_secret', 'oauth_refresh_token'];

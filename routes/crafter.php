@@ -303,6 +303,14 @@ Route::middleware('crafter.base')->prefix('admin')->name('crafter.')->group(func
     Route::post('translation-review/{product}/approve', [App\Http\Controllers\Admin\TranslationReviewController::class, 'approve'])->name('translation-review.approve');
     Route::post('translation-review/approve-bulk', [App\Http\Controllers\Admin\TranslationReviewController::class, 'approveBulk'])->name('translation-review.approve-bulk');
     Route::post('translation-review/auto-translate-bulk', [App\Http\Controllers\Admin\TranslationReviewController::class, 'autoTranslateBulk'])->name('translation-review.auto-translate-bulk');
+
+    // Logi automatycznych tłumaczeń
+    Route::get('translation-logs', [App\Http\Controllers\Admin\TranslationLogController::class, 'index'])->name('translation-logs.index');
+
+    // Ustawienia modułu tłumaczeń
+    Route::get('translation-settings', [App\Http\Controllers\Admin\TranslationSettingsController::class, 'index'])->name('translation-settings.index');
+    Route::match(['put', 'patch'], 'translation-settings', [App\Http\Controllers\Admin\TranslationSettingsController::class, 'update'])->name('translation-settings.update');
+    Route::post('translation-settings/translate-missing', [App\Http\Controllers\Admin\TranslationSettingsController::class, 'translateMissing'])->name('translation-settings.translate-missing');
 });
 
 
@@ -687,10 +695,24 @@ Route::middleware(['crafter.base', 'auth', 'crafter.verified'])->prefix('admin')
         ->name('connect.integrations.ebay.offers.fetch');
     Route::post('connect/integrations/ebay/offers/{offer}/assign', [App\Http\Controllers\Admin\Connect\EbayOffersController::class, 'assign'])
         ->name('connect.integrations.ebay.offers.assign');
+    Route::post('connect/integrations/ebay/offers/{offer}/quantity', [App\Http\Controllers\Admin\Connect\EbayOffersController::class, 'setQuantity'])
+        ->name('connect.integrations.ebay.offers.quantity');
     Route::post('connect/integrations/ebay/offers/price-preview', [App\Http\Controllers\Admin\Connect\EbayOffersController::class, 'priceUpdatePreview'])
         ->name('connect.integrations.ebay.offers.price-preview');
     Route::post('connect/integrations/ebay/offers/price-apply', [App\Http\Controllers\Admin\Connect\EbayOffersController::class, 'priceUpdateApply'])
         ->name('connect.integrations.ebay.offers.price-apply');
+    Route::post('connect/integrations/ebay/offers/auto-actions', [App\Http\Controllers\Admin\Connect\EbayOffersController::class, 'saveAutoActions'])
+        ->name('connect.integrations.ebay.offers.auto-actions');
+    Route::post('connect/integrations/ebay/offers/auto-actions/run', [App\Http\Controllers\Admin\Connect\EbayOffersController::class, 'runAutoActions'])
+        ->name('connect.integrations.ebay.offers.auto-actions.run');
+    Route::post('connect/integrations/ebay/offers/auto-assign/run', [App\Http\Controllers\Admin\Connect\EbayOffersController::class, 'runAutoAssign'])
+        ->name('connect.integrations.ebay.offers.auto-assign.run');
+    Route::get('connect/integrations/ebay/offers/logs', [App\Http\Controllers\Admin\Connect\EbayOffersController::class, 'logs'])
+        ->name('connect.integrations.ebay.offers.logs');
+    Route::post('connect/integrations/ebay/offers/qty-preview', [App\Http\Controllers\Admin\Connect\EbayOffersController::class, 'quantityUpdatePreview'])
+        ->name('connect.integrations.ebay.offers.qty-preview');
+    Route::post('connect/integrations/ebay/offers/qty-apply', [App\Http\Controllers\Admin\Connect\EbayOffersController::class, 'quantityUpdateApply'])
+        ->name('connect.integrations.ebay.offers.qty-apply');
 });
 
 

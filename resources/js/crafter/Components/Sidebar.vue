@@ -128,6 +128,11 @@
                 <SidebarItem :href="route('crafter.connect.chatbot.index')">
                     Integracja chatboot
                 </SidebarItem>
+                <SidebarSubGroup title="Marketplace">
+                    <SidebarItem :href="route('crafter.connect.integrations.ebay.offers.index')">
+                        Ebay
+                    </SidebarItem>
+                </SidebarSubGroup>
             </SidebarGroup>
 
             <!-- Argo Scope -->
@@ -195,19 +200,21 @@
                 {{ $t("crafter", "AI Tools") }}
             </SidebarItem>
 
-            <!-- Matryca tłumaczeń -->
-            <SidebarItem
-                :href="route('crafter.translation-phrases.index')"
-                :icon="LanguageIcon"
-            >
-                Matryca tłumaczeń
-            </SidebarItem>
-            <SidebarItem
-                :href="route('crafter.translation-review.index')"
-                :icon="ClipboardDocumentCheckIcon"
-            >
-                Tłumaczenia: review queue
-            </SidebarItem>
+            <!-- Tłumaczenia -->
+            <SidebarGroup title="Tłumaczenia" :toggable="true" :open="false" :icon="LanguageIcon">
+                <SidebarItem :href="route('crafter.translation-phrases.index')">
+                    Matryca tłumaczeń
+                </SidebarItem>
+                <SidebarItem :href="route('crafter.translation-review.index')">
+                    Tłumaczenia (review)
+                </SidebarItem>
+                <SidebarItem :href="route('crafter.translation-logs.index')">
+                    Logi
+                </SidebarItem>
+                <SidebarItem :href="route('crafter.translation-settings.index')">
+                    Ustawienia
+                </SidebarItem>
+            </SidebarGroup>
 
             <!-- Użytkownicy -->
             <SidebarItem

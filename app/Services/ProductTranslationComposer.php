@@ -4,9 +4,11 @@ namespace App\Services;
 
 use App\Models\IntegrationProduct;
 use App\Models\Product;
+use App\Models\TranslationLog;
 use App\Models\TranslationOverride;
 use App\Models\TranslationPhrase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Sklejacz nazw produktów dla wszystkich kanałów (lokali + kont Allegro) z matrycy fraz.
@@ -114,7 +116,7 @@ class ProductTranslationComposer
             }
             $rendition = $renditionsByChannel->get($channel);
             $channels[$channel] = $rendition
-                ? $this->joinPrefixWithSuffix($rendition->value, $make, $model)
+                ? $this->composeForeign($rendition->value, $plName, $make, $model, $classification['element'])
                 : null;
         }
 
@@ -133,15 +135,21 @@ class ProductTranslationComposer
      *
      * @return array{matched: bool, applied_locales: int, applied_integrations: int, skipped_locked: int}
      */
-    public function apply(Product $product): array
+    public function apply(Product $product, string $context = 'auto'): array
     {
+        // Migawka nazw PRZED — do logu PRZED→PO (Tłumaczenia → Logi).
+        $before = $product->getTranslations('name');
+
         // Samowystarczalność: upewnij się, że fraza istnieje w matrycy i ma tłumaczenia.
         // Nowy wariant (np. "Aluminiowa osłona dyferencjału z Webasto") powstanie i wygeneruje się SAM.
         $this->ensurePhrase($product);
 
         $proposal = $this->compose($product);
         $stats = ['matched' => $proposal['matched'], 'applied_locales' => 0, 'applied_integrations' => 0, 'skipped_locked' => 0];
-        if (!$proposal['matched']) return $stats;
+        if (!$proposal['matched']) {
+            $this->writeLog($product, $context, TranslationLog::STATUS_UNMATCHED, false, [], $stats, 'Brak dopasowania frazy w matrycy');
+            return $stats;
+        }
 
         DB::transaction(function () use ($product, $proposal, &$stats) {
             // === Locale: products.name ===
@@ -212,7 +220,48 @@ class ProductTranslationComposer
             }
         });
 
+        // Log PRZED→PO dla locale products.name (Allegro liczone w stats.applied_integrations).
+        $after = $product->getTranslations('name');
+        $changes = [];
+        foreach (self::LOCALE_CHANNELS as $loc) {
+            $from = (string) ($before[$loc] ?? '');
+            $to   = (string) ($after[$loc] ?? '');
+            if ($from !== $to) {
+                $changes[] = ['locale' => $loc, 'from' => $from, 'to' => $to];
+            }
+        }
+        $status = ($changes === [] && $stats['applied_integrations'] === 0)
+            ? TranslationLog::STATUS_SKIPPED
+            : TranslationLog::STATUS_OK;
+        $this->writeLog($product, $context, $status, true, $changes, $stats, null);
+
         return $stats;
+    }
+
+    /**
+     * Zapis wpisu do dziennika automatycznych tłumaczeń. Nigdy nie wywala samego tłumaczenia
+     * (błąd zapisu logu tylko ostrzega w logach aplikacji).
+     */
+    private function writeLog(Product $product, string $context, string $status, bool $matched, array $changes, array $stats, ?string $message): void
+    {
+        try {
+            TranslationLog::create([
+                'product_id'    => $product->id,
+                'external_id'   => $product->external_id,
+                'product_code'  => $product->product_code,
+                'name_pl'       => mb_substr((string) $product->getTranslation('name', 'pl', false), 0, 255),
+                'action'        => 'auto_matrix',
+                'context'       => $context,
+                'status'        => $status,
+                'matched'       => $matched,
+                'source_locale' => 'pl',
+                'changes'       => $changes ?: null,
+                'stats'         => $stats ?: null,
+                'message'       => $message,
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('TranslationLog write failed: ' . $e->getMessage());
+        }
     }
 
     private function applyIntegrationOverride(Product $product, int $integrationId, string $value, array &$stats): void
@@ -325,16 +374,11 @@ class ProductTranslationComposer
     ];
 
     /**
-     * Prostuje śmieciowy PL z feedu do spójnego formatu, ZACHOWUJĄC wariant pojazdu.
-     *
-     * "Stalowa Osłona pod silnik Citroen Grand C4 SpaceTourer Aluminium"
-     *   → "Aluminiowa osłona silnika Citroen Grand C4 SpaceTourer"
-     *
-     * Ogon brany OD KOŃCA elementu, więc warianty zarówno przed marką (manualnej) jak i po niej (4x4)
-     * zostają. Strażnik: jeśli wynik zgubiłby jakiekolwiek istotne słowo (np. zła klasyfikacja),
-     * zwracamy oryginał nietknięty.
+     * Wyciąga OGON pojazdu (marka/model/wariant, np. "Audi A4 B9", "Ford Tourneo Custom PHEV", "4x4")
+     * z nazwy PL, licząc od końca elementu. Czyści materiał ("aluminium") i modyfikatory już zawarte
+     * we frazie (z Webasto / System Start-Stop / galwanizowana). Ogon jest ~język-neutralny.
      */
-    public function straightenPl(string $plName, ?string $make, ?string $model, string $classifiedPhrase, string $element): string
+    private function deriveVehicleTail(string $plName, ?string $make, ?string $model, string $element): string
     {
         $tail = null;
         $anchor = self::ELEMENT_ANCHOR[$element] ?? null;
@@ -355,8 +399,8 @@ class ProductTranslationComposer
         }
         // słowo materiału "aluminium" gdziekolwiek w ogonie (to nie wariant pojazdu)
         $tail = preg_replace('/[\s\-–]*\baluminium\b/iu', '', (string) $tail);
-        // modyfikatory/wykończenia są już w $classifiedPhrase — usuń je z ogona, by nie dublować
-        // (np. ogon "z Webasto VW Sharan z Webasto" → "VW Sharan"). Czyni prostowanie idempotentnym.
+        // modyfikatory/wykończenia są już we frazie — usuń je z ogona, by nie dublować
+        // (np. ogon "z Webasto VW Sharan z Webasto" → "VW Sharan"). Czyni składanie idempotentnym.
         $tail = preg_replace('/[\s\-–]*\b(z\s+Webasto|System\s+Start[-\s]?Stop|Start[-\s]?Stop|Start[-\s]?Go|galwanizowan[aye])\b/iu', '', $tail);
         // wiszące wykończenie doklejone przez feed bez "z" (np. "VW Caddy - Webasto")
         $tail = preg_replace('/[\s\-–]+(Webasto|galwanizowan\w*)\s*$/iu', '', $tail);
@@ -368,12 +412,17 @@ class ProductTranslationComposer
             $tail = preg_replace('/^(' . preg_quote($make, '/') . ')\s+\1\b/iu', '$1', $tail);
         }
 
-        $new = trim($classifiedPhrase . ($tail !== '' ? ' ' . $tail : ''));
+        return (string) $tail;
+    }
 
-        // STRAŻNIK: identyfikacja pojazdu musi przetrwać. Jeśli ANI marka ANI model nie zostały
-        // w wyniku (zła kotwica / błędna klasyfikacja ucięła środek nazwy) — zwróć oryginał.
-        // Luźno (przynajmniej jedno słowo), bo PL bywa skrótem marki (VW ≠ atrybut "Volkswagen").
-        $newLower = mb_strtolower($new, 'UTF-8');
+    /**
+     * STRAŻNIK: czy identyfikacja pojazdu przetrwała w wyniku? Jeśli ANI marka ANI model nie
+     * występują (zła kotwica / błędna klasyfikacja ucięła środek) → false, wołający zwraca oryginał.
+     * Luźno (przynajmniej jedno słowo), bo nazwa bywa skrótem marki (VW ≠ atrybut "Volkswagen").
+     */
+    private function vehiclePreserved(string $candidate, ?string $make, ?string $model): bool
+    {
+        $lower = mb_strtolower($candidate, 'UTF-8');
         $vehicleWords = [];
         foreach ([$make, $model] as $part) {
             if (!$part) continue;
@@ -382,13 +431,44 @@ class ProductTranslationComposer
                 if ($word !== '') $vehicleWords[] = $word;
             }
         }
-        if ($vehicleWords !== []) {
-            $anyPresent = false;
-            foreach ($vehicleWords as $word) {
-                if (mb_strpos($newLower, $word) !== false) { $anyPresent = true; break; }
-            }
-            if (!$anyPresent) return $plName;
+        if ($vehicleWords === []) return true; // brak danych pojazdu → nie blokuj
+        foreach ($vehicleWords as $word) {
+            if (mb_strpos($lower, $word) !== false) return true;
         }
-        return $new;
+        return false;
+    }
+
+    /**
+     * Prostuje śmieciowy PL z feedu do spójnego formatu, ZACHOWUJĄC wariant pojazdu.
+     *
+     * "Stalowa Osłona pod silnik Citroen Grand C4 SpaceTourer Aluminium"
+     *   → "Aluminiowa osłona silnika Citroen Grand C4 SpaceTourer"
+     */
+    public function straightenPl(string $plName, ?string $make, ?string $model, string $classifiedPhrase, string $element): string
+    {
+        $tail = $this->deriveVehicleTail($plName, $make, $model, $element);
+        $new = trim($classifiedPhrase . ($tail !== '' ? ' ' . $tail : ''));
+
+        // Jeśli identyfikacja pojazdu zniknęła — zwróć oryginał nietknięty.
+        return $this->vehiclePreserved($new, $make, $model) ? $new : $plName;
+    }
+
+    /**
+     * Składa nazwę OBCOJĘZYCZNĄ: {obce tłumaczenie typu} + {ogon pojazdu z PL}.
+     *
+     * Ogon (marka/model/wariant, np. "Audi A4 B9", "Ford Tourneo Custom PHEV") jest ~język-neutralny,
+     * więc bierzemy go z polskiego oryginału — obce nazwy zachowują wariant tak jak PL, a dla produktów
+     * już dobrze przetłumaczonych wynik jest identyczny (idempotentnie, brak zubożenia "A4 B9"→"A4").
+     * Gdyby ogon zgubił pojazd (zła kotwica) — fallback do rendition + make + model.
+     */
+    private function composeForeign(string $renditionValue, string $plName, ?string $make, ?string $model, string $element): string
+    {
+        $tail = $this->deriveVehicleTail($plName, $make, $model, $element);
+        $candidate = trim($renditionValue . ($tail !== '' ? ' ' . $tail : ''));
+
+        if ($tail === '' || !$this->vehiclePreserved($candidate, $make, $model)) {
+            return $this->joinPrefixWithSuffix($renditionValue, $make, $model);
+        }
+        return $candidate;
     }
 }

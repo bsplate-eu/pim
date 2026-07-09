@@ -20,6 +20,7 @@ class EbayOffer extends Model
         'price',
         'currency',
         'quantity',
+        'quantity_sold',
         'listing_status',
         'listing_url',
         'variation',
@@ -33,6 +34,7 @@ class EbayOffer extends Model
     protected $casts = [
         'price' => 'decimal:2',
         'quantity' => 'integer',
+        'quantity_sold' => 'integer',
         'variation' => 'array',
         'raw' => 'array',
         'first_seen' => 'datetime',

@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Models\Ebay\EbayActionLog;
 use App\Models\Scrap\EbaySettings;
 use App\Services\Ebay\EbayOfferService;
 use Illuminate\Console\Command;
@@ -34,6 +35,11 @@ class SyncEbayOffers extends Command
         }
 
         $this->info("Rynek {$r['marketplace']}: pobrano {$r['fetched']} ofert (nowych {$r['new']}, stron {$r['pages']}, zmapowano po SKU {$r['matched']}).");
+
+        $restocked = EbayOfferService::fromSettings($settings)->applyAutoRestock(EbayActionLog::CONTEXT_SYNC);
+        if ($restocked > 0) {
+            $this->info("Auto-restock: podniesiono {$restocked} ofert ze stanem 0.");
+        }
 
         return self::SUCCESS;
     }

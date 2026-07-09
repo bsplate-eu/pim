@@ -237,28 +237,52 @@ class PricelistController extends Controller
 
         [$header, $rows] = $this->readCsv($request->file('file')->getRealPath());
 
-        $idIdx = array_search('id', $header, true);
-        $priceIdx = array_search('price', $header, true);
-        if ($idIdx === false || $priceIdx === false) {
-            return back()->withErrors(['file' => 'CSV musi zawierac kolumny "id" i "price"']);
+        // Klucz produktu: 'id' (product_id) LUB 'external_id' (mapowany do product_id).
+        $idIdx     = array_search('id', $header, true);
+        $extIdx    = array_search('external_id', $header, true);
+        $priceIdx  = array_search('price', $header, true);
+        $manualIdx = array_search('manual_price', $header, true);
+
+        if ($idIdx === false && $extIdx === false) {
+            return back()->withErrors(['file' => 'CSV musi zawierac kolumne "id" lub "external_id"']);
+        }
+        if ($priceIdx === false && $manualIdx === false) {
+            return back()->withErrors(['file' => 'CSV musi zawierac kolumne "price" lub "manual_price"']);
+        }
+
+        // Mapa external_id => product_id (gdy plik używa external_id).
+        $extToId = [];
+        if ($extIdx !== false) {
+            $exts = array_filter(array_map(fn ($r) => trim((string) ($r[$extIdx] ?? '')), $rows));
+            $extToId = \App\Models\Product::whereIn('external_id', array_unique($exts))
+                ->pluck('id', 'external_id')->all();
         }
 
         $data = [];
         foreach ($rows as $r) {
-            $productId = (int) ($r[$idIdx] ?? 0);
+            $productId = $idIdx !== false
+                ? (int) ($r[$idIdx] ?? 0)
+                : (int) ($extToId[trim((string) ($r[$extIdx] ?? ''))] ?? 0);
             if ($productId <= 0) {
                 continue;
             }
-            $data[] = [
-                'pricelist_id' => $pricelist->id,
-                'product_id' => $productId,
-                'price' => $this->normalizePrice((string) ($r[$priceIdx] ?? '')) ?? 0,
-            ];
+            $row = ['pricelist_id' => $pricelist->id, 'product_id' => $productId];
+            if ($priceIdx !== false)  $row['price']        = $this->normalizePrice((string) ($r[$priceIdx] ?? '')) ?? 0;
+            if ($manualIdx !== false) $row['manual_price'] = $this->normalizePrice((string) ($r[$manualIdx] ?? '')) ?? 0;
+            // `price` jest NOT NULL — dodaj 0 dla ewentualnego INSERT (nowy wiersz w cenniku).
+            // Istniejących nie tknie: updateCols aktualizuje tylko kolumny z pliku.
+            $row['price'] ??= 0;
+            $data[] = $row;
         }
+
+        // Aktualizuj tylko te kolumny cenowe, które faktycznie były w pliku.
+        $updateCols = [];
+        if ($priceIdx !== false)  $updateCols[] = 'price';
+        if ($manualIdx !== false) $updateCols[] = 'manual_price';
 
         $imported = 0;
         foreach (array_chunk($data, 1000) as $chunk) {
-            PricelistProduct::upsert($chunk, ['pricelist_id', 'product_id'], ['price']);
+            PricelistProduct::upsert($chunk, ['pricelist_id', 'product_id'], $updateCols);
             $imported += count($chunk);
         }
 

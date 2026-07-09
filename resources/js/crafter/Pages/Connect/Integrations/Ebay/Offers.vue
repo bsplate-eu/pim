@@ -13,6 +13,179 @@
     <PageContent fluid>
         <div class="mb-4 text-sm text-gray-500">Argo Connect → Marketplace → <span class="font-medium text-gray-700">Ebay</span></div>
 
+        <!-- Górne taby: Oferty / Automatyczne akcje / Logi -->
+        <div class="mb-5 border-b border-gray-200">
+            <nav class="-mb-px flex gap-6">
+                <button type="button" @click="viewMode = 'offers'" :class="tabClass(viewMode === 'offers')">Oferty</button>
+                <button type="button" @click="viewMode = 'auto'" :class="tabClass(viewMode === 'auto')">Automatyczne akcje</button>
+                <button type="button" @click="openLogs" :class="tabClass(viewMode === 'logs')">Logi</button>
+            </nav>
+        </div>
+
+        <!-- TAB: Automatyczne akcje -->
+        <Card v-if="viewMode === 'auto'">
+            <CardHeader>
+                <h2 class="text-lg font-semibold">Automatyczne akcje</h2>
+                <p class="text-sm text-gray-500">Reguły wykonywane automatycznie — po każdym „Pobierz oferty" oraz cronem (<code>ebay:auto-actions</code>).</p>
+            </CardHeader>
+            <CardContent class="space-y-4">
+                <!-- Reguła 1: Auto-restock -->
+                <div class="rounded-lg border border-gray-200 p-4">
+                    <div class="flex items-start justify-between gap-4">
+                        <div>
+                            <div class="font-medium text-gray-900">Auto-restock — uzupełnianie stanu</div>
+                            <div class="text-sm text-gray-600 mt-1">
+                                Gdy stan aktywnej aukcji spadnie do <span class="font-semibold">0</span> → ustaw na
+                                <input type="number" min="1" v-model.number="autoForm.to" @change="saveAuto"
+                                    class="w-20 mx-1 rounded-md border-gray-300 text-sm focus:border-primary-500 focus:ring-primary-500" /> szt.
+                            </div>
+                            <div class="text-xs text-gray-400 mt-1">Dotyczy wszystkich rynków. Zmiana idzie od razu na eBay.</div>
+                        </div>
+                        <label class="inline-flex items-center gap-2 cursor-pointer shrink-0">
+                            <input type="checkbox" v-model="autoForm.enabled" @change="saveAuto"
+                                class="rounded text-primary-600 focus:ring-primary-500" />
+                            <span class="text-sm font-medium" :class="autoForm.enabled ? 'text-green-700' : 'text-gray-400'">
+                                {{ autoForm.enabled ? 'Włączone' : 'Wyłączone' }}
+                            </span>
+                        </label>
+                    </div>
+                    <div class="mt-3">
+                        <Button type="button" variant="outline" color="gray" @click="runAuto" :loading="runningAuto" :disabled="!meta.oauth_connected">
+                            Uruchom teraz
+                        </Button>
+                        <span class="ml-2 text-xs text-gray-400">Przeszuka oferty ze stanem 0 i podniesie je od razu.</span>
+                    </div>
+                </div>
+
+                <!-- Reguła 2: Auto-przypisanie do produktów -->
+                <div class="rounded-lg border border-gray-200 p-4">
+                    <div class="flex items-start justify-between gap-4">
+                        <div>
+                            <div class="font-medium text-gray-900">Auto-przypisanie do produktów (po SKU)</div>
+                            <div class="text-sm text-gray-600 mt-1">
+                                Nieprzypisane oferty łączy z naszym produktem po <span class="font-semibold">SKU</span>
+                                (SKU aukcji = kod produktu, znormalizowane).
+                            </div>
+                            <div class="text-xs text-gray-400 mt-1">Dopasowanie do wszystkich produktów w katalogu. Ręczne przypisania nietykalne. Bez zmian na eBay.</div>
+                        </div>
+                        <label class="inline-flex items-center gap-2 cursor-pointer shrink-0">
+                            <input type="checkbox" v-model="autoForm.assign_enabled" @change="saveAuto"
+                                class="rounded text-primary-600 focus:ring-primary-500" />
+                            <span class="text-sm font-medium" :class="autoForm.assign_enabled ? 'text-green-700' : 'text-gray-400'">
+                                {{ autoForm.assign_enabled ? 'Włączone' : 'Wyłączone' }}
+                            </span>
+                        </label>
+                    </div>
+                    <div class="mt-3">
+                        <Button type="button" variant="outline" color="gray" @click="runAssign" :loading="runningAssign">
+                            Uruchom teraz
+                        </Button>
+                        <span class="ml-2 text-xs text-gray-400">Przeszuka nieprzypisane oferty i zmapuje pasujące po SKU.</span>
+                    </div>
+                </div>
+            </CardContent>
+        </Card>
+
+        <!-- TAB: Logi automatycznych akcji -->
+        <Card v-if="viewMode === 'logs'">
+            <CardHeader>
+                <div class="flex items-center justify-between gap-3 flex-wrap">
+                    <div>
+                        <h2 class="text-lg font-semibold">Logi automatycznych akcji</h2>
+                        <p class="text-sm text-gray-500">Co i kiedy zmienił auto-restock — jeden wiersz = jedna oferta podniesiona (lub błąd).</p>
+                    </div>
+                    <div class="flex items-center gap-x-4 gap-y-2 flex-wrap">
+                        <div class="flex flex-wrap gap-1.5">
+                            <button v-for="pill in logStatusPills" :key="pill.key" type="button" @click="setLogStatus(pill.key)"
+                                class="rounded-full px-3 py-1 text-xs font-medium border transition"
+                                :class="logStatus === pill.key ? 'bg-primary-600 text-white border-primary-600' : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'">
+                                {{ pill.label }} <span class="opacity-70">({{ logCounts[pill.key] ?? 0 }})</span>
+                            </button>
+                        </div>
+                        <input type="search" v-model="logSearch" @keyup.enter="reloadLogs"
+                            placeholder="Szukaj: tytuł / SKU / ItemID…"
+                            class="w-56 rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm" />
+                        <Button type="button" variant="outline" color="gray" :leftIcon="ArrowPathIcon" @click="reloadLogs" :loading="logsLoading">
+                            Odśwież
+                        </Button>
+                    </div>
+                </div>
+            </CardHeader>
+            <CardContent class="p-0">
+                <div v-if="logsLoading && !logs" class="p-8 text-center text-sm text-gray-500">Ładowanie…</div>
+                <div v-else-if="!logs || logs.data.length === 0" class="p-8 text-center text-sm text-gray-500">
+                    Brak logów. Auto-restock zapisze tu każdą podniesioną ofertę (cron / „Uruchom teraz" / po pobraniu ofert).
+                </div>
+                <div v-else class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200 text-sm">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Czas</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Akcja</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Źródło</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Oferta</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Rynek</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Efekt</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                                <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Link</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200 bg-white">
+                            <tr v-for="l in logs.data" :key="l.id" class="hover:bg-gray-50">
+                                <td class="px-4 py-2.5 text-xs text-gray-500 whitespace-nowrap">{{ l.created_at }}</td>
+                                <td class="px-4 py-2.5 text-xs whitespace-nowrap">
+                                    <span class="inline-flex rounded px-1.5 py-0.5 font-medium" :class="actionClass(l.action)">{{ actionLabel(l.action) }}</span>
+                                </td>
+                                <td class="px-4 py-2.5 text-xs whitespace-nowrap">
+                                    <span class="inline-flex rounded px-1.5 py-0.5" :class="contextClass(l.context)">{{ contextLabel(l.context) }}</span>
+                                </td>
+                                <td class="px-4 py-2.5">
+                                    <div class="max-w-md truncate text-gray-900" :title="l.title ?? ''">{{ l.title || '—' }}</div>
+                                    <div class="font-mono text-xs text-gray-400">{{ l.sku || l.item_id || '—' }}</div>
+                                </td>
+                                <td class="px-4 py-2.5 text-xs text-gray-500 whitespace-nowrap">{{ marketLabel(l.marketplace) }}</td>
+                                <td class="px-4 py-2.5 whitespace-nowrap text-sm">
+                                    <span v-if="l.status !== 'ok'" class="text-gray-400">—</span>
+                                    <template v-else-if="l.action === 'auto_restock'">
+                                        <span class="text-gray-400">{{ l.qty_before ?? 0 }}</span>
+                                        <span class="text-gray-400 mx-1">→</span>
+                                        <span class="font-semibold text-green-700">{{ l.qty_after }}</span>
+                                        <span class="text-gray-400 text-xs"> szt.</span>
+                                    </template>
+                                    <template v-else-if="l.action === 'auto_assign'">
+                                        <span class="text-gray-400 mr-1">→</span>
+                                        <span class="font-mono font-medium text-green-700">{{ l.product?.product_code ?? l.sku ?? '—' }}</span>
+                                        <span v-if="l.product?.name" class="text-gray-500"> · {{ l.product.name }}</span>
+                                    </template>
+                                    <span v-else class="text-gray-400">—</span>
+                                </td>
+                                <td class="px-4 py-2.5 whitespace-nowrap">
+                                    <span class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium"
+                                        :class="l.status === 'ok' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'">
+                                        <span class="h-1.5 w-1.5 rounded-full" :class="l.status === 'ok' ? 'bg-green-500' : 'bg-red-500'" />
+                                        {{ l.status === 'ok' ? 'OK' : 'Błąd' }}
+                                    </span>
+                                    <div v-if="l.message" class="text-xs text-red-500 max-w-xs truncate" :title="l.message">{{ l.message }}</div>
+                                </td>
+                                <td class="px-4 py-2.5 text-right">
+                                    <a v-if="l.listing_url" :href="l.listing_url" target="_blank" rel="noopener" class="text-primary-600 hover:underline text-xs">otwórz ↗</a>
+                                    <span v-else class="text-gray-400 text-xs">—</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div v-if="logs && logs.last_page > 1" class="flex flex-wrap gap-1 p-4 border-t border-gray-100">
+                    <button v-for="p in logPageWindow" :key="p" type="button" @click="loadLogs(p)"
+                        :class="['px-3 py-1 rounded text-sm', p === logs.current_page ? 'bg-primary-600 text-white' : 'text-gray-600 hover:bg-gray-100']">
+                        {{ p }}
+                    </button>
+                </div>
+            </CardContent>
+        </Card>
+
+        <div v-show="viewMode === 'offers'">
+
         <div v-if="!meta.oauth_connected"
             class="mb-4 rounded-md bg-yellow-50 border border-yellow-200 p-3 text-sm text-yellow-800">
             Konto eBay nie jest połączone.
@@ -48,17 +221,33 @@
                 </button>
                 <button type="button" @click="clearSelection" class="text-gray-500 hover:text-gray-700 underline">Wyczyść</button>
                 <span class="text-gray-300">|</span>
-                <span class="font-medium text-gray-800">Operacja: zmień cenę na cenę z cennika</span>
-                <select v-model.number="opForm.pricelist_id"
-                    class="rounded-md border-gray-300 text-sm focus:border-primary-500 focus:ring-primary-500">
-                    <option :value="null">— wybierz cennik —</option>
-                    <option v-for="pl in pricelists" :key="pl.id" :value="pl.id">{{ pl.name }}</option>
+                <span class="font-medium text-gray-800">Operacja:</span>
+                <select v-model="opType" class="rounded-md border-gray-300 text-sm focus:border-primary-500 focus:ring-primary-500">
+                    <option value="price">Zmień cenę (z cennika)</option>
+                    <option value="qty">Zmień ilość</option>
                 </select>
-                <span class="text-gray-600">VAT</span>
-                <input type="number" v-model.number="opForm.vat" min="0" max="100" step="1"
-                    class="w-16 rounded-md border-gray-300 text-sm focus:border-primary-500 focus:ring-primary-500" />
-                <span class="text-gray-500">%</span>
-                <Button type="button" color="primary" @click="doPreview" :loading="previewing" :disabled="!opForm.pricelist_id">
+                <template v-if="opType === 'price'">
+                    <select v-model.number="opForm.pricelist_id"
+                        class="rounded-md border-gray-300 text-sm focus:border-primary-500 focus:ring-primary-500">
+                        <option :value="null">— wybierz cennik —</option>
+                        <option v-for="pl in pricelists" :key="pl.id" :value="pl.id">{{ pl.name }}</option>
+                    </select>
+                    <span class="text-gray-600">VAT</span>
+                    <input type="number" v-model.number="opForm.vat" min="0" max="100" step="1"
+                        class="w-16 rounded-md border-gray-300 text-sm focus:border-primary-500 focus:ring-primary-500" />
+                    <span class="text-gray-500">%</span>
+                </template>
+                <template v-else>
+                    <select v-model="qtyForm.mode" class="rounded-md border-gray-300 text-sm focus:border-primary-500 focus:ring-primary-500">
+                        <option value="increase">Zwiększ o</option>
+                        <option value="decrease">Zmniejsz o</option>
+                        <option value="set">Ustaw na</option>
+                    </select>
+                    <input type="number" v-model.number="qtyForm.amount" min="0" step="1"
+                        class="w-20 rounded-md border-gray-300 text-sm focus:border-primary-500 focus:ring-primary-500" />
+                    <span class="text-gray-500">szt.</span>
+                </template>
+                <Button type="button" color="primary" @click="doPreview" :loading="previewing">
                     Podgląd zmian
                 </Button>
             </div>
@@ -177,7 +366,13 @@
                                 <td class="px-4 py-3 text-right whitespace-nowrap font-medium">
                                     {{ o.price != null ? `${o.price} ${o.currency ?? ''}` : '—' }}
                                 </td>
-                                <td class="px-4 py-3 text-right">{{ o.quantity ?? '—' }}</td>
+                                <td class="px-4 py-3 text-right">
+                                    <input type="number" min="0" step="1" :value="o.quantity ?? 0"
+                                        @change="saveQuantity(o, ($event.target as HTMLInputElement).value)"
+                                        :disabled="!meta.oauth_connected"
+                                        title="Wpisz i zatwierdź (Enter / klik poza) → zmienia stan na eBay"
+                                        class="w-16 text-right rounded-md border-gray-300 text-sm focus:border-primary-500 focus:ring-primary-500 disabled:opacity-50" />
+                                </td>
                                 <td v-if="activeMarketplace === null" class="px-4 py-3 text-xs text-gray-500">{{ marketLabel(o.marketplace) }}</td>
                                 <td class="px-4 py-3 text-xs">
                                     <span :class="o.listing_status === 'Active' ? 'text-green-700' : 'text-gray-500'">{{ o.listing_status ?? '—' }}</span>
@@ -206,17 +401,18 @@
         <div v-if="showPreview" class="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4" @click.self="showPreview = false">
             <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[85vh] flex flex-col">
                 <div class="px-5 py-4 border-b">
-                    <h3 class="text-lg font-semibold">Podgląd zmiany cen</h3>
-                    <p class="text-sm text-gray-500">Cennik: <span class="font-medium">{{ preview?.pricelist ?? '—' }}</span> · VAT {{ opForm.vat }}%</p>
+                    <h3 class="text-lg font-semibold">Podgląd zmian — {{ opType === 'price' ? 'cena' : 'ilość' }}</h3>
+                    <p v-if="opType === 'price'" class="text-sm text-gray-500">Cennik: <span class="font-medium">{{ preview?.pricelist ?? '—' }}</span> · VAT {{ opForm.vat }}%</p>
+                    <p v-else class="text-sm text-gray-500">{{ qtyForm.mode === 'set' ? 'Ustaw na' : qtyForm.mode === 'increase' ? 'Zwiększ o' : 'Zmniejsz o' }} <span class="font-medium">{{ qtyForm.amount }} szt.</span></p>
                 </div>
                 <div class="px-5 py-3 text-sm">
-                    <span class="font-semibold text-green-700">{{ preview?.count ?? 0 }}</span> ofert do zmiany,
-                    <span class="text-gray-500">{{ preview?.skipped ?? 0 }} pominiętych (brak ceny w cenniku)</span>.
+                    <span class="font-semibold text-green-700">{{ preview?.count ?? 0 }}</span> ofert do zmiany<template v-if="opType === 'price'">,
+                    <span class="text-gray-500">{{ preview?.skipped ?? 0 }} pominiętych (brak ceny w cenniku)</span></template>.
                 </div>
                 <div class="px-5 overflow-auto flex-1">
                     <table class="min-w-full text-sm">
                         <thead class="text-xs text-gray-500 uppercase sticky top-0 bg-white">
-                            <tr><th class="text-left py-1">Tytuł / SKU</th><th class="text-right">Obecna</th><th class="text-right">Nowa (brutto)</th></tr>
+                            <tr><th class="text-left py-1">Tytuł / SKU</th><th class="text-right">Obecna</th><th class="text-right">Nowa</th></tr>
                         </thead>
                         <tbody class="divide-y divide-gray-100">
                             <tr v-for="(r, i) in preview?.sample ?? []" :key="i">
@@ -224,8 +420,8 @@
                                     <span class="truncate block max-w-xs">{{ r.title }}</span>
                                     <span class="font-mono text-xs text-gray-400">{{ r.sku || '—' }}</span>
                                 </td>
-                                <td class="text-right text-gray-500 whitespace-nowrap">{{ r.old ?? '—' }} {{ r.currency }}</td>
-                                <td class="text-right font-medium whitespace-nowrap">{{ r.new }} {{ r.currency }}</td>
+                                <td class="text-right text-gray-500 whitespace-nowrap">{{ r.old ?? '—' }} {{ preview?.unit }}</td>
+                                <td class="text-right font-medium whitespace-nowrap">{{ r.new }} {{ preview?.unit }}</td>
                             </tr>
                         </tbody>
                     </table>
@@ -234,7 +430,7 @@
                     </p>
                 </div>
                 <div class="px-5 py-4 border-t flex items-center justify-between gap-3 flex-wrap">
-                    <p class="text-xs text-amber-600">⚠️ „Zastosuj" zmienia REALNE ceny na eBay. Najpierw testuj na Sandboxie.</p>
+                    <p class="text-xs text-amber-600">⚠️ „Zastosuj" zmienia REALNE dane na eBay. Najpierw testuj na Sandboxie.</p>
                     <div class="flex gap-2">
                         <Button type="button" variant="outline" color="gray" @click="showPreview = false">Anuluj</Button>
                         <Button type="button" color="primary" @click="doApply" :loading="applying" :disabled="(preview?.count ?? 0) === 0">
@@ -243,6 +439,7 @@
                     </div>
                 </div>
             </div>
+        </div>
         </div>
     </PageContent>
 </template>
@@ -285,6 +482,7 @@ interface Props {
     per_page: number;
     filters: { search: string | null; mapped: string | null; marketplace: string | null };
     meta: { oauth_connected: boolean; has_credentials: boolean };
+    auto: { enabled: boolean; to: number; assign_enabled: boolean };
 }
 
 const props = defineProps<Props>();
@@ -302,7 +500,8 @@ const MARKET_LABELS: Record<string, string> = {
     EBAY_DE: "Niemcy (DE)", EBAY_PL: "Polska (PL)", EBAY_US: "USA", EBAY_GB: "UK",
     EBAY_FR: "Francja", EBAY_IT: "Włochy", EBAY_ES: "Hiszpania", EBAY_AT: "Austria",
 };
-function marketLabel(mp: string): string {
+function marketLabel(mp: string | null): string {
+    if (!mp) return "—";
     return MARKET_LABELS[mp] ?? mp;
 }
 
@@ -402,6 +601,26 @@ async function fetch() {
     }
 }
 
+/** Inline: zmiana ilości jednej oferty → od razu na eBay (ReviseInventoryStatus). */
+async function saveQuantity(o: OfferRow, value: string) {
+    const qty = parseInt(value, 10);
+    if (!Number.isFinite(qty) || qty < 0 || qty === (o.quantity ?? 0)) return;
+    try {
+        const { data } = await axios.post(
+            route("crafter.connect.integrations.ebay.offers.quantity", { offer: o.id }),
+            { quantity: qty },
+        );
+        if (data.ok) {
+            o.quantity = data.quantity;
+            toast.success(`Ilość → ${data.quantity} szt. (eBay)`);
+        } else {
+            toast.error(data.message);
+        }
+    } catch (e: any) {
+        toast.error(e?.response?.data?.message ?? "Błąd zmiany ilości.");
+    }
+}
+
 // --- Zaznaczanie (cross-page) ---
 const selected = ref<Set<number>>(new Set());
 const selectAllMatching = ref(false); // true = WSZYSTKIE zmapowane pasujące filtrowi (nie tylko zaznaczone strony)
@@ -431,27 +650,36 @@ function clearSelection() {
     selectAllMatching.value = false;
 }
 
-// --- Operacja: zmień cenę na cenę z cennika ---
+// --- Operacje: zmień cenę (z cennika) LUB zmień ilość ---
+const opType = ref<"price" | "qty">("price");
 const opForm = reactive({ pricelist_id: null as number | null, vat: 0 });
-const preview = ref<{ count: number; skipped: number; pricelist: string | null; sample: any[] } | null>(null);
+const qtyForm = reactive({ mode: "increase" as "increase" | "decrease" | "set", amount: 0 });
+const preview = ref<{ count: number; skipped: number; pricelist?: string | null; unit: string; sample: any[] } | null>(null);
 const previewing = ref(false);
 const applying = ref(false);
 const showPreview = ref(false);
 
-function opPayload(): Record<string, any> {
-    const base = { pricelist_id: opForm.pricelist_id, vat: opForm.vat };
+/** Część payloadu wskazująca zbiór ofert (zaznaczone ids lub wszystkie pasujące filtrowi). */
+function selectionPayload(): Record<string, any> {
     return selectAllMatching.value
-        ? { ...base, all: true, marketplace: activeMarketplace.value || undefined, search: search.value || undefined }
-        : { ...base, ids: [...selected.value] };
+        ? { all: true, marketplace: activeMarketplace.value || undefined, search: search.value || undefined }
+        : { ids: [...selected.value] };
 }
 
 async function doPreview() {
-    if (!opForm.pricelist_id) { toast.error("Wybierz cennik."); return; }
     if (!selectAllMatching.value && selected.value.size === 0) { toast.error("Zaznacz oferty lub „wszystkie pasujące”."); return; }
+    if (opType.value === "price" && !opForm.pricelist_id) { toast.error("Wybierz cennik."); return; }
     previewing.value = true;
     try {
-        const { data } = await axios.post(route("crafter.connect.integrations.ebay.offers.price-preview"), opPayload());
-        preview.value = data;
+        if (opType.value === "price") {
+            const { data } = await axios.post(route("crafter.connect.integrations.ebay.offers.price-preview"),
+                { pricelist_id: opForm.pricelist_id, vat: opForm.vat, ...selectionPayload() });
+            preview.value = { ...data, unit: "EUR" };
+        } else {
+            const { data } = await axios.post(route("crafter.connect.integrations.ebay.offers.qty-preview"),
+                { mode: qtyForm.mode, amount: qtyForm.amount, ...selectionPayload() });
+            preview.value = { ...data, unit: "szt." };
+        }
         showPreview.value = true;
     } catch (e: any) {
         toast.error(e?.response?.data?.message ?? "Błąd podglądu.");
@@ -461,10 +689,17 @@ async function doPreview() {
 }
 
 async function doApply() {
-    if (!window.confirm(`Zmienić ceny ${preview.value?.count ?? ""} ofert NA ŻYWO na eBay? To realne ceny aukcji.`)) return;
+    const what = opType.value === "price" ? "ceny" : "ilość";
+    if (!window.confirm(`Zmienić ${what} ${preview.value?.count ?? ""} ofert NA ŻYWO na eBay? To realne aukcje.`)) return;
     applying.value = true;
     try {
-        const { data } = await axios.post(route("crafter.connect.integrations.ebay.offers.price-apply"), opPayload());
+        const url = opType.value === "price"
+            ? route("crafter.connect.integrations.ebay.offers.price-apply")
+            : route("crafter.connect.integrations.ebay.offers.qty-apply");
+        const payload = opType.value === "price"
+            ? { pricelist_id: opForm.pricelist_id, vat: opForm.vat, ...selectionPayload() }
+            : { mode: qtyForm.mode, amount: qtyForm.amount, ...selectionPayload() };
+        const { data } = await axios.post(url, payload);
         if (data.ok) {
             toast.success(data.message);
             showPreview.value = false;
@@ -473,9 +708,137 @@ async function doApply() {
             toast.error(data.message);
         }
     } catch (e: any) {
-        toast.error(e?.response?.data?.message ?? "Błąd zmiany cen.");
+        toast.error(e?.response?.data?.message ?? "Błąd operacji.");
     } finally {
         applying.value = false;
     }
+}
+
+// --- Górny tryb: Oferty / Automatyczne akcje / Logi ---
+const viewMode = ref<"offers" | "auto" | "logs">("offers");
+const autoForm = reactive({
+    enabled: props.auto?.enabled ?? true,
+    to: props.auto?.to ?? 5,
+    assign_enabled: props.auto?.assign_enabled ?? true,
+});
+const runningAuto = ref(false);
+const runningAssign = ref(false);
+
+async function saveAuto() {
+    try {
+        await axios.post(route("crafter.connect.integrations.ebay.offers.auto-actions"), {
+            enabled: autoForm.enabled,
+            to: autoForm.to,
+            assign_enabled: autoForm.assign_enabled,
+        });
+        toast.success("Zapisano regułę.");
+    } catch (e: any) {
+        toast.error(e?.response?.data?.message ?? "Błąd zapisu reguły.");
+    }
+}
+
+async function runAuto() {
+    runningAuto.value = true;
+    try {
+        const { data } = await axios.post(route("crafter.connect.integrations.ebay.offers.auto-actions.run"));
+        data.ok ? toast.success(data.message) : toast.error(data.message);
+    } catch (e: any) {
+        toast.error(e?.response?.data?.message ?? "Błąd uruchomienia.");
+    } finally {
+        runningAuto.value = false;
+        if (viewMode.value === "logs") reloadLogs(); // odśwież dziennik po ręcznym uruchomieniu
+    }
+}
+
+async function runAssign() {
+    runningAssign.value = true;
+    try {
+        const { data } = await axios.post(route("crafter.connect.integrations.ebay.offers.auto-assign.run"));
+        data.ok ? toast.success(data.message) : toast.error(data.message);
+    } catch (e: any) {
+        toast.error(e?.response?.data?.message ?? "Błąd uruchomienia.");
+    } finally {
+        runningAssign.value = false;
+        if (viewMode.value === "logs") reloadLogs(); // odśwież dziennik po ręcznym uruchomieniu
+    }
+}
+
+// --- Logi automatycznych akcji (ładowane axiosem przy wejściu w zakładkę) ---
+interface LogRow {
+    id: number;
+    action: string;
+    context: string | null;
+    status: string;
+    marketplace: string | null;
+    item_id: string | null;
+    sku: string | null;
+    title: string | null;
+    listing_url: string | null;
+    qty_before: number | null;
+    qty_after: number | null;
+    message: string | null;
+    created_at: string | null;
+    product: { product_code: string | null; name: string | null } | null;
+}
+const logs = ref<(Paginated<LogRow> & { current_page: number }) | null>(null);
+const logsLoading = ref(false);
+const logStatus = ref<"all" | "ok" | "error">("all");
+const logSearch = ref("");
+const logCounts = ref<Record<string, number>>({ all: 0, ok: 0, error: 0 });
+const logStatusPills = [
+    { key: "all", label: "Wszystkie" },
+    { key: "ok", label: "OK" },
+    { key: "error", label: "Błąd" },
+];
+
+function openLogs() {
+    viewMode.value = "logs";
+    if (!logs.value) loadLogs(1);
+}
+async function loadLogs(page = 1) {
+    logsLoading.value = true;
+    try {
+        const { data } = await axios.get(route("crafter.connect.integrations.ebay.offers.logs"), {
+            params: {
+                page,
+                status: logStatus.value === "all" ? undefined : logStatus.value,
+                search: logSearch.value || undefined,
+            },
+        });
+        logs.value = data.logs;
+        logCounts.value = data.counts;
+    } catch (e: any) {
+        toast.error(e?.response?.data?.message ?? "Błąd wczytania logów.");
+    } finally {
+        logsLoading.value = false;
+    }
+}
+function reloadLogs() { loadLogs(1); }
+function setLogStatus(key: string) {
+    logStatus.value = key as "all" | "ok" | "error";
+    loadLogs(1);
+}
+const logPageWindow = computed<number[]>(() => {
+    if (!logs.value) return [];
+    const last = logs.value.last_page;
+    const cur = logs.value.current_page;
+    const start = Math.max(1, cur - 5);
+    const end = Math.min(last, cur + 5);
+    const out: number[] = [];
+    for (let i = start; i <= end; i++) out.push(i);
+    return out;
+});
+
+function actionLabel(a: string): string {
+    return ({ auto_restock: "Auto-restock", auto_assign: "Auto-przypisanie" } as Record<string, string>)[a] ?? a;
+}
+function actionClass(a: string): string {
+    return ({ auto_restock: "bg-emerald-50 text-emerald-700", auto_assign: "bg-indigo-50 text-indigo-700" } as Record<string, string>)[a] ?? "bg-gray-100 text-gray-600";
+}
+function contextLabel(c: string | null): string {
+    return ({ cron: "Cron", manual: "Ręcznie", sync: "Po pobraniu" } as Record<string, string>)[c ?? ""] ?? (c || "—");
+}
+function contextClass(c: string | null): string {
+    return ({ cron: "bg-blue-50 text-blue-700", manual: "bg-purple-50 text-purple-700", sync: "bg-gray-100 text-gray-600" } as Record<string, string>)[c ?? ""] ?? "bg-gray-100 text-gray-600";
 }
 </script>
