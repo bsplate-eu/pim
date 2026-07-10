@@ -73,4 +73,19 @@ class OpencartConnector extends AbstractHttpConnector
             return [];
         }
     }
+
+    /**
+     * OpenCart: wyłączamy reużycie po SKU. W katalogu BSP wiele OSOBNYCH produktów
+     * (jedna osłona pasuje do wielu modeli) dzieli jeden Art.-Nr — bez tego connector
+     * dedupuje po SKU i N pim_id → 1 produkt. Każdy pim_id MUSI dać osobny produkt.
+     */
+    public function importProducts(array $items): array
+    {
+        $response = $this->request('importProducts', [
+            'items'           => $items,
+            'allow_sku_reuse' => false,
+        ]);
+
+        return $response['data'] ?? [];
+    }
 }

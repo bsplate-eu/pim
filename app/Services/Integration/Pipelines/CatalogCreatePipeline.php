@@ -141,6 +141,9 @@ class CatalogCreatePipeline extends AbstractConnectorPipeline
             : [];
 
         return [
+            // Bez pim_id connector OpenCart nie rozpozna istniejącej kategorii (addCategory)
+            // → tworzy duplikaty i nie zapisuje oc_pim_category_link.
+            'pim_id'            => (int) $category->id,
             'name_i18n'         => $filter($tr('name')),
             'short_description' => $filter($tr('lead')),
             'description'       => $filter($tr('long_description')),
