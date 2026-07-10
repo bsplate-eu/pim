@@ -36,3 +36,7 @@ _deploy_*
 _DEPLOY_*
 *.tar.gz
 /*.sql
+
+# --- Skrypty i eksporty robocze (importery, rekoncyliacje, feedy Selly) ---
+/_*
+*.csv
