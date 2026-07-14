@@ -342,8 +342,17 @@ class CatalogCreatePipeline extends AbstractConnectorPipeline
             $product->getTranslations('name'),
             fn ($v) => trim((string) $v) !== ''
         );
+        // Doklej rocznik (year-start/year-stop) do nazwy w KAŻDYM locale — language-neutral.
+        // W products.name lat nie ma (są w atrybutach); wcześniej doklejał je szablon, ale tylko
+        // gdy slot nazwy był pusty → po wypełnieniu nazw roczniki znikały z tytułów w sklepie.
+        $ySuffix = $this->yearSuffix($product);
+        if ($ySuffix !== '') {
+            foreach ($nameI18n as $loc => $val) {
+                if (!str_ends_with($val, $ySuffix)) $nameI18n[$loc] = $val . $ySuffix;
+            }
+        }
         if ($renderedTitle !== '' && empty($nameI18n[$locale])) {
-            $nameI18n[$locale] = $renderedTitle;
+            $nameI18n[$locale] = $renderedTitle; // fallback: szablon już zawiera rocznik
         }
         if (empty($nameI18n)) {
             $nameI18n = [$locale => $product->product_code ?: "product-{$product->id}"];
@@ -509,5 +518,21 @@ class CatalogCreatePipeline extends AbstractConnectorPipeline
             if ($value !== '') return $value;
         }
         return trim($fallback);
+    }
+
+    /**
+     * Zakres lat produkcji z atrybutów (language-neutral), np. " (2008-2018)".
+     * Pusty gdy brak year-start i year-stop.
+     */
+    private function yearSuffix(Product $product): string
+    {
+        $start = $stop = '';
+        foreach ($product->attributeValues as $av) {
+            $slug = $av->attribute?->slug;
+            if ($slug === 'year-start') $start = trim((string) $av->name);
+            elseif ($slug === 'year-stop') $stop = trim((string) $av->name);
+        }
+        if ($start === '' && $stop === '') return '';
+        return ' (' . $start . '-' . $stop . ')';
     }
 }
