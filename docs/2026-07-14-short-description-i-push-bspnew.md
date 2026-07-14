@@ -85,11 +85,12 @@ Wynik (`catalog_create` run id=18): **1491/1491**, 0 błędów, 3 min 40 s. Delt
 
 Prod = PrestaShop, więc short_description **będzie** widoczny (`description_short`). Prod bez gita/composera → paczka ręczna.
 
-**Paczka:** `short_description_fix_2026-07-14.zip` (separatory `/`, NIE robić Compress-Archive), zawiera 4 pliki:
+**Paczka:** `_deploy_short_description_2026-07-14.zip` (separatory `/`, NIE robić Compress-Archive), zawiera 5 plików + DEPLOY.md:
 - `app/Services/Integration/SyncService.php`
 - `app/Services/Integration/Pipelines/CatalogCreatePipeline.php`
 - `app/Services/Integration/Pipelines/CatalogDeltaPipeline.php`
 - `app/Services/Integration/Pipelines/MediaSyncPipeline.php`
+- `app/Models/IntegrationProduct.php` — fix null-override (override `name:null` NIE zeruje nazwy; incydent 2026-07-02, commit `c0793b7`, wg sesji „selly 2/3" czekał na prod)
 
 **Kroki na prod:**
 1. Backup 4 plików na prod.
