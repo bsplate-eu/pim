@@ -1,0 +1,58 @@
+@php($is_alu = ($attribute_material ?? '') == 'Aluminium')
+<div>
+    <p>
+        <strong>Producent:</strong> PARETO
+        <br>
+        <strong>Kod produktu:</strong> {{ $product_code }}
+        <br>
+        <strong>Stan produktu:</strong> Nowy
+        <br><br>
+        <strong>Osłona przeznaczona do auta:</strong>
+    </p>
+    <ul>
+        <li><strong>Marka:</strong> {{ $attribute_make }}</li>
+        <li><strong>Model:</strong> {{ $attribute_model }}</li>
+        <li><strong>Lata produkcji:</strong> {{ $attribute_year_start }}-{{ $attribute_year_stop }}</li>
+        @if($attribute_engine)
+            <li><strong>Rodzaje silników:</strong> {{ $attribute_engine }}</li>
+        @endif
+    </ul>
+    <p><strong><br>Dane techniczne osłony:</strong></p>
+    <ul>
+        <li><strong>Zabezpieczane elementy podwozia:</strong> {{ $attribute_protection }}</li>
+        @if($is_alu)
+        <li><strong>Materiał osłony:</strong> Aluminium (lekkie i bardzo wytrzymałe)</li>
+        @else
+        <li><strong>Materiał osłony:</strong> Stal (bardzo wytrzymała i elastyczna)</li>
+        @endif
+        <li><strong>Każda osłona posiada przetłoczenia wzmacniające konstrukcję</strong></li>
+        <li><strong>Grubość osłony:</strong> {{ $width }} mm</li>
+        <li><strong>Malowanie osłony:</strong> proszkowe (warstwa antykorozyjna), elektrostatyczne</li>
+        <li><strong>Technologia produkcji:</strong> obrabiarka CNC</li>
+        <li><strong>Akcesoria montażowe dołączone do zestawu:</strong> śruby, nakrętki, klipsy</li>
+        <li><strong>Montaż:</strong> w otworach fabrycznych, nie trzeba nic przerabiać, nie narusza gwarancji auta.</li>
+@if($attribute_oil)
+<li><strong>Posiada wycięcie na otwór spustowy miski olejowe</strong>, nie ma konieczności demontażu osłony przy wymianie oleju.</li></br>
+@else
+@endif
+    </ul>
+<br>
+    @if($is_alu)
+    <p><strong>Nasze aluminiowe osłony wykonane są z wysokiej jakości aluminium o grubości {{ rtrim(rtrim($width, '0'), '.') }} mm.</strong> <br>
+Aluminium jest znacznie lżejsze od stali - <strong>naprawdę ochroni podwozie Twojego samochodu</strong> bez zbędnego obciążania przodu auta.
+<p><strong>Najwyższej jakości aluminiowe osłony silnika oraz innych podzespołów, produkowane przy wykorzystaniu
+            najnowocześniejszych technologii obróbki metali.</strong></p>
+    @else
+    <p><strong>Nasze osłony wykonane są z wysokiej jakości stali S235 o grubości od 2 do 3 mm, a nie z DC01 używanej przez konkurencję.</strong> <br>
+Nasz materiał to stal konstrukcyjna - <strong>naprawdę ochroni podwozie Twojego samochodu,</strong> zamiast tylko wyglądać jak osłona.
+<p><strong>Najwyższej jakości stalowe osłony silnika oraz innych podzespołów, produkowane przy wykorzystaniu
+            najnowocześniejszych technologii obróbki metali.</strong></p>
+    @endif
+    <p>Osłony Pareto idealnie sprawdzają się wszędzie tam gdzie może zajść ryzyko mechanicznego uszkodzenia elementów
+        podwozia Twojego auta (progi zwalniające, krzewy, kamienie etc.)</p>
+        <br>Osłony są bardzo łatwe w montażu, nie trzeba wykonywać żadnych przeróbek mocowań w podwoziu. Montaż nie
+        narusza gwarancji auta.<br>
+Malowane proszkowo, warstwą antykorozyjną metoda elektrostatyczną. <br>
+    </p>
+    <p>W zestawie dostarczamy wszystkie potrzebne elementy montażowe: śruby, nakrętki, klipsy.</p>
+    <p>Posiadamy w ofercie osłony do większości modeli aut jeżdżących po polskich drogach.</p>
