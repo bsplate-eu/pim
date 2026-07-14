@@ -322,12 +322,13 @@ class CatalogDeltaPipeline extends AbstractConnectorPipeline
         $locale   = $this->currentSource->template->locale ?? 'en';
         $template = $this->currentSource->template;
 
-        $renderedTitle = $renderedDescription = '';
+        $renderedTitle = $renderedDescription = $renderedShort = '';
         $renderedMetaTitle = $renderedMetaDesc = '';
 
         if ($template) {
             try { $renderedTitle       = trim((string) $template->getRenderedTitle($product)); } catch (\Throwable) {}
             try { $renderedDescription = trim((string) $template->getRenderedDescription($product)); } catch (\Throwable) {}
+            try { $renderedShort       = trim((string) $template->getRenderedShortDescription($product)); } catch (\Throwable) {}
             try { $renderedMetaTitle   = trim((string) $template->getRenderedMetaTitle($product)); } catch (\Throwable) {}
             try { $renderedMetaDesc    = trim((string) $template->getRenderedMetaDescription($product)); } catch (\Throwable) {}
         }
@@ -342,6 +343,10 @@ class CatalogDeltaPipeline extends AbstractConnectorPipeline
 
         $info1 = array_filter($product->getTranslations('info_1'), fn ($v) => trim(strip_tags((string) $v)) !== '');
         if ($renderedDescription !== '') $info1[$locale] = $renderedDescription;
+
+        // Krótki opis (info_2) — analogicznie do długiego: baza z tłumaczeń + nakładka z szablonu.
+        $info2 = array_filter($product->getTranslations('info_2'), fn ($v) => trim(strip_tags((string) $v)) !== '');
+        if ($renderedShort !== '') $info2[$locale] = $renderedShort;
 
         $metaTitle = array_filter($product->getTranslations('meta_title'), fn ($v) => trim((string) $v) !== '');
         if (empty($metaTitle[$locale]) && $renderedMetaTitle !== '') {
@@ -400,7 +405,7 @@ class CatalogDeltaPipeline extends AbstractConnectorPipeline
             'categories'          => array_values(array_unique(array_map('intval', $categories))),
             'manufacturer_name'   => (string) $this->integration->manufacturer,
             'seo'                 => [
-                'short_description' => null,
+                'short_description' => $info2 ?: new \stdClass(),
                 'description'       => $info1 ?: new \stdClass(),
                 'head_title'        => $metaTitle ?: new \stdClass(),
                 'meta_description'  => $metaDescription ?: new \stdClass(),

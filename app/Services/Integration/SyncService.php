@@ -277,6 +277,10 @@ class SyncService
         $info1 = array_filter($product->getTranslations('info_1'), fn ($v) => trim(strip_tags((string) $v)) !== '');
         if ($renderedDescription !== '') $info1[$locale] = $renderedDescription;
 
+        // Krótki opis (info_2) — analogicznie do długiego: baza z tłumaczeń + nakładka z szablonu.
+        $info2 = array_filter($product->getTranslations('info_2'), fn ($v) => trim(strip_tags((string) $v)) !== '');
+        if ($renderedShort !== '') $info2[$locale] = $renderedShort;
+
         $metaTitle = array_filter($product->getTranslations('meta_title'), fn ($v) => trim((string) $v) !== '');
         if (empty($metaTitle[$locale]) && $renderedMetaTitle !== '') {
             $metaTitle[$locale] = $renderedMetaTitle;
@@ -345,7 +349,7 @@ class SyncService
             'categories'          => array_values(array_unique(array_map('intval', $categories))),
             'manufacturer_name'   => (string) $this->integration->manufacturer,
             'seo'                 => [
-                'short_description' => null,
+                'short_description' => $info2 ?: new \stdClass(),
                 'description'       => $info1 ?: new \stdClass(),
                 'head_title'        => $metaTitle ?: new \stdClass(),
                 'meta_description'  => $metaDescription ?: new \stdClass(),
