@@ -234,6 +234,7 @@ class MediaSyncPipeline extends AbstractConnectorPipeline
                 ?->product?->product_code ?? 'pim-' . $productId;
 
             $result = $this->connector->importProducts([[
+                'pim_id'      => (int) $productId, // OC connector identyfikuje produkt po pim_id (bez tego: "Missing pim_id")
                 'sku'         => $sku,
                 'external_id' => $externalProductId,
                 'images_mode' => 'smart',
