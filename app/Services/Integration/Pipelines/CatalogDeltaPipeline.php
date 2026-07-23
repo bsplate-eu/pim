@@ -146,7 +146,7 @@ class CatalogDeltaPipeline extends AbstractConnectorPipeline
             ? $category->getTranslations($attr)
             : [];
 
-        return [
+        $payload = [
             // Bez pim_id connector OpenCart nie rozpozna istniejącej kategorii (addCategory)
             // → tworzy duplikaty i nie zapisuje oc_pim_category_link.
             'pim_id'            => (int) $category->id,
@@ -157,6 +157,32 @@ class CatalogDeltaPipeline extends AbstractConnectorPipeline
             'meta_description'  => $filter($tr('meta_description')),
             'meta_url'          => $filter($tr('meta_url')),
         ];
+
+        // Fallback slugów: Category w tym PIM tłumaczy tylko `name`, więc meta_url jest
+        // zawsze puste i sklepy nie dostawały seo_url kategorii. Konwencja jak bsplate.de:
+        // marka => "audi", model => "audi-a3" (prefiks nazwy rodzica; korzenia drzewa nie prefiksujemy).
+        if (empty($payload['meta_url'])) {
+            $parent = ($category->parent_id && (int) $category->parent_id !== (int) $this->integration->category_id)
+                ? Category::find($category->parent_id)
+                : null;
+            $parentNames = $parent ? $parent->getTranslations('name') : [];
+            $slugs = [];
+            foreach ($payload['name_i18n'] as $loc => $nm) {
+                $pn   = (string) ($parentNames[$loc] ?? (reset($parentNames) ?: ''));
+                $own  = Str::slug((string) $nm);
+                $pref = Str::slug($pn);
+                // nazwy modeli w PIM zawierają już markę ("Alfa Romeo Giulia") — nie dublować prefiksu
+                $slug = ($pref === '' || $own === $pref || str_starts_with($own, $pref . '-'))
+                    ? $own
+                    : $pref . '-' . $own;
+                if ($slug !== '') {
+                    $slugs[$loc] = $slug;
+                }
+            }
+            $payload['meta_url'] = $slugs;
+        }
+
+        return $payload;
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
