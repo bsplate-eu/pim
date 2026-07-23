@@ -31,6 +31,15 @@ git push  →  cron co 5 min  →  git pull  →  lint PHP (rollback przy błęd
 
 `.env`, `storage/`, `public/media`, `public/storage`, vendor, baza (poza `artisan migrate`).
 
+## Pułapki
+
+- Po `git init` na serwerze branch `main` nie ma upstreamu i `git pull --ff-only` pada
+  („no tracking information"). Raz: `git branch --set-upstream-to=origin/main main`.
+- Skrypt kopiujemy do `/home/admin/bin/` — cron uruchamia kopię, nie plik z repo.
+  Po zmianie `deploy/wdroz-pim.sh` trzeba go tam skopiować ponownie.
+- `vendor/` nie jedzie gitem: po zmianie zależności deploy przejdzie, ale aplikacja
+  może paść na brakującej klasie. Zależności wdrażamy osobno.
+
 ## Ręczne wdrożenie / diagnostyka
 
 ```bash
