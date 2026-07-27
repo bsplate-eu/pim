@@ -20,6 +20,7 @@ export type PriceRow = {
     auto_price: number | string;
     manual_price: number | string;
     purchase_price: number | string;
+    purchase_price_manual: number | string;
     source_id: number | null;
 };
 

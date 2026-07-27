@@ -33,6 +33,7 @@ class UpdatePricelistRequest extends FormRequest
             'rows.*.price' => ['nullable'],
             'rows.*.auto_price' => ['nullable'],
             'rows.*.manual_price' => ['nullable'],
+            'rows.*.purchase_price_manual' => ['nullable'],
         ];
     }
 }

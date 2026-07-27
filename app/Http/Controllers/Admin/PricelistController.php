@@ -97,7 +97,7 @@ class PricelistController extends Controller
             ? PricelistProduct::where('pricelist_id', $baseId)->pluck('price', 'product_id')
             : collect();
 
-        $rows = Product::select('id', 'product_code', 'name', 'source_id')
+        $rows = Product::select('id', 'product_code', 'name', 'source_id', 'purchase_price_manual')
             ->orderBy('product_code')
             ->get()
             ->map(fn ($product) => [
@@ -108,6 +108,8 @@ class PricelistController extends Controller
                 'auto_price' => (float) ($autoPrices[$product->id] ?? 0),
                 'manual_price' => (float) ($manualPrices[$product->id] ?? 0),
                 'purchase_price' => (float) ($purchase[$product->id] ?? 0),
+                // Zakup reczny (EUR) — globalny na produkcie, nadrzedny nad cennikiem bazowym.
+                'purchase_price_manual' => (float) $product->purchase_price_manual,
                 'source_id' => $product->source_id,
             ]);
 
@@ -140,6 +142,8 @@ class PricelistController extends Controller
         if (!empty($rows)) {
             PricelistProduct::upsert($rows, ['pricelist_id', 'product_id'], ['price', 'auto_price', 'manual_price']);
         }
+
+        $this->saveManualPurchasePrices($request->input('rows', []));
 
         if (session('pricelists_url')) {
             return redirect(session('pricelists_url'))->with(['message' => ___('crafter', 'Operation successful')]);
@@ -355,6 +359,37 @@ class PricelistController extends Controller
     /**
      * Normalizuje cene wpisana w gridzie (PL/EU separatory) do formatu decimal.
      */
+    /**
+     * Zapisuje kolumne "Zakup ręcz EUR" (products.purchase_price_manual).
+     *
+     * Wartosc jest GLOBALNA dla produktu (nie nalezy do edytowanego cennika), wiec leci
+     * do tabeli products, a nie do pricelist_product. Zapisujemy tylko wiersze, ktore
+     * faktycznie sie zmienily, i grupujemy po wartosci — jeden UPDATE na kazda odrebna
+     * cene zamiast tysiaca zapytan przy wklejeniu calej kolumny.
+     */
+    private function saveManualPurchasePrices(array $rows): void
+    {
+        $incoming = collect($rows)
+            ->filter(fn ($row) => !empty($row['product_id']) && array_key_exists('purchase_price_manual', $row))
+            ->mapWithKeys(fn ($row) => [
+                (int) $row['product_id'] => (float) ($this->normalizePrice((string) ($row['purchase_price_manual'] ?? '')) ?? 0),
+            ]);
+
+        if ($incoming->isEmpty()) {
+            return;
+        }
+
+        $current = Product::whereIn('id', $incoming->keys())->pluck('purchase_price_manual', 'id');
+
+        $changed = $incoming->filter(
+            fn ($value, $id) => abs((float) ($current[$id] ?? 0) - $value) > 0.0001
+        );
+
+        foreach ($changed->groupBy(fn ($value) => (string) $value, true) as $value => $group) {
+            Product::whereIn('id', $group->keys())->update(['purchase_price_manual' => (float) $value]);
+        }
+    }
+
     private function normalizePrice(string $value): ?string
     {
         $value = trim($value);

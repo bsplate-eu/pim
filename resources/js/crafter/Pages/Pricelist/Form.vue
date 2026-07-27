@@ -101,7 +101,9 @@
                                         </h4>
                                         <p class="text-xs text-gray-500 mb-3">
                                             Cena netto aut. =
-                                            <strong>Cena zak EUR × mnożnik</strong>.
+                                            <strong>cena zakupu EUR × mnożnik</strong>
+                                            (bierzemy <strong>Zakup ręcz EUR</strong>,
+                                            a gdy pusty — <strong>Cena zak EUR</strong>).
                                             Waluta inna niż EUR → wynik przeliczany
                                             z EUR kursem NBP. Zakres:
                                             <strong>{{ scopeLabel }}</strong>
@@ -326,6 +328,13 @@ const effPrice = (m: any): number => {
     return manual > 0 ? manual : toNum(m?.price);
 };
 
+// Cena zakupu efektywna (EUR): "Zakup ręcz EUR" jeśli > 0 (twardy override wpisany z palca,
+// globalny dla produktu), inaczej "Cena zak EUR" z cennika bazowego.
+const effBuy = (m: any): number => {
+    const manual = toNum(m?.purchase_price_manual);
+    return manual > 0 ? manual : toNum(m?.purchase_price);
+};
+
 const columns = [
     { prop: "product_code", name: "Kod", readonly: true, size: 150, sortable: true },
     { prop: "name", name: "Nazwa", readonly: true, size: 340, sortable: true },
@@ -361,6 +370,28 @@ const columns = [
         size: 130,
         sortable: true,
         cellCompare: numericCompare,
+        // Wyszarzamy, gdy nadpisane przez "Zakup ręcz EUR" — sygnał, że ta wartość nie liczy się już do Zysku/Marży.
+        cellTemplate: (h: any, p: any) => {
+            const overridden = toNum(p.model?.purchase_price_manual) > 0;
+            return h(
+                "span",
+                overridden
+                    ? { style: { color: "#9ca3af", textDecoration: "line-through" } }
+                    : {},
+                toNum(p.model?.purchase_price).toFixed(2)
+            );
+        },
+    },
+    {
+        // Zakup ręczny (EUR) — twardy override ceny zakupu wpisywany z palca. Gdy > 0 to ON
+        // jest ceną zakupu do Zysku/Marży i do operacji masowej "Wylicz ceny z ceny zakupu".
+        // Wartość GLOBALNA dla produktu (products.purchase_price_manual) — widoczna we
+        // wszystkich cennikach. Pusta/0 = brak override, liczymy z cennika bazowego.
+        prop: "purchase_price_manual",
+        name: "Zakup ręcz EUR",
+        size: 150,
+        sortable: true,
+        cellCompare: numericCompare,
     },
     {
         prop: "profit",
@@ -369,7 +400,7 @@ const columns = [
         sortable: false,
         size: 120,
         cellTemplate: (h: any, p: any) => {
-            const profit = effPrice(p.model) - toNum(p.model?.purchase_price);
+            const profit = effPrice(p.model) - effBuy(p.model);
             return h(
                 "span",
                 profit < 0 ? { style: { color: "#b91c1c" } } : {},
@@ -386,7 +417,7 @@ const columns = [
         cellTemplate: (h: any, p: any) => {
             const sale = effPrice(p.model);
             if (sale <= 0) return h("span", { style: { color: "#9ca3af" } }, "—");
-            const margin = ((sale - toNum(p.model?.purchase_price)) / sale) * 100;
+            const margin = ((sale - effBuy(p.model)) / sale) * 100;
             return h(
                 "span",
                 margin < 0 ? { style: { color: "#b91c1c" } } : {},
@@ -621,13 +652,14 @@ async function applyPricing(): Promise<void> {
         }
     }
 
-    // cena sprzedazy = cena zak EUR * mnoznik * kurs. Pomijamy produkty bez ceny zakupu.
+    // cena sprzedazy = cena zakupu EUR * mnoznik * kurs. Cena zakupu = "Zakup ręcz EUR"
+    // jesli wpisany, inaczej "Cena zak EUR". Pomijamy produkty bez zadnej ceny zakupu.
     const current: any[] = grid.getSource();
     let updated = 0;
     let skipped = 0;
     const next = current.map((row) => {
         if (!ids.has(row.product_id)) return row;
-        const buy = parseFloat(String(row.purchase_price ?? 0)) || 0;
+        const buy = effBuy(row);
         if (buy <= 0) {
             skipped++;
             return row;

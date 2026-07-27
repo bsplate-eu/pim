@@ -36,6 +36,7 @@ class Product extends Model implements HasMedia
         'product_code',
         'width',
         'weight',
+        'purchase_price_manual',
         'comment',
         'enabled',
         'info_1',

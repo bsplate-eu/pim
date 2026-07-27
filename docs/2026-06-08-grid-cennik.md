@@ -48,8 +48,23 @@ Kolumny:
 - **Cena sprzedaży netto** (`price`, editable, sortable — cena **właściwa** produktu)
 - **Cena netto aut.** (`auto_price`, editable, sortable — wynik Operacji masowych; cena właściwa zostaje nietknięta)
 - **Cena ręczna** (`manual_price`, editable, sortable — twardy override; gdy > 0 jest **ceną eksportową**)
-- **Cena zak EUR** (`purchase_price`, read-only — z cennika bazowego, slug `sumpguard`, EUR)
-- **Zysk** / **Marża** (liczone z **ceny eksportowej** = `manual_price` ?? `price`, i ceny zakupu)
+- **Cena zak EUR** (`purchase_price`, read-only — z cennika bazowego, slug `sumpguard`, EUR; przekreślona i wyszarzona, gdy nadpisana przez „Zakup ręcz EUR")
+- **Zakup ręcz EUR** (`purchase_price_manual`, editable, sortable — twardy override ceny zakupu wpisywany z palca; gdy > 0 **jest nadrzędny** nad cennikiem bazowym)
+- **Zysk** / **Marża** (liczone z **ceny eksportowej** = `manual_price` ?? `price`, i **ceny zakupu efektywnej** = `purchase_price_manual` ?? `purchase_price`)
+
+#### Zakup ręcz EUR — gdzie to siedzi
+
+W odróżnieniu od pozostałych cen **nie należy do cennika**, tylko do produktu: kolumna
+`products.purchase_price_manual` (migracja `2026_07_27_100000_add_purchase_price_manual_to_products_table`).
+Dzięki temu wpisana raz cena zakupu jest widoczna **we wszystkich cennikach naraz** — tak jak
+„Cena zak EUR", która też jest globalna (przychodzi z cennika bazowego).
+
+Zapis idzie tym samym `Save` co reszta gridu — `PricelistController::update()` kieruje tę jedną
+kolumnę do `products` metodą `saveManualPurchasePrices()` (zapisuje tylko realnie zmienione wiersze,
+grupując po wartości = jeden UPDATE na odrębną cenę). Pusta komórka / `0` = brak override.
+
+Cena zakupu efektywna jest używana także przez operację masową **„Wylicz ceny z ceny zakupu"**
+(helper `effBuy()` w `Form.vue`).
 
 #### Sortowanie
 - Każdy nagłówek z sortable ma widoczną strzałkę **⇅** (przyciemniona).
