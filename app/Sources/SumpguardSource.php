@@ -387,7 +387,7 @@ class SumpguardSource extends BaseSource implements SourceInterface
                 // Sklejacz: spróbuj wypełnić wszystkie locale + nazwy per konto Allegro z matrycy fraz.
                 // Atrybuty (make, model) ustawione będą zaraz dalej w `attributeValues()->sync`,
                 // więc composer wywołujemy PO sync atrybutów (sklejacz potrzebuje make+model).
-                $product->attributeValues()->sync($this->getAttributes($item));
+                $product->syncAttributeValuesPreserving($this->getAttributes($item));
                 try {
                     app(\App\Services\ProductTranslationComposer::class)->apply($product->fresh(['attributeValues.attribute']));
                 } catch (\Throwable $e) {
@@ -400,7 +400,7 @@ class SumpguardSource extends BaseSource implements SourceInterface
                 return; // wczesny return — atrybuty już zsynchronizowane wyżej, nie powtarzaj.
             }
 
-            $product->attributeValues()->sync($this->getAttributes($item));
+            $product->syncAttributeValuesPreserving($this->getAttributes($item));
 
         });
 

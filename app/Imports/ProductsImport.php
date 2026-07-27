@@ -61,7 +61,7 @@ class ProductsImport implements ToCollection, WithHeadingRow, SkipsEmptyRows
 
 
             $attribute_values = $this->getAttributes($row);
-            $product->attributeValues()->sync($attribute_values);
+            $product->syncAttributeValuesPreserving($attribute_values);
         });
 
 

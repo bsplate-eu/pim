@@ -76,6 +76,47 @@ class Product extends Model implements HasMedia
         return $this->belongsToMany(AttributeValue::class);
     }
 
+    /**
+     * Atrybuty ustawiane WYŁĄCZNIE ręcznie w PIM (nie niesie ich żadne źródło ani
+     * import), więc zwykły `attributeValues()->sync()` je kasował.
+     */
+    const PRESERVED_ATTRIBUTE_SLUGS = ['material'];
+
+    /**
+     * Sync wartości atrybutów z zachowaniem atrybutów chronionych.
+     *
+     * Zasada per atrybut: jeśli przychodzący zestaw NIESIE wartość chronionego
+     * atrybutu — wygrywa zestaw (świadoma zmiana). Jeśli nie niesie nic dla tego
+     * atrybutu — bieżąca wartość produktu zostaje nietknięta.
+     */
+    public function syncAttributeValuesPreserving(array $attribute_value_ids): void
+    {
+        $ids = collect($attribute_value_ids)->map(fn($id) => (int) $id);
+        $protected = self::protectedAttributeValues();   // [value_id => attribute_id]
+
+        if ($protected->isNotEmpty()) {
+            $incomingAttributes = $ids->map(fn($id) => $protected->get($id))->filter()->unique();
+
+            $keep = $this->attributeValues()->pluck('attribute_values.id')
+                ->map(fn($id) => (int) $id)
+                ->filter(fn($id) => $protected->has($id)
+                    && !$incomingAttributes->contains($protected->get($id)));
+
+            $ids = $ids->merge($keep)->unique()->values();
+        }
+
+        $this->attributeValues()->sync($ids->all());
+    }
+
+    /** Mapa [attribute_value_id => attribute_id] dla atrybutów chronionych. */
+    private static function protectedAttributeValues()
+    {
+        return Cache::remember('protected_attribute_values', 3600, fn() => AttributeValue::query()
+            ->whereHas('attribute', fn($q) => $q->whereIn('slug', self::PRESERVED_ATTRIBUTE_SLUGS))
+            ->pluck('attribute_id', 'id'))
+            ->map(fn($attributeId) => (int) $attributeId);
+    }
+
     public function pricelists()
     {
         return $this->belongsToMany(Pricelist::class)->withPivot('price');
@@ -121,7 +162,7 @@ class Product extends Model implements HasMedia
 
         });
 
-        $this->attributeValues()->sync($attribute_values->flatten()->toArray());
+        $this->syncAttributeValuesPreserving($attribute_values->flatten()->toArray());
     }
 
 
