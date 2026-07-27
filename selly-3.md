@@ -16,7 +16,7 @@
 | Mapa kategorii per-produkt (override) | ✅ NA PRODZIE | `config/selly_category_overrides.php`, 1599 wpisów |
 | Kolejność w kategorii — reguła + pliki | ✅ WYGENEROWANE | makieta + CSV, invariant 0 naruszeń |
 | Import kolejności do Selly | 🔴 **NIE UDAŁO SIĘ** | zły klucz dopasowania w integratorze — patrz §3 |
-| Kolumna „Materiał" w PIM (kod) | ✅ ZBUDOWANE + commit `2b9fa52` | ⏸️ **push NIEZROBIONY** |
+| Kolumna „Materiał" w PIM (kod) | ✅ NA PRODZIE | commit `2b9fa52`, push OK, auto-deploy zaciągnął |
 | Kolumna „Materiał" na prodzie | 🔴 **pokazuje puste** | diagnoza + skrypt gotowy, patrz §5 |
 | Auto-oznaczenie materiału wg kodu | 🟡 skrypt gotowy, przetestowany | `deploy/material-auto-assign.php`, na prodzie NIE odpalony |
 
@@ -141,17 +141,16 @@ PUT material='drewno'          → 302 odrzucone przez walidacje, bez zmiany
 przywrocenie stanu             → OK
 ```
 
-### ⏸️ PUSH NIEZROBIONY
-Commit `2b9fa52` **siedzi lokalnie**. Push zablokował klasyfikator uprawnień Claude Code.
-User próbował pushować **na serwerze** (`admin@pareto:~$`) i z `C:\Users\Pareto 1` — oba złe miejsca.
+### ✅ PUSH ZROBIONY — kolumna jest na prodzie
+`2b9fa52` **jest na `origin/main`** (potwierdzone `git branch -r --contains`), auto-deploy zaciągnął → kolumna
+widoczna w PIM. Po drodze: push z serwera (`admin@pareto:~$`) i z `C:\Users\Pareto 1` = „not a git repository";
+zadziałało dopiero `git -C "D:\laragon\www\PIM" push origin main` (repo jest na Windowsie, serwer sam robi pull).
 
+**Do wypushowania zostaje `4981611`** (ten handoff + `deploy/material-auto-assign.php`):
 ```bash
 git -C "D:\laragon\www\PIM" push origin main
 ```
-Potem cron (5 min) → `git pull` na prodzie. Potem **Ctrl+Shift+R**.
-
-> ⚠️ Kolumna JEST już widoczna na prodzie (screen usera) — czyli **jakaś wersja jednak trafiła**.
-> Do sprawdzenia w nowej sesji: `git -C "D:\laragon\www\PIM" status` / `git log origin/main -1`.
+Bez tego skryptu z §6 **nie ma na prodzie** i nie da się go tam odpalić.
 
 ---
 
@@ -249,7 +248,8 @@ Potem: feed MINUS eksport sklepu po `opis##{external_id}` → `_selly_nowe.csv` 
 
 1. 🔴 **Dokończyć import kolejności** — poprawić „Powiązywanie pól" w Selly (§3): `c_1`→ID produktu, `c_15`→Kolejność, reszta Pominięte.
 2. 🔴 **Odpalić `deploy/material-auto-assign.php` (dry-run)** na prodzie → diagnoza pustej kolumny (§5/§6).
-3. 🟡 **Push commita `2b9fa52`** (+ nowy skrypt + tłumaczenia) — `git -C "D:\laragon\www\PIM" push origin main`.
+3. 🟡 **Push commita `4981611`** (handoff + skrypt materiału) — `git -C "D:\laragon\www\PIM" push origin main`.
+   *(`2b9fa52` z kolumną już wypushowany i na prodzie.)*
 4. 🟡 **Dodać tłumaczenia** `"Material"`, `"Not set"` do `public/lang/pl/crafter.json` (i `en`).
 5. 🟡 **Fix szablonu** `$is_alu` po kodzie (§7) — decyzja usera.
 6. 🟡 **Nowości** — pobrać feed z proda, wygenerować plik (§8).
@@ -292,7 +292,8 @@ Potem: feed MINUS eksport sklepu po `opis##{external_id}` → `_selly_nowe.csv` 
 | `_selly_kolejnosc_TEST.csv` | 38 wierszy, 3 kategorie | test |
 | `deploy/material-auto-assign.php` | auto-materiał wg kodu + diagnoza | 🟡 nowy, niezacommitowany |
 | `_deploy_kolumna_material_2026-07-08.zip` | zapas (auto-deploy czyni zbędnym) | — |
-| commit `2b9fa52` | kolumna „Materiał" | ⏸️ niezapushowany |
+| commit `2b9fa52` | kolumna „Materiał" | ✅ na origin/main + prod |
+| commit `4981611` | ten handoff + skrypt materiału | ⏸️ do wypushowania |
 
 Źródło prawdy dla kategorii/kolejności: **`C:\Users\Pareto 1\Downloads\1_export-product(5).csv`**
 (1804 wiersze: 1599 `opis##` + 205 spoza feedu; 0 w „1. XXX", 0 duplikatów, 519 kategorii).
