@@ -17,8 +17,10 @@
 | Kolejność w kategorii — reguła + pliki | ✅ WYGENEROWANE | makieta + CSV, invariant 0 naruszeń |
 | Import kolejności do Selly | 🔴 **NIE UDAŁO SIĘ** | zły klucz dopasowania w integratorze — patrz §3 |
 | Kolumna „Materiał" w PIM (kod) | ✅ NA PRODZIE | commit `2b9fa52`, push OK, auto-deploy zaciągnął |
-| Kolumna „Materiał" na prodzie | 🔴 **pokazuje puste** | diagnoza + skrypt gotowy, patrz §5 |
-| Auto-oznaczenie materiału wg kodu | 🟡 skrypt gotowy, przetestowany | `deploy/material-auto-assign.php`, na prodzie NIE odpalony |
+| Kolumna „Materiał” na prodzie | ✅ **DZIAŁA** | prod miał tylko 13 przypisań — dane uzupełnione (§5) |
+| Auto-oznaczenie materiału wg kodu | ✅ ODPALONE NA PRODZIE | stal=1307, alu=328; rerun 0 zmian (§6) |
+| Materiał odporny na `sync()` ze źródeł/importu | ✅ NA PRODZIE | commit `bcda40b` (§6b) |
+| Klucze i18n `Material` / `Not set` | ✅ w repo, commit `fbc4cb6` | ⏸️ wymaga symlinka `public_html/lang` — §5 |
 
 ---
 
@@ -154,29 +156,42 @@ Bez tego skryptu z §6 **nie ma na prodzie** i nie da się go tam odpalić.
 
 ---
 
-## 5. 🔴 PROBLEM: kolumna na prodzie pokazuje WSZYSTKO PUSTE
+## 5. ✅ ROZWIĄZANE (2026-07-27): kolumna na prodzie pokazywała WSZYSTKO PUSTE
 
-Screen z proda: nagłówek **`crafter.Material`** (surowy klucz) + **wszystkie wiersze „—"**,
-mimo że wg pamięci projektu prod miał `stal=1297 / alu=314`.
+Screen z proda: nagłówek **`crafter.Material`** (surowy klucz) + wszystkie wiersze „—".
 
-### Dwie usterki
-**a) Nagłówek `crafter.Material`** — brak klucza w tłumaczeniach.
-Tłumaczenia UI: `public/lang/{locale}/crafter.json`. **Do dodania: `"Material"` i `"Not set"`** (przynajmniej `pl`, `en`).
-*(Lokalnie brakuje też „Enabled"/„Category" — a na prodzie działają, więc pliki prod ≠ local.)*
+### ⚠️ Hipoteza z tej sekcji BYŁA BŁĘDNA
+Zakładała inny slug atrybutu na prodzie (`material-1` po kolizji `Sluggable`). Diagnoza wykazała:
+```
+ATTR id=9 slug='material' name(pl)='Materiał'
+   VAL id=2606 slug='stal'        VAL id=2607 slug='aluminium'
+```
+**Slug był poprawny.** Kontroler znajdował atrybut bez problemu.
 
-**b) Wszystkie „—" — hipoteza (mocna):**
-`index()` szuka `Attribute::where('slug','material')`. Jeśli na prodzie atrybut ma **inny slug**, to:
-- `$materialValueIds` = pusta → `whereIn('attribute_values.id', [])` → **każdy produkt = null → „—"**
-- `materialOptions` = pusta → dropdown tylko z „—"
+### Prawdziwe przyczyny — dwie, niezależne
 
-**Dlaczego slug może się różnić:** trait `Sluggable` (`app/Models/Traits/Sluggable.php`) przy tworzeniu
-**dokleja `-1`, `-2`** gdy slug zajęty → atrybut mógł powstać jako `material-1`.
+**a) Wiersze „—": na prodzie było TYLKO 13 przypisań w pivocie** (11 stal / 2 alu),
+wszystkie z datą `2026-07-10 10:16:14`. Danych po prostu nie było.
+➡️ Wpis w pamięci projektu „prod: stal=1297/alu=314" **był błędny** — to były liczby z **lokalnej** bazy.
+*Lekcja: liczby z pamięci projektu weryfikować zapytaniem, zanim zbuduje się na nich hipotezę.*
 
-➡️ **Diagnoza + naprawa: skrypt z §6 (dry-run pokaże prawdę).**
+**b) Nagłówek `crafter.Material`: docroot NIE serwuje `PIM/public/lang/`.**
+`public_html/lang/` to **fizyczna kopia z 14 maja**, nie symlink — w odróżnieniu od `build`, `media`,
+`storage`, które symlinkami są. Każdy nowy klucz i18n dodany w repo **cicho ginie**.
+Porównanie obu drzew: **0 różnic** poza nowymi kluczami → symlink bezpieczny.
+
+### Wykonane
+- klucze `crafter.Material` + `crafter.Not set` w 15 locale — commit `fbc4cb6`
+- podmiana kopii na symlink (**ręcznie przez usera**, classifier blokuje mi zmiany struktury na prodzie):
+```bash
+ssh -i /d/laragon/www/SSH/bsp-auto admin@5.196.81.23 \
+ 'cd ~/domains/pim.bsplate.eu/public_html && mv lang lang.OLD-20260727 && ln -s /home/admin/domains/pim.bsplate.eu/PIM/public/lang lang'
+```
+Potem **Ctrl+Shift+R**. Stara kopia zostaje jako `lang.OLD-20260727` (rollback = `mv` z powrotem).
 
 ---
 
-## 6. SKRYPT AUTO-OZNACZENIA MATERIAŁU 🟡 gotowy, na prodzie NIE odpalony
+## 6. SKRYPT AUTO-OZNACZENIA MATERIAŁU ✅ ODPALONY NA PRODZIE (2026-07-27)
 
 **`deploy/material-auto-assign.php`** — reguła zamówiona przez usera:
 ```
@@ -185,30 +200,56 @@ pozostałe                   →  Stal
 ```
 
 Co robi:
-1. **DIAGNOZA** — wypisuje wszystkie atrybuty wyglądające na „Materiał" (slug `material*` lub nazwa z „materia"),
-   ich wartości, slugi i liczbę przypisanych produktów. **To odpowie, czemu prod świeci pustkami.**
-2. Używa istniejącego atrybutu (nie tworzy duplikatu); jeśli slug ≠ `material` — **prostuje go** (kontroler szuka `material`).
-   To samo dla wartości (`stal-1` → `stal`).
+1. **DIAGNOZA** — atrybuty wyglądające na „Materiał" (slug `material*` lub nazwa z „materia"),
+   ich wartości, slugi i liczba przypisanych produktów.
+2. Używa istniejącego atrybutu (nie tworzy duplikatu); slug ≠ `material` → **prostuje** (kontroler szuka `material`).
 3. Klasyfikuje wszystkie produkty **po kodzie** i synchronizuje pivot.
-4. Raportuje **rozjazdy kod vs nazwa PL** (do ręcznego przejrzenia).
+4. Raportuje **rozjazdy kod vs nazwa PL**.
 
 **Bezpieczeństwo:** nie dotyka `products.name` ani tłumaczeń; w pivocie rusza wyłącznie wiersze
-wskazujące na stal/aluminium; **idempotentny**; **domyślnie dry-run**.
+stal/aluminium; **idempotentny**; **domyślnie dry-run**.
 
 ```bash
-# prod — NAJPIERW dry-run (nic nie zapisuje, pokazuje diagnozę):
-/usr/local/php83/bin/php deploy/material-auto-assign.php
-
-# dopiero po przeczytaniu diagnozy:
-/usr/local/php83/bin/php deploy/material-auto-assign.php --apply
+/usr/local/php83/bin/php deploy/material-auto-assign.php            # dry-run
+/usr/local/php83/bin/php deploy/material-auto-assign.php --apply    # zapis
 ```
 
-**Test lokalny (dry-run):** atrybut `id=9 slug='material'`, wartości `stal(1243)` / `aluminium(251)`,
-klasyfikacja 1494 produktów = 251 alu / 1243 stal, **do dodania 0, do usunięcia 0, rozjazdów 0** → idempotentny. ✅
-
-⚠️ Skrypt jest **nowy i niezacommitowany** — wejdzie na prod dopiero po `git add` + push (lub wgrać ręcznie).
+### Wynik na prodzie
+```
+produktow: 1635  (aluminium: 328, stal: 1307)   bez kodu: 0
+do dodania: 1623    do usuniecia (bledny material): 1    rozjazdy kod vs nazwa PL: 0
+stan w bazie po zapisie:  stal=1307, aluminium=328
+rerun (idempotencja):     do dodania 0, do usuniecia 0    ✅
+```
 
 ---
+
+## 6b. UTWARDZENIE — materiał odporny na sync (commit `bcda40b`) ✅
+
+**Skąd te sieroce 13 przypisań:** `attributeValues()->sync()` robi **pełny sync** — kasuje wartości,
+których przychodzący zestaw nie niesie. A materiału **nie niesie żadne źródło ani import**
+(ustawiany ręcznie w PIM). Trzy miejsca kasowały go po cichu:
+
+| Miejsce | Kiedy strzelało |
+|---|---|
+| `SumpguardSource.php:390,403` | `sources:sync` — **wyłączony na prodzie** po incydencie nazw |
+| `ProductsImport.php:64` | **import Excela z panelu — aktywny** ← realne zagrożenie |
+| `Product::setAttributeValues()` | zapis atrybutów z formularza |
+
+**Fix:** `Product::syncAttributeValuesPreserving()` + stała `Product::PRESERVED_ATTRIBUTE_SLUGS = ['material']`.
+Zasada **per atrybut chroniony**: zestaw niosący wartość tego atrybutu wygrywa (świadoma zmiana);
+zestaw nienoszący nic → bieżąca wartość produktu zostaje nietknięta. Mapa chronionych wartości
+cache'owana 1h (`protected_attribute_values`).
+
+**Testy lokalne (produkt 1115, stan przywrócony):**
+```
+T1 zestaw bez materialu   → material zachowany TAK, pozostale atrybuty zgodne TAK
+T2 zestaw z aluminium     → alu ustawione TAK, stal usunieta TAK
+T3 produkt bez materialu  → nic nie doklejone TAK
+restore                   → OK
+```
+
+➡️ **Dodanie kolejnego atrybutu chronionego** = dopisanie sluga do `PRESERVED_ATTRIBUTE_SLUGS`.
 
 ## 7. PROPOZYCJA (niezrobiona) — fix szablonu opisu
 
@@ -247,13 +288,11 @@ Potem: feed MINUS eksport sklepu po `opis##{external_id}` → `_selly_nowe.csv` 
 ## 📋 OTWARTE PUNKTY (priorytetowo)
 
 1. 🔴 **Dokończyć import kolejności** — poprawić „Powiązywanie pól" w Selly (§3): `c_1`→ID produktu, `c_15`→Kolejność, reszta Pominięte.
-2. 🔴 **Odpalić `deploy/material-auto-assign.php` (dry-run)** na prodzie → diagnoza pustej kolumny (§5/§6).
-3. 🟡 **Push commita `4981611`** (handoff + skrypt materiału) — `git -C "D:\laragon\www\PIM" push origin main`.
-   *(`2b9fa52` z kolumną już wypushowany i na prodzie.)*
-4. 🟡 **Dodać tłumaczenia** `"Material"`, `"Not set"` do `public/lang/pl/crafter.json` (i `en`).
-5. 🟡 **Fix szablonu** `$is_alu` po kodzie (§7) — decyzja usera.
-6. 🟡 **Nowości** — pobrać feed z proda, wygenerować plik (§8).
-7. ⚪ Z `selly2.md`, nadal otwarte: ceny ręczne (`_cennik_manual.csv` + paczka importu), fix `getOverridedProduct()` na prod,
+2. 🟡 **Symlink `public_html/lang` → `PIM/public/lang`** na prodzie (§5) — bez tego nagłówek kolumny
+   pokazuje surowy klucz `crafter.Material`, a każdy przyszły klucz i18n ginie. Komenda w §5, wykonuje user.
+3. 🟡 **Fix szablonu** `$is_alu` po kodzie (§7) — decyzja usera.
+4. 🟡 **Nowości** — pobrać feed z proda, wygenerować plik (§8).
+5. ⚪ Z `selly2.md`, nadal otwarte: ceny ręczne (`_cennik_manual.csv` + paczka importu), fix `getOverridedProduct()` na prod,
    duplikaty zestawów w Selly (Passat B5 ma 6 zestawów, część wygląda na duble), obce języki (composeForeign).
 
 ---
