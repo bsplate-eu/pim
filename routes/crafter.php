@@ -160,6 +160,7 @@ Route::name('crafter.')->middleware('crafter.base')->prefix('admin')->group(func
             Route::post('products/import', [App\Http\Controllers\Admin\ProductController::class, 'import'])->name('products.import');
             Route::get('products/edit/{product}/ai', [App\Http\Controllers\Admin\ProductController::class, 'editAI'])->name('products.edit-ai');
             Route::get('products/edit/{product}', [App\Http\Controllers\Admin\ProductController::class, 'edit'])->name('products.edit');
+            Route::put('products/{product}/material', [App\Http\Controllers\Admin\ProductController::class, 'updateMaterial'])->name('products.update-material');
             Route::match(['put', 'patch'], 'products/{product}', [App\Http\Controllers\Admin\ProductController::class, 'update'])->name('products.update');
             Route::delete('products/{product}', [App\Http\Controllers\Admin\ProductController::class, 'destroy'])->name('products.destroy');
             Route::post('products/bulk-destroy', [App\Http\Controllers\Admin\ProductController::class, 'bulkDestroy'])->name('products.bulk-destroy');

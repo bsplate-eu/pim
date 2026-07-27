@@ -10,6 +10,7 @@ use App\Http\Requests\Admin\Product\CreateProductRequest;
 use App\Http\Requests\Admin\Product\StoreProductRequest;
 use App\Http\Requests\Admin\Product\EditProductRequest;
 use App\Http\Requests\Admin\Product\UpdateProductRequest;
+use App\Http\Requests\Admin\Product\UpdateProductMaterialRequest;
 use App\Http\Requests\Admin\Product\DestroyProductRequest;
 use App\Http\Requests\Admin\Product\BulkDestroyProductRequest;
 use App\Imports\ProductsImport;
@@ -43,6 +44,10 @@ class ProductController extends Controller
      */
     public function index(IndexProductRequest $request): Response|JsonResponse
     {
+        // Atrybut „Materiał" (Stal/Aluminium) — pokazywany i edytowany wprost na liście.
+        $materialValues = self::materialValues();
+        $materialValueIds = $materialValues->pluck('id')->all();
+
         $productsQuery = QueryBuilder::for(Product::class)
             ->allowedFilters([
                 AllowedFilter::custom('search', new FuzzyFilter(
@@ -50,12 +55,23 @@ class ProductController extends Controller
                 )),
                 AllowedFilter::callback('source', fn(Builder $query, $value) => $query->where('source_id', $value)),
                 AllowedFilter::callback('enabled', fn(Builder $query, $value) => $query->where('enabled', $value)),
+                // 'none' = brak ustawionego materiału (do wyłapania nowych produktów)
+                AllowedFilter::callback('material', function (Builder $query, $value) use ($materialValueIds) {
+                    if (empty($materialValueIds)) {
+                        return;
+                    }
+                    $has = fn($q) => $q->whereIn('attribute_values.id', $materialValueIds);
+
+                    $value === 'none'
+                        ? $query->whereDoesntHave('attributeValues', $has)
+                        : $query->whereHas('attributeValues', fn($q) => $has($q)->where('attribute_values.slug', $value));
+                }),
             ])
             ->defaultSort('id')
             ->allowedSorts('id', 'external_id', 'source_id', 'category', 'name', 'product_code', 'enabled')
             ->with(['source', 'categories', 'media' => function ($query) {
                 $query->orderBy('order_column');
-            }]);
+            }, 'attributeValues' => fn($query) => $query->whereIn('attribute_values.id', $materialValueIds)]);
 
         if ($request->wantsJson() && $request->get('bulk_select_all')) {
             return response()->json($productsQuery->select(['id'])->pluck('id'));
@@ -69,6 +85,9 @@ class ProductController extends Controller
         $products->getCollection()->transform(function ($product) {
             $product->setTranslation('name', app()->getLocale(), htmlspecialchars_decode($product->name));
             $product->thumbnail_url = $product->media?->first()?->getUrl('preview') ?? 'https://placehold.co/100';
+            // slug wartości materiału ('stal'/'aluminium') albo null gdy nieustawiony
+            $product->material = $product->attributeValues->first()?->slug;
+            $product->unsetRelation('attributeValues');
             return $product;
         });
 
@@ -78,7 +97,34 @@ class ProductController extends Controller
         return Inertia::render('Product/Index', [
             'products' => $products,
             'sources' => Source::query()->get(),
+            'materialOptions' => $materialValues
+                ->map(fn($value) => ['value' => $value->slug, 'label' => $value->name])
+                ->values(),
         ]);
+    }
+
+    /** Wartości atrybutu „Materiał" (Stal/Aluminium); pusta kolekcja gdy atrybutu nie ma. */
+    private static function materialValues()
+    {
+        return Attribute::with('values')->where('slug', 'material')->first()?->values ?? collect();
+    }
+
+    /**
+     * Inline zmiana materiału z listy produktów. Rusza WYŁĄCZNIE wartości atrybutu
+     * „Materiał" — pozostałe atrybuty produktu zostają nietknięte.
+     */
+    public function updateMaterial(UpdateProductMaterialRequest $request, Product $product): RedirectResponse
+    {
+        $materialValues = self::materialValues();
+        $slug = $request->validated()['material'] ?? null;
+
+        $product->attributeValues()->detach($materialValues->pluck('id')->all());
+
+        if ($slug && $value = $materialValues->firstWhere('slug', $slug)) {
+            $product->attributeValues()->attach($value->id);
+        }
+
+        return redirect()->back()->with(['message' => ___('crafter', 'Operation successful')]);
     }
 
     /**

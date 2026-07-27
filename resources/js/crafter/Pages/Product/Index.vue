@@ -49,6 +49,14 @@
                         mode="single"
                         can-clear
                     />
+                    <Multiselect
+                        v-model="filtersForm.material"
+                        name="material"
+                        :label="$t('crafter', 'Material')"
+                        :options="[...materialOptions, { value: 'none', label: $t('crafter', 'Not set') }]"
+                        mode="single"
+                        can-clear
+                    />
                 </FiltersDropdown>
             </template>
             <template #bulkActions="{ bulkAction }">
@@ -120,6 +128,9 @@
                 <ListingHeaderCell sortBy="name">
                     {{ $t("crafter", "Name") }}
                 </ListingHeaderCell>
+                <ListingHeaderCell>
+                    {{ $t("crafter", "Material") }}
+                </ListingHeaderCell>
                 <ListingHeaderCell sortBy="category">
                     {{ $t("crafter", "Category") }}
                 </ListingHeaderCell>
@@ -161,6 +172,23 @@
                             </div>
                         </div>
                     </div>
+                </ListingDataCell>
+                <ListingDataCell>
+                    <select
+                        :value="item.material ?? ''"
+                        @change="(e: any) => action('put', route('crafter.products.update-material', item), { material: e.target.value || null })"
+                        class="w-full min-w-[8rem] rounded-md border-gray-300 text-sm shadow-sm focus:border-primary-500 focus:ring-primary-500"
+                        :class="item.material ? 'text-gray-900' : 'text-gray-400'"
+                    >
+                        <option value="">—</option>
+                        <option
+                            v-for="option in materialOptions"
+                            :key="option.value"
+                            :value="option.value"
+                        >
+                            {{ option.label }}
+                        </option>
+                    </select>
                 </ListingDataCell>
                 <ListingDataCell>
                     {{ item.category }}
@@ -283,6 +311,7 @@ const {availableLocales, currentLocale, translatableDefaultValue, getLabelWithLo
 interface Props {
     products: PaginatedCollection<Product>;
     sources: Array<any>;
+    materialOptions: Array<{ value: string; label: string }>;
 }
 
 defineProps<Props>();
@@ -300,6 +329,7 @@ const {filtersForm, resetFilters, activeFiltersCount} = useListingFilters(
     {
         source: (usePage().props as PageProps).filter?.source ?? null,
         enabled: (usePage().props as PageProps).filter?.enabled ?? null,
+        material: (usePage().props as PageProps).filter?.material ?? null,
     }
 );
 </script>
