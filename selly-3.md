@@ -268,20 +268,28 @@ Materiał w opisie zależy **tylko od atrybutu** — brak atrybutu = opis pisze 
 
 ---
 
-## 8. NOWOŚCI DO WYSTAWIENIA — zablokowane na braku feedu
+## 8. NOWOŚCI DO WYSTAWIENIA ✅ PLIK GOTOWY (2026-07-27)
 
-User prosił o plik z nowościami dla oslonypareto.pl. **Nie da się policzyć z lokalnego PIM:**
-- lokalne PIM = **1494** produkty, sklep = **1599** → lokalne jest **do tyłu**, nie zna najnowszych
-- lokalny diff dał tylko 11 śmieci (8 pakietów promo bez ceny, Seat Leon, 2× `27.311b` Crafter/MAN — te do usunięcia)
+Feed z proda **przegenerowany po wgraniu materiału** (`SynchronizeIntegration::dispatchSync(8)` — cache
+`storage/app/integrations/8.csv` miał TTL 6h i był sprzed zmiany, więc opisy ALU nadal pisałyby „Stal").
 
-**Potrzebny świeży feed z proda:**
+**Kontrola materiału na świeżym feedzie: 323/323 produktów ALU ma opis aluminiowy, 0 rozjazdów.** ✅
+(m.in. `14.103ALU` Mercedes B-Classe — produkt zgłoszony przez usera.)
+
+**Plik:** `_selly_nowe_2026-07-27.csv` (root PIM) — **17 produktów**, format feedu 1:1
+(17 kolumn, `;` + BOM), z Nazwą dodatkową, kategoriami i Kolejnością liczoną na PEŁNYM katalogu.
+
 ```
-https://pim.bsplate.eu/api/selly/8?key=610bcd2a278d3dfdeecd6128d3aa1d9b3af957a9e26b3f42282d9cde5fc3f266
+feed z proda:        1616
+eksport sklepu:      1599 kluczy (plik 1_export-product(5).csv z 2026-07-08)
+NOWE:                17     (4 do realnych kategorii, 13 do X/401 — ręczne rozłożenie)
+pominiete bez ceny:  2      opis##6149288 / opis##6149289 — oba 27.311b (znane smieci do usuniecia w PIM)
 ```
-(pierwsze wejście = 503 + generacja w tle → odświeżyć po ~10 s; plik cache: `storage/app/integrations/8.csv`, TTL 6h)
 
-Potem: feed MINUS eksport sklepu po `opis##{external_id}` → `_selly_nowe.csv` → import z **„dodawanie nowych" ON**.
-*(Przeglądarka Claude nie ma dostępu do prod feedu — user musi pobrać plik.)*
+⚠️ Eksport sklepu ma 19 dni. Ryzyko duplikatów **niskie**, o ile integrator działa w trybie
+**„tylko dodawanie nowych" + dopasowanie po „Kod importu"** — produkty dodane po 8 lipca dopasują się
+po `opis##{external_id}` i zostaną pominięte. Dla pewności: świeży eksport → przeliczyć
+(`scratchpad/build_nowe.php <sciezka_do_eksportu>`).
 
 ---
 
