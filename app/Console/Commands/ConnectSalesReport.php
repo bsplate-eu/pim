@@ -58,6 +58,8 @@ class ConnectSalesReport extends Command
 
         if (! $result['ok']) {
             $this->error('WhatsApp: ' . $result['error']);
+            // Cron leci z >/dev/null — bez tego wpisu nieudana wysyłka nie zostawia śladu.
+            \Illuminate\Support\Facades\Log::error('connect:sales-report — wysyłka WhatsApp nieudana: ' . $result['error']);
 
             return self::FAILURE;
         }

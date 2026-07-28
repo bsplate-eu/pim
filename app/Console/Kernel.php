@@ -62,6 +62,15 @@ class Kernel extends ConsoleKernel
             ->withoutOverlapping()
             ->name('ksef_signal_due');
 
+        // Ponowienie co godzinę po godzinie wysyłki — gdy bramka CallMeBot jest chwilowo padnięta
+        // (awaria 2026-07-28), pojedynczy dzienny strzał przepadał do następnego dnia.
+        // Anty-duplikat `last_sent_date` sprawia, że po udanej wysyłce kolejne przebiegi tylko wychodzą.
+        $schedule->command('ksef:signal-due')
+            ->hourly()
+            ->when(fn () => substr(now()->format('H:i'), 0, 5) > substr($signalTime, 0, 5))
+            ->withoutOverlapping()
+            ->name('ksef_signal_due_retry');
+
         // Argo Connect → Integracja chatboot — dzienny raport sprzedaży na WhatsApp (godzina z ustawień, domyślnie 20:00)
         $salesTime = '20:00';
         try {
@@ -76,6 +85,13 @@ class Kernel extends ConsoleKernel
             ->dailyAt($salesTime)
             ->withoutOverlapping()
             ->name('connect_sales_report');
+
+        // Ponowienie co godzinę — jak wyżej, na wypadek awarii bramki CallMeBot.
+        $schedule->command('connect:sales-report')
+            ->hourly()
+            ->when(fn () => substr(now()->format('H:i'), 0, 5) > substr($salesTime, 0, 5))
+            ->withoutOverlapping()
+            ->name('connect_sales_report_retry');
 
         // [argo-mail-pkg] Argo Mail — synchronizacja skrzynek IMAP (co minutę)
         $schedule->command('mail:sync')
@@ -104,6 +120,13 @@ class Kernel extends ConsoleKernel
         $schedule->command('scope:sync-shop francja')->dailyAt('05:30')->when(fn () => now()->dayOfYear % 3 === 0)->withoutOverlapping()->name('scope_sync_francja');
         $schedule->command('scope:sync-shop czechy')->dailyAt('05:30')->when(fn () => now()->dayOfYear % 3 === 1)->withoutOverlapping()->name('scope_sync_czechy');
         $schedule->command('scope:sync-shop hiszpania')->dailyAt('05:30')->when(fn () => now()->dayOfYear % 3 === 2)->withoutOverlapping()->name('scope_sync_hiszpania');
+
+        // Marketplace → eBay (NASZE aukcje). Co godzinę: odśwież stany z eBay, a zaraz po tym uzupełnij
+        // te, które spadły do progu (auto_restock_when, domyślnie <=1) → auto_restock_to (5).
+        // `ebay:sync-offers` robi obie rzeczy naraz (sync → auto-restock) — i to jest istotne: sam
+        // `ebay:auto-actions` działa na stanach z ostatniego syncu, więc bez odświeżenia nic nie wyłapie.
+        // withoutOverlapping, bo pełny fetch to ~34 strony GetSellerList i trwa kilka minut.
+        $schedule->command('ebay:sync-offers')->hourly()->withoutOverlapping()->name('ebay_sync_offers');
     }
 
     /**

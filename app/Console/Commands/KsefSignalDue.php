@@ -59,6 +59,8 @@ class KsefSignalDue extends Command
 
         if (! $result['ok']) {
             $this->error('Signal: ' . $result['error']);
+            // Cron leci z >/dev/null — bez tego wpisu nieudana wysyłka nie zostawia śladu.
+            \Illuminate\Support\Facades\Log::error('ksef:signal-due — wysyłka WhatsApp nieudana: ' . $result['error']);
 
             return self::FAILURE;
         }

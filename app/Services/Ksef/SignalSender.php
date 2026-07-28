@@ -55,9 +55,16 @@ class SignalSender
 
             $body = trim(strip_tags($response->body()));
 
-            // CallMeBot bywa zwraca 200 z treścią błędu — łapiemy też to.
-            if (! $response->successful() || stripos($body, 'error') !== false) {
-                return ['ok' => false, 'error' => $body !== '' ? $body : 'Bramka CallMeBot zwróciła błąd (HTTP ' . $response->status() . ').'];
+            // CallMeBot bywa zwraca 2xx z treścią błędu — łapiemy też to.
+            // UWAGA (awaria 2026-07-28): przy niedostarczeniu bramka odpowiada HTTP **207**
+            // z treścią „Service is down (410)…" — `successful()` przepuszczało to jako sukces,
+            // przez co powiadomienia były po cichu gubione (last_sent_date zapisany, wiadomości brak).
+            // Dlatego: sukces WYŁĄCZNIE przy HTTP 200 bez znanych fraz błędu.
+            $failure = $response->status() !== 200
+                || preg_match('/error|service is down|not delivered|invalid|apikey|inconvenience/i', $body) === 1;
+
+            if ($failure) {
+                return ['ok' => false, 'error' => $body !== '' ? 'HTTP ' . $response->status() . ': ' . $body : 'Bramka CallMeBot zwróciła błąd (HTTP ' . $response->status() . ').'];
             }
 
             return ['ok' => true, 'error' => null];
