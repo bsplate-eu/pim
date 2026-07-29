@@ -36,7 +36,8 @@ class EbayAutoActions extends Command
         // Auto-restock — wymaga OAuth; metoda sama pomija gdy wyłączone/niepołączone.
         if ($settings->isOauthConnected()) {
             $restocked = $svc->applyAutoRestock(EbayActionLog::CONTEXT_CRON);
-            $this->info("Auto-restock: podniesiono {$restocked} ofert (stan 0 → {$settings->auto_restock_to}).");
+            $when = (int) ($settings->auto_restock_when ?? 1);
+            $this->info("Auto-restock: podniesiono {$restocked} ofert (stan <= {$when} → {$settings->auto_restock_to}).");
         } else {
             $this->warn('Auto-restock pominięty — konto eBay nie jest połączone (OAuth).');
         }

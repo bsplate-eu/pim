@@ -74,22 +74,27 @@ class EbayOfferService
             return 0;
         }
         $to = max(1, (int) ($this->settings->auto_restock_to ?? 5));
+        // Próg: uzupełniaj gdy stan <= auto_restock_when (domyślnie 1). Warunek „== 0" był bezużyteczny —
+        // PIM widzi świeży stan tylko w chwili syncu, a towar schodzi między syncami.
+        $when = max(0, (int) ($this->settings->auto_restock_when ?? 1));
         $client = new EbaySellClient($this->settings, new EbayOAuthService($this->settings));
 
         $done = 0;
-        EbayOffer::where('quantity', 0)
+        EbayOffer::where('quantity', '<=', $when)
+            ->where('quantity', '<', $to)   // tylko PODNOŚ — nigdy nie obniżaj istniejącego stanu
             ->where('listing_status', 'Active')
             ->chunkById(50, function ($offers) use ($client, $to, $context, &$done) {
                 foreach ($offers as $o) {
+                    $before = (int) $o->quantity;
                     try {
                         $client->reviseQuantity($o->item_id, (string) $o->sku, $to, $o->marketplace, (int) $o->quantity_sold);
                         $o->forceFill(['quantity' => $to])->save();
-                        $this->logAction($o, EbayActionLog::ACTION_AUTO_RESTOCK, $context, EbayActionLog::STATUS_OK, ['qty_before' => 0, 'qty_after' => $to]);
+                        $this->logAction($o, EbayActionLog::ACTION_AUTO_RESTOCK, $context, EbayActionLog::STATUS_OK, ['qty_before' => $before, 'qty_after' => $to]);
                         usleep(300_000);
                         $done++;
                     } catch (\Throwable $e) {
                         \Illuminate\Support\Facades\Log::warning("eBay auto-restock {$o->item_id}/{$o->sku}: " . $e->getMessage());
-                        $this->logAction($o, EbayActionLog::ACTION_AUTO_RESTOCK, $context, EbayActionLog::STATUS_ERROR, ['qty_before' => 0, 'message' => $e->getMessage()]);
+                        $this->logAction($o, EbayActionLog::ACTION_AUTO_RESTOCK, $context, EbayActionLog::STATUS_ERROR, ['qty_before' => $before, 'message' => $e->getMessage()]);
                     }
                 }
             });

@@ -160,12 +160,14 @@ class EbaySellClient
         ][$site] ?? $default;
     }
 
-    /** Ustaw DOSTĘPNĄ ilość pozycji (ReviseInventoryStatus). UWAGA: eBay `Quantity` to ilość
-     *  ŁĄCZNA (dostępne = Quantity − QuantitySold), więc wysyłamy `$available + $sold`, aby realnie
-     *  dostępne wyszło = $available. $sold = już sprzedane (z ostatniego pobrania). $sku puste → cała oferta. */
+    /** Ustaw DOSTĘPNĄ ilość pozycji (ReviseInventoryStatus).
+     *  UWAGA (sprawdzone na żywo 2026-07-08, aukcje GTC z OutOfStockControl): eBay traktuje tu
+     *  `Quantity` jako ilość DOSTĘPNĄ i sam dolicza QuantitySold do sumy. Wysyłamy więc $available
+     *  wprost — doliczanie $sold dawało wynik zawyżony o liczbę sprzedanych.
+     *  $sold zostaje w sygnaturze (informacyjnie, wołający je przekazują). $sku puste → cała oferta. */
     public function reviseQuantity(string $itemId, string $sku, int $available, string $marketplace, int $sold = 0): void
     {
-        $total = max(0, $available) + max(0, $sold);
+        $total = max(0, $available);
         $skuXml = $sku !== '' ? "<SKU>{$sku}</SKU>" : '';
         $body = '<?xml version="1.0" encoding="utf-8"?>'
             . '<ReviseInventoryStatusRequest xmlns="urn:ebay:apis:eBLBaseComponents">'

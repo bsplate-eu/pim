@@ -38,7 +38,8 @@ class SyncEbayOffers extends Command
 
         $restocked = EbayOfferService::fromSettings($settings)->applyAutoRestock(EbayActionLog::CONTEXT_SYNC);
         if ($restocked > 0) {
-            $this->info("Auto-restock: podniesiono {$restocked} ofert ze stanem 0.");
+            $when = (int) ($settings->auto_restock_when ?? 1);
+            $this->info("Auto-restock: podniesiono {$restocked} ofert (stan <= {$when} → {$settings->auto_restock_to}).");
         }
 
         return self::SUCCESS;

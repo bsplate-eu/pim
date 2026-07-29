@@ -34,6 +34,7 @@ class EbaySettings extends Model
         'oauth_connected_at',
         'auto_restock_enabled',
         'auto_restock_to',
+        'auto_restock_when',
         'auto_assign_enabled',
     ];
 
@@ -47,6 +48,7 @@ class EbaySettings extends Model
         'oauth_connected_at' => 'datetime',
         'auto_restock_enabled' => 'boolean',
         'auto_restock_to' => 'integer',
+        'auto_restock_when' => 'integer',
         'auto_assign_enabled' => 'boolean',
     ];
 

@@ -363,8 +363,9 @@ class EbayOffersController extends Controller
         }
 
         $n = EbayOfferService::fromSettings($settings)->applyAutoRestock(EbayActionLog::CONTEXT_MANUAL);
+        $when = (int) ($settings->auto_restock_when ?? 1);
 
-        return response()->json(['ok' => true, 'message' => "Auto-restock: podniesiono {$n} ofert ze stanem 0."]);
+        return response()->json(['ok' => true, 'message' => "Auto-restock: podniesiono {$n} ofert (stan ≤ {$when} → {$settings->auto_restock_to})."]);
     }
 
     /** „Uruchom teraz" (auto-przypisanie) — zmapuj nieprzypisane oferty po SKU. Nie wymaga konta (lokalne). */
