@@ -806,7 +806,13 @@ class MailController extends Controller
         $to = $this->parseEmails($data['to']);
         $cc = $this->parseEmails($data['cc'] ?? '');
         if (empty($to)) {
-            return response()->json(['ok' => false, 'message' => 'Podaj poprawny adres odbiorcy.'], 422);
+            return response()->json(['ok' => false, 'message' => 'Nie rozpoznano adresu w polu „Do". Wpisz sam adres, np. jan@firma.pl.'], 422);
+        }
+        if ($bad = $this->undeliverableEmails(array_merge($to, $cc))) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'To adres testowy, poczta tam nie dojdzie: '.implode(', ', $bad).'. Wpisz prawdziwy adres odbiorcy.',
+            ], 422);
         }
 
         $subject = trim((string) ($data['subject'] ?? ''));
@@ -900,20 +906,68 @@ class MailController extends Controller
     }
 
     /**
+     * Rozbija surowe pole „Do"/„DW" na listę adresów. Przyjmuje to, co realnie
+     * wkleja się z Outlooka/Gmaila, nie tylko goły adres:
+     *   jan@firma.pl
+     *   Jan Kowalski <jan@firma.pl>
+     *   "Kowalski, Jan" <jan@firma.pl>; anna@firma.pl
+     *   mailto:jan@firma.pl
+     *
      * @return array<int, string>
      */
     private function parseEmails(string $raw): array
     {
-        $parts = preg_split('/[,;\s]+/', trim($raw)) ?: [];
+        // Kopiuj-wklej z przeglądarki wciąga NBSP/zero-width, które psują podział po spacjach.
+        $raw = str_replace(["\u{00A0}", "\u{200B}", "\u{FEFF}"], ' ', $raw);
+
+        $candidates = [];
+
+        // Najpierw adresy w nawiasach — reszta („Jan Kowalski") to nazwa wyświetlana, nie adres.
+        if (preg_match_all('/<([^<>]+)>/', $raw, $m)) {
+            foreach ($m[1] as $addr) {
+                $candidates[] = $addr;
+            }
+            $raw = preg_replace('/<[^<>]*>/', ' ', $raw) ?? $raw;
+        }
+
+        foreach (preg_split('/[,;\s]+/', $raw) ?: [] as $part) {
+            $candidates[] = $part;
+        }
+
         $out = [];
-        foreach ($parts as $p) {
-            $p = trim($p);
+        foreach ($candidates as $p) {
+            $p = preg_replace('/^\s*mailto:/i', '', $p) ?? $p;
+            $p = trim($p, " \t\n\r\0\x0B\"'<>,;.");
             if ($p !== '' && filter_var($p, FILTER_VALIDATE_EMAIL)) {
                 $out[] = $p;
             }
         }
 
         return array_values(array_unique($out));
+    }
+
+    /**
+     * Adresy w domenach zarezerwowanych na przykłady (RFC 2606/6761). Mają null MX —
+     * poczta tam nigdy nie dojdzie, więc lepiej odrzucić od razu niż czekać na bounce.
+     *
+     * @param  array<int, string>  $emails
+     * @return array<int, string>
+     */
+    private function undeliverableEmails(array $emails): array
+    {
+        $domains = ['example.com', 'example.org', 'example.net', 'example.edu', 'localhost'];
+        $tlds = ['test', 'invalid', 'localhost', 'example'];
+
+        $bad = [];
+        foreach ($emails as $email) {
+            $domain = strtolower(substr((string) strrchr($email, '@'), 1));
+            $tld = str_contains($domain, '.') ? substr((string) strrchr($domain, '.'), 1) : $domain;
+            if (in_array($domain, $domains, true) || in_array($tld, $tlds, true)) {
+                $bad[] = $email;
+            }
+        }
+
+        return array_values(array_unique($bad));
     }
 
     public function syncAccount(Account $account, MailSyncService $service): JsonResponse
