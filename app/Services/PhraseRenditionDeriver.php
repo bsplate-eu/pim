@@ -32,6 +32,8 @@ class PhraseRenditionDeriver
         'sk'                     => ['Oceľový' => 'Hliníkový', 'Oceľová' => 'Hliníková', 'Oceľové' => 'Hliníkové'],
         'fr'                     => ['Acier' => 'Aluminium'],
         'es'                     => ['metálico' => 'de aluminio', 'metalico' => 'de aluminio', 'Acero' => 'Aluminio'],
+        'lv'                     => ['Tērauda' => 'Alumīnija'],
+        'et'                     => ['Terasest' => 'Alumiiniumist'],
         'allegro_klapypodsilnik' => ['Stalowa' => 'Aluminiowa', 'Stal' => 'Aluminium'],
         'allegro_czescipareto'   => ['Metalowa' => 'Aluminiowa', 'Stalowa' => 'Aluminiowa'],
         'allegro_ksteileshop'    => ['Stalowa' => 'Aluminiowa', 'Stal' => 'Aluminium'],
@@ -44,20 +46,40 @@ class PhraseRenditionDeriver
         'i skrzyni biegów' => [
             'pl' => 'i skrzyni biegów', 'de' => 'und Getriebe', 'cs' => 'a převodovky',
             'sk' => 'a prevodovky', 'fr' => 'et boîte de vitesses', 'es' => 'y caja de cambios',
+            'lv' => 'un ātrumkārbas', 'et' => 'ja käigukasti',
         ],
         'System Start-Stop' => [
             'pl' => 'System Start-Stop', 'de' => 'Start-Stop-System', 'cs' => 'systém Start-Stop',
             'sk' => 'systém Start-Stop', 'fr' => 'système Start-Stop', 'es' => 'sistema Start-Stop',
+            'lv' => 'Start-Stop sistēmai', 'et' => 'Start-Stop süsteemiga',
         ],
         'z Webasto' => [
             'pl' => 'z Webasto', 'de' => 'mit Webasto', 'cs' => 's Webasto',
             'sk' => 's Webasto', 'fr' => 'avec Webasto', 'es' => 'con Webasto',
+            'lv' => 'ar Webasto', 'et' => 'koos Webastoga',
         ],
         'galwanizowana' => [
             'pl' => 'galwanizowana', 'de' => 'verzinkt', 'cs' => 'galvanizovaný',
             'sk' => 'galvanizovaný', 'fr' => 'galvanisé', 'es' => 'galvanizado',
+            'lv' => 'ar cinkojumu', 'et' => 'tsinkkattega',
         ],
     ];
+
+    /**
+     * Kanały o szyku head-final — rdzeń frazy („aizsargs" / „kaitse") stoi na KOŃCU, nie na początku.
+     * W nich sufiks NOMINALNY nie może iść po rdzeniu, tylko przed nim:
+     *   „Tērauda dzinēja aizsargs" + „un ātrumkārbas" → „Tērauda dzinēja un ātrumkārbas aizsargs"
+     *   „Terasest mootori kaitse"  + „ja käigukasti"  → „Terasest mootori ja käigukasti kaitse"
+     * (doklejenie na końcu dałoby formy niegramatyczne po łotewsku i estońsku).
+     */
+    private const HEAD_FINAL_CHANNELS = ['lv', 'et'];
+
+    /**
+     * Sufiksy, które rozszerzają frazę NOMINALNĄ (dokładają chroniony element), a nie są okolicznikiem.
+     * Tylko one wchodzą przed rdzeń w kanałach head-final — „ar Webasto" czy „Start-Stop sistēmai"
+     * to okoliczniki i zostają na końcu we wszystkich kanałach.
+     */
+    private const NOMINAL_SUFFIXES = ['i skrzyni biegów'];
 
     private const ALLEGRO_CHANNELS = [
         'allegro_klapypodsilnik', 'allegro_czescipareto', 'allegro_dolneoslony',
@@ -78,7 +100,7 @@ class PhraseRenditionDeriver
             if (Str::endsWith($phrase->phrase_pl, ' ' . $suffixPl)) {
                 $basePl = Str::beforeLast($phrase->phrase_pl, ' ' . $suffixPl);
                 return $this->buildFromBase($phrase, $basePl, fn ($val, $channel) =>
-                    $val . ' ' . ($this->channelSuffix($map, $channel)), $overwrite);
+                    $this->attachSuffix($val, $this->channelSuffix($map, $channel), $channel, $suffixPl), $overwrite);
             }
         }
 
@@ -123,6 +145,26 @@ class PhraseRenditionDeriver
             $written++;
         }
         return $written;
+    }
+
+    /**
+     * Dokleja przetłumaczony sufiks do renditcji bazy — na końcu, a w kanałach head-final
+     * (łotewski, estoński) sufiks nominalny wsuwa PRZED ostatnie słowo, czyli przed rdzeń frazy.
+     */
+    private function attachSuffix(string $value, string $suffix, string $channel, string $suffixPl): string
+    {
+        $inline = in_array($channel, self::HEAD_FINAL_CHANNELS, true)
+            && in_array($suffixPl, self::NOMINAL_SUFFIXES, true);
+
+        if (!$inline) {
+            return $value . ' ' . $suffix;
+        }
+
+        $head = Str::afterLast($value, ' ');
+        if ($head === $value) {
+            return $value . ' ' . $suffix; // jednowyrazowa fraza — nie ma czego rozdzielać
+        }
+        return Str::beforeLast($value, ' ') . ' ' . $suffix . ' ' . $head;
     }
 
     private function channelSuffix(array $map, string $channel): string

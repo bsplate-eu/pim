@@ -23,6 +23,8 @@ class TranslationPhraseController extends Controller
         'sk' => 'SK',
         'fr' => 'FR',
         'es' => 'ES',
+        'lv' => 'LV',
+        'et' => 'ET',
         'allegro_klapypodsilnik' => 'Allegro · klapypodsilnik',
         'allegro_czescipareto'   => 'Allegro · czescipareto',
         'allegro_dolneoslony'    => 'Allegro · dolneoslony',

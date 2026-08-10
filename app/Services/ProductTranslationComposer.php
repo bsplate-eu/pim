@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Log;
  * Sklejacz nazw produktów dla wszystkich kanałów (lokali + kont Allegro) z matrycy fraz.
  *
  * Wejście: Product (z atrybutami `make`, `model` i z nazwą PL).
- * Wyjście: dla każdego kanału (pl/de/cs/sk/fr/es + 5 Allegro) — pełna nazwa lub null jeśli brak frazy w matrycy.
+ * Wyjście: dla każdego kanału (pl/de/cs/sk/fr/es/lv + 5 Allegro) — pełna nazwa lub null jeśli brak frazy w matrycy.
  *
  * Algorytm:
  *   1. ProductPhraseClassifier rozpoznaje frazę kanoniczną z PL nazwy (materiał × element × wykończenie).
@@ -24,7 +24,7 @@ use Illuminate\Support\Facades\Log;
  *   4. Dla każdej rendition: skleić jako `{value} {make} {model}`.
  *
  * Apply zapisuje wynik do:
- *   - products.name->{locale} dla locale OBCYCH (de/cs/sk/fr/es) — z flagą `auto_matrix`.
+ *   - products.name->{locale} dla locale OBCYCH (de/cs/sk/fr/es/lv) — z flagą `auto_matrix`.
  *     PL NIE jest nadpisywane — to język źródłowy (zachowuje pełny wariant pojazdu z feedu Sumpguard).
  *   - integration_products.overrides.name per konto Allegro (integracje 13/14/16/17/18 + alias 12)
  *
@@ -40,10 +40,10 @@ class ProductTranslationComposer
     }
 
     /** Kanały matrycy odpowiadające bezpośrednio locale w `products.name`. */
-    public const LOCALE_CHANNELS = ['pl', 'de', 'cs', 'sk', 'fr', 'es'];
+    public const LOCALE_CHANNELS = ['pl', 'de', 'cs', 'sk', 'fr', 'es', 'lv', 'et'];
 
     /** Locale które composer ZAPISUJE. PL pominięte — to język źródłowy (nie nadpisujemy feedu). */
-    public const WRITABLE_LOCALE_CHANNELS = ['de', 'cs', 'sk', 'fr', 'es'];
+    public const WRITABLE_LOCALE_CHANNELS = ['de', 'cs', 'sk', 'fr', 'es', 'lv', 'et'];
 
     /** Kanał matrycy → integration_id (per konto Allegro). */
     public const ALLEGRO_INTEGRATION_MAP = [

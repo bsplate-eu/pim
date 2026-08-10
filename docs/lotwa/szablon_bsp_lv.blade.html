@@ -1,0 +1,58 @@
+@php($is_alu = str_starts_with(mb_strtolower((string) ($attribute_material ?? '')), 'alum'))
+<div>
+    <p>
+        <strong>Ražotājs:</strong> PARETO
+        <br>
+        <strong>Preces kods:</strong> {{ $product_code }}
+        <br>
+        <strong>Preces stāvoklis:</strong> Jauna
+        <br><br>
+        <strong>Aizsargs paredzēts automašīnai:</strong>
+    </p>
+    <ul>
+        <li><strong>Marka:</strong> {{ $attribute_make }}</li>
+        <li><strong>Modelis:</strong> {{ $attribute_model }}</li>
+        <li><strong>Ražošanas gadi:</strong> {{ $attribute_year_start }}-{{ $attribute_year_stop }}</li>
+        @if($attribute_engine)
+            <li><strong>Dzinēji, kuriem aizsargs ir piemērots:</strong> {{ $attribute_engine }}</li>
+        @endif
+    </ul>
+    <p><strong><br>Aizsarga tehniskie dati:</strong></p>
+    <ul>
+        <li><strong>Aizsargājamie šasijas elementi:</strong> {{ $attribute_protection }}</li>
+        @if($is_alu)
+        <li><strong>Aizsarga materiāls:</strong> Alumīnijs (viegls un ļoti izturīgs)</li>
+        @else
+        <li><strong>Aizsarga materiāls:</strong> Tērauds (ļoti izturīgs un elastīgs)</li>
+        @endif
+        <li><strong>Katram aizsargam ir konstrukciju pastiprinošas stinguma ribas</strong></li>
+        <li><strong>Aizsarga biezums:</strong> {{ $width }} mm</li>
+        <li><strong>Aizsarga krāsojums:</strong> pulverkrāsojums (pretkorozijas slānis), elektrostatiskā metode</li>
+        <li><strong>Ražošanas tehnoloģija:</strong> CNC apstrāde</li>
+        <li><strong>Montāžas piederumi komplektā:</strong> skrūves, uzgriežņi, klipši</li>
+        <li><strong>Montāža:</strong> rūpnīcas caurumos, nekas nav jāpārveido, netiek zaudēta automašīnas garantija.</li>
+@if($attribute_oil)
+<li><strong>Ir izgriezums eļļas noliešanas atverei</strong> – mainot eļļu, aizsargu nav jānoņem.</li></br>
+@else
+@endif
+    </ul>
+<br>
+    @if($is_alu)
+    <p><strong>Mūsu alumīnija aizsargi ir izgatavoti no augstas kvalitātes {{ rtrim(rtrim($width, '0'), '.') }} mm bieza alumīnija.</strong> <br>
+Alumīnijs ir ievērojami vieglāks par tēraudu – <strong>tas patiešām pasargās Jūsu automašīnas šasiju</strong>, papildus nenoslogojot automašīnas priekšu.
+<p><strong>Augstākās kvalitātes alumīnija dzinēja un citu mezglu aizsargi, ražoti, izmantojot
+            modernākās metālapstrādes tehnoloģijas.</strong></p>
+    @else
+    <p><strong>Mūsu aizsargi ir izgatavoti no augstas kvalitātes 2–3 mm bieza S235 tērauda, nevis no konkurentu izmantotā DC01.</strong> <br>
+Mūsu materiāls ir konstrukciju tērauds: <strong>tas patiešām pasargās Jūsu automašīnas šasiju</strong>, nevis tikai izskatīsies pēc aizsarga.
+<p><strong>Augstākās kvalitātes tērauda dzinēja un citu mezglu aizsargi, ražoti, izmantojot
+            modernākās metālapstrādes tehnoloģijas.</strong></p>
+    @endif
+    <p>Pareto aizsargi lieliski noder visur, kur pastāv risks mehāniski bojāt automašīnas šasijas
+        elementus (ātrumvaļņi, krūmi, akmeņi u.c.).</p>
+        <br>Aizsargus ir ļoti viegli uzstādīt – nav nepieciešami nekādi šasijas stiprinājumu pārveidojumi. Montāža
+        nerada automašīnas garantijas zaudēšanu.<br>
+Krāsoti ar pulverkrāsu, uzklājot pretkorozijas slāni elektrostatiskā veidā. <br>
+    </p>
+    <p>Komplektā piegādājam visus nepieciešamos montāžas elementus: skrūves, uzgriežņus, klipšus.</p>
+    <p>Piedāvājam aizsargus lielākajai daļai automašīnu modeļu, kas brauc pa Latvijas ceļiem.</p>

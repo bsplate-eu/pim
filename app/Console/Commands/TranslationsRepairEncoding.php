@@ -25,7 +25,7 @@ class TranslationsRepairEncoding extends Command
     protected $signature = 'translations:repair-encoding
         {--dry-run : Pokaż co zostanie naprawione, bez zapisu}
         {--locale= : Napraw tylko ten locale (domyślnie wszystkie 6 matrycowych)}
-        {--clear-non-matrix : Zamiast naprawiać — WYCZYŚĆ uszkodzone sloty w lokalach SPOZA matrycy (en/lt/it/lv/et/ro/hu/bg)}';
+        {--clear-non-matrix : Zamiast naprawiać — WYCZYŚĆ uszkodzone sloty w lokalach SPOZA matrycy (en/lt/it/ro/hu/bg)}';
 
     protected $description = 'Naprawia uszkodzone polskie znaki w products.name (z feedu) lub czyści śmieci w lokalach spoza matrycy';
 
@@ -125,14 +125,17 @@ class TranslationsRepairEncoding extends Command
 
     /**
      * Czyści uszkodzone sloty (zawierające "?") w lokalach SPOZA matrycy.
-     * Matryca pokrywa pl/de/cs/sk/fr/es — reszta available_locales (en/lt/it/lv/et/ro/hu/bg)
+     * Matryca pokrywa pl/de/cs/sk/fr/es/lv/et — reszta available_locales (en/lt/it/ro/hu/bg)
      * trzyma tylko popsuty polski fallback z Sumpguarda → kasujemy żeby były puste.
      * Respektuje locki (manual/sheet_import/auto_matrix).
+     *
+     * Lista matrycowych bierze się z composera, nie z LOCALE_FEED — lv i et są w matrycy,
+     * ale nie mają własnych plików feedu, więc obie listy nie są tożsame.
      */
     private function clearNonMatrix(bool $dryRun): int
     {
         $allLocales = app(\App\Settings\GeneralSettings::class)->available_locales;
-        $matrixLocales = array_keys(self::LOCALE_FEED);
+        $matrixLocales = \App\Services\ProductTranslationComposer::LOCALE_CHANNELS;
         $nonMatrix = array_values(array_diff($allLocales, $matrixLocales));
 
         if (empty($nonMatrix)) {

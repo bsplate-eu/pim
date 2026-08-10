@@ -1,0 +1,58 @@
+@php($is_alu = str_starts_with(mb_strtolower((string) ($attribute_material ?? '')), 'alum'))
+<div>
+    <p>
+        <strong>Tootja:</strong> PARETO
+        <br>
+        <strong>Tootekood:</strong> {{ $product_code }}
+        <br>
+        <strong>Toote seisukord:</strong> Uus
+        <br><br>
+        <strong>Kaitse on mõeldud autole:</strong>
+    </p>
+    <ul>
+        <li><strong>Mark:</strong> {{ $attribute_make }}</li>
+        <li><strong>Mudel:</strong> {{ $attribute_model }}</li>
+        <li><strong>Tootmisaastad:</strong> {{ $attribute_year_start }}-{{ $attribute_year_stop }}</li>
+        @if($attribute_engine)
+            <li><strong>Mootorid, millele kaitse sobib:</strong> {{ $attribute_engine }}</li>
+        @endif
+    </ul>
+    <p><strong><br>Kaitse tehnilised andmed:</strong></p>
+    <ul>
+        <li><strong>Kaitstavad veermiku osad:</strong> {{ $attribute_protection }}</li>
+        @if($is_alu)
+        <li><strong>Kaitse materjal:</strong> Alumiinium (kerge ja väga vastupidav)</li>
+        @else
+        <li><strong>Kaitse materjal:</strong> Teras (väga vastupidav ja elastne)</li>
+        @endif
+        <li><strong>Igal kaitsel on konstruktsiooni tugevdavad jäikusribid</strong></li>
+        <li><strong>Kaitse paksus:</strong> {{ $width }} mm</li>
+        <li><strong>Kaitse värvimine:</strong> pulbervärvimine (korrosioonivastane kiht), elektrostaatiline meetod</li>
+        <li><strong>Tootmistehnoloogia:</strong> CNC töötlemine</li>
+        <li><strong>Paigaldustarvikud komplektis:</strong> poldid, mutrid, klambrid</li>
+        <li><strong>Paigaldus:</strong> tehase avadesse, midagi ei ole vaja ümber teha, auto garantii ei kaota kehtivust.</li>
+@if($attribute_oil)
+<li><strong>Kaitsel on väljalõige õli väljalaskeava jaoks</strong> – õlivahetusel ei ole vaja kaitset eemaldada.</li></br>
+@else
+@endif
+    </ul>
+<br>
+    @if($is_alu)
+    <p><strong>Meie alumiiniumkaitsed on valmistatud kvaliteetsest {{ rtrim(rtrim($width, '0'), '.') }} mm paksusest alumiiniumist.</strong> <br>
+Alumiinium on tunduvalt kergem kui teras – <strong>see kaitseb tõepoolest Teie auto veermikku</strong>, koormamata lisaks auto esiosa.
+<p><strong>Kõrgeima kvaliteediga alumiiniumist mootori ja teiste sõlmede kaitsed, valmistatud
+            kõige kaasaegsemate metallitöötlustehnoloogiatega.</strong></p>
+    @else
+    <p><strong>Meie kaitsed on valmistatud kvaliteetsest 2–3 mm paksusest S235 terasest, mitte konkurentide kasutatavast DC01-st.</strong> <br>
+Meie materjal on konstruktsiooniteras: <strong>see kaitseb tõepoolest Teie auto veermikku</strong>, mitte ei näe lihtsalt kaitse moodi välja.
+<p><strong>Kõrgeima kvaliteediga terasest mootori ja teiste sõlmede kaitsed, valmistatud
+            kõige kaasaegsemate metallitöötlustehnoloogiatega.</strong></p>
+    @endif
+    <p>Pareto kaitsed sobivad suurepäraselt kõikjale, kus on oht auto veermiku osi mehaaniliselt
+        vigastada (lamavad politseinikud, põõsad, kivid jne).</p>
+        <br>Kaitseid on väga lihtne paigaldada – veermiku kinnitusi ei ole vaja kuidagi ümber teha. Paigaldus
+        ei too kaasa auto garantii kaotamist.<br>
+Värvitud pulbervärviga, korrosioonivastase kihiga, elektrostaatilisel meetodil. <br>
+    </p>
+    <p>Komplektis on kõik vajalikud paigalduselemendid: poldid, mutrid, klambrid.</p>
+    <p>Pakume kaitseid enamikule Eesti teedel sõitvatest automudelitest.</p>

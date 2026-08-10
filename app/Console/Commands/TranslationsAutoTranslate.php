@@ -22,7 +22,7 @@ class TranslationsAutoTranslate extends Command
         {--limit=0 : Limit produktów (0 = wszystkie)}
         {--dry-run : Pokaż statystyki bez zapisu}';
 
-    protected $description = 'Wypełnia tłumaczenia produktów (6 lokali + 5 kont Allegro) z matrycy fraz';
+    protected $description = 'Wypełnia tłumaczenia produktów (7 lokali + 5 kont Allegro) z matrycy fraz';
 
     public function handle(ProductTranslationComposer $composer): int
     {
