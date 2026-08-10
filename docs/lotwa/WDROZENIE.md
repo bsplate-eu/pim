@@ -1,7 +1,26 @@
 # Wdrożenie LV + ET na produkcję — procedura
 
-Stan na 2026-08-10: **kod i skrypty gotowe, nic jeszcze nie wypchnięte**. Pre-flight przeszedł,
-poniżej dokładna kolejność, kontrole i rollback.
+> ## ✅ WYKONANE 2026-08-10
+>
+> | | |
+> |---|---|
+> | Zrzut przed wdrożeniem | `/home/admin/backup-pim-lv-et-20260810-103117` |
+> | Kod na prodzie | `c1868cd` (auto-deploy, `deploy OK` w logu) |
+> | Matryca | 34/34 renditcje LV, 34/34 ET |
+> | Atrybuty | 48/48 `protection`, 166/166 `engine` — w obu językach |
+> | Szablony | `bsp-lv` id 15, `bsp-et` id 16 |
+> | `auto-translate` | 1632 matched, **0 unmatched**, 3264 zapisy locale |
+> | Nazwy `lv` / `et` | 1632 / 1635 (3 produkty poza feedem Sumpguard) |
+> | **Nazwy PL** | **0 zmian** — `lv-et-verify.php` exit 0 |
+> | Aplikacja po wdrożeniu | HTTP 200 na `/admin/login`, zero ERROR w `laravel.log` |
+>
+> 148 slotów `name.lv` i 148 `name.et` ze śmieciami z feedu zostało nadpisanych poprawnymi
+> nazwami — zgodnie z planem, nie miały locków.
+>
+> Poniższa procedura zostaje jako wzorzec dla kolejnego rynku (`ro`, `hu`, `bg` są już
+> w `available_locales`).
+
+Pre-flight przeszedł, poniżej dokładna kolejność, kontrole i rollback.
 
 ## Pre-flight — wykonany 2026-08-10
 
