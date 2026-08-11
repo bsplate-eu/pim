@@ -42,6 +42,7 @@ class EbayKtypePush extends Command
     private string $categoryId;
     private array $modelCache = [];
     private array $yearCache = [];
+    private array $platformCache = [];
 
     public function handle(): int
     {
@@ -60,6 +61,9 @@ class EbayKtypePush extends Command
 
         $q = EbayOffer::query()
             ->where('listing_status', 'Active')
+            // Status „Active" w bazie bywa martwy (aukcja skończyła się między syncami, wiersz
+            // zostaje) — żywa aukcja = widziana przez ostatni sync (cron co godzinę).
+            ->where('last_seen', '>=', now()->subHours(3))
             ->where('marketplace', $marketplace)
             ->whereNotNull('product_id')
             ->with('product.attributeValues.attribute');
@@ -144,7 +148,24 @@ class EbayKtypePush extends Command
                 continue;
             }
 
-            $compat = array_map(fn ($y) => ['Make' => $ebayMake, 'Model' => $ebayModel, 'Year' => (string) $y], $years);
+            // DE wymaga minimum Make+Model+Platform (sprawdzone na żywo: same Make/Model/Year
+            // odrzuca). Wpisy per platforma × rocznik; kombinacje spoza bazy eBay pominie
+            // (raportując ostrzeżeniem), reszta się zapisuje.
+            $platforms = $this->platformCache[$ebayMake . '|' . $ebayModel]
+                ??= $this->taxonomy->compatibilityPropertyValues($this->treeId, $this->categoryId, 'Platform', ['Make' => $ebayMake, 'Model' => $ebayModel]);
+            if ($platforms === []) {
+                $this->warn('   Brak platform w bazie eBaya — pomijam.');
+                $report[] = ['item_id' => $offer->item_id, 'status' => 'no_platform', 'vehicle' => $v, 'ebay_model' => $ebayModel];
+                continue;
+            }
+            $this->line('   Platformy: ' . implode(' | ', $platforms));
+
+            $compat = [];
+            foreach ($platforms as $platform) {
+                foreach ($years as $y) {
+                    $compat[] = ['Make' => $ebayMake, 'Model' => $ebayModel, 'Platform' => $platform, 'Year' => (string) $y];
+                }
+            }
 
             if (! $apply) {
                 $report[] = ['item_id' => $offer->item_id, 'status' => 'dry_run', 'ebay_make' => $ebayMake, 'ebay_model' => $ebayModel, 'years' => $years];
@@ -154,10 +175,13 @@ class EbayKtypePush extends Command
             try {
                 $warnings = $client->reviseCompatibility($offer->item_id, $offer->marketplace, $compat);
                 foreach ($warnings as $w) {
-                    $this->warn('   eBay: ' . $w);
+                    $this->warn('   eBay: ' . mb_substr($w, 0, 200));
                 }
-                $this->info('   ✓ wysłano ' . count($compat) . ' wpisów');
-                $report[] = ['item_id' => $offer->item_id, 'status' => 'sent', 'ebay_make' => $ebayMake, 'ebay_model' => $ebayModel, 'years' => $years, 'warnings' => $warnings];
+                // Zaufaj odczytowi, nie własnej wysyłce: ile wpisów FAKTYCZNIE siedzi na aukcji.
+                $after = $client->itemCompatibility($offer->item_id, $offer->marketplace);
+                $saved = $after['count'];
+                $this->{$saved > 0 ? 'info' : 'error'}("   → na aukcji zapisane wpisy: {$saved} (wysłane: " . count($compat) . ')');
+                $report[] = ['item_id' => $offer->item_id, 'status' => $saved > 0 ? 'sent' : 'sent_but_empty', 'ebay_make' => $ebayMake, 'ebay_model' => $ebayModel, 'years' => $years, 'sent' => count($compat), 'saved' => $saved, 'warnings' => $warnings];
             } catch (\Throwable $e) {
                 $this->error('   BŁĄD wysyłki: ' . $e->getMessage());
                 $report[] = ['item_id' => $offer->item_id, 'status' => 'error', 'error' => $e->getMessage()];
