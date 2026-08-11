@@ -211,11 +211,13 @@ class EbayKtypePush extends Command
             return null;
         }
 
-        // Generacja: cyfra po nazwie modelu w tytule aukcji (np. „Grand Vitara 2 (2005-…”) lub nazwie PL.
+        // Generacja: liczba po nazwie modelu w tytule aukcji lub nazwie produktu — „Grand Vitara 2”,
+        // ale też oznaczenia serii „Land Cruiser J90” (J zdejmujemy; eBay ma model „Land Cruiser 90”).
+        // 1–3 cyfry: nie łapie roczników (2004 = 4 cyfry).
         $generation = null;
         $modelWords = str_replace('-', ' ', $attrs['model']);
         foreach ([$offer->title, $offer->product->name['pl'] ?? '', $offer->product->name['en'] ?? ''] as $hint) {
-            if ($hint && preg_match('/' . preg_quote($modelWords, '/') . '\s+(\d{1,2})\b/i', str_replace('-', ' ', $hint), $m)) {
+            if ($hint && preg_match('/' . preg_quote($modelWords, '/') . '\s+j?(\d{1,3})\b/i', str_replace('-', ' ', $hint), $m)) {
                 $generation = (int) $m[1];
                 break;
             }
