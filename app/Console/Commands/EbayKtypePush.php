@@ -59,11 +59,12 @@ class EbayKtypePush extends Command
         $this->categoryId = (string) $this->option('category');
         $client = new EbaySellClient($settings, new EbayOAuthService($settings));
 
+        // Status „Active" w bazie bywa martwy (aukcja skończyła się, wiersz zostaje z last_seen
+        // sprzed godzin) — żywa aukcja = widziana w OSTATNIM przebiegu synca (cron co godzinę).
+        $lastSync = EbayOffer::query()->where('marketplace', $marketplace)->max('last_seen');
         $q = EbayOffer::query()
             ->where('listing_status', 'Active')
-            // Status „Active" w bazie bywa martwy (aukcja skończyła się między syncami, wiersz
-            // zostaje) — żywa aukcja = widziana przez ostatni sync (cron co godzinę).
-            ->where('last_seen', '>=', now()->subHours(3))
+            ->where('last_seen', '>=', \Carbon\Carbon::parse($lastSync)->subMinutes(15))
             ->where('marketplace', $marketplace)
             ->whereNotNull('product_id')
             ->with('product.attributeValues.attribute');
