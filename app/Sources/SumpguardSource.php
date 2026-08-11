@@ -486,7 +486,12 @@ class SumpguardSource extends BaseSource implements SourceInterface
 //            return collect(json_decode(file_get_contents($storage_path), true));
 //        }
 
-        $response = Http::sink(storage_path("app/sumpguard/{$locale}.json"))->get("https://pl.sump-guard.co.uk/api/products/json/$locale");
+        // Serwer feedu bywa wolny (~40 s na odpowiedź) — domyślny timeout 30 s ubijał każdy nocny sync
+        // (cURL error 28, feed zamrożony na ostatnim udanym pobraniu). Stąd szeroki timeout + retry.
+        $response = Http::timeout(180)
+            ->retry(2, 5000)
+            ->sink(storage_path("app/sumpguard/{$locale}.json"))
+            ->get("https://pl.sump-guard.co.uk/api/products/json/$locale");
         return $response->collect();
     }
 
