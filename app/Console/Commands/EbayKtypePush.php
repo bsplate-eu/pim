@@ -75,10 +75,20 @@ class EbayKtypePush extends Command
 
         $offers = $q->get()->unique('item_id')->values();
 
+        // Rejestr obrobionych aukcji (wysłane + terminalnie pominięte) — kolejne paczki
+        // biorą tylko nowe. --items wymusza ponowną obróbkę (np. po poprawce dopasowania).
+        $pushedPath = 'ebay/ktype-pushed.json';
+        $pushed = Storage::exists($pushedPath)
+            ? (json_decode(Storage::get($pushedPath), true) ?: [])
+            : [];
+
         // Pilot: tylko engine=all (fitment „wszystkie wersje" jest wtedy jednoznaczny).
         $rows = [];
         $mismatched = [];
         foreach ($offers as $offer) {
+            if (isset($pushed[$offer->item_id]) && ! $this->option('items')) {
+                continue;
+            }
             $v = $this->vehicleAttrs($offer);
             if (! $v) {
                 continue;
@@ -178,11 +188,20 @@ class EbayKtypePush extends Command
                 foreach ($warnings as $w) {
                     $this->warn('   eBay: ' . mb_substr($w, 0, 200));
                 }
-                // Zaufaj odczytowi, nie własnej wysyłce: ile wpisów FAKTYCZNIE siedzi na aukcji.
-                $after = $client->itemCompatibility($offer->item_id, $offer->marketplace);
-                $saved = $after['count'];
-                $this->{$saved > 0 ? 'info' : 'error'}("   → na aukcji zapisane wpisy: {$saved} (wysłane: " . count($compat) . ')');
-                $report[] = ['item_id' => $offer->item_id, 'status' => $saved > 0 ? 'sent' : 'sent_but_empty', 'ebay_make' => $ebayMake, 'ebay_model' => $ebayModel, 'years' => $years, 'sent' => count($compat), 'saved' => $saved, 'warnings' => $warnings];
+                // Weryfikacja odczytem (ile wpisów FAKTYCZNIE siedzi na aukcji) — przy masowych
+                // paczkach próbkowana (co 5. aukcja + każda z ostrzeżeniem „ungültig"), żeby nie
+                // przepalać dziennego limitu Trading API na GetItem.
+                $suspicious = (bool) collect($warnings)->first(fn ($w) => str_contains($w, 'ungültig') || stripos($w, 'invalid') !== false);
+                $saved = null;
+                if ($suspicious || count($report) % 5 === 0) {
+                    $after = $client->itemCompatibility($offer->item_id, $offer->marketplace);
+                    $saved = $after['count'];
+                    $this->{$saved > 0 ? 'info' : 'error'}("   → na aukcji zapisane wpisy: {$saved} (wysłane: " . count($compat) . ')');
+                } else {
+                    $this->info('   ✓ wysłano ' . count($compat) . ' wpisów (bez weryfikacji odczytem)');
+                }
+                $status = $saved === 0 ? 'sent_but_empty' : 'sent';
+                $report[] = ['item_id' => $offer->item_id, 'status' => $status, 'ebay_make' => $ebayMake, 'ebay_model' => $ebayModel, 'years' => $years, 'sent' => count($compat), 'saved' => $saved, 'warnings' => $warnings];
             } catch (\Throwable $e) {
                 $this->error('   BŁĄD wysyłki: ' . $e->getMessage());
                 $report[] = ['item_id' => $offer->item_id, 'status' => 'error', 'error' => $e->getMessage()];
@@ -192,6 +211,21 @@ class EbayKtypePush extends Command
         $path = 'ebay/ktype-push-' . now()->format('Y-m-d-His') . ($apply ? '' : '-dryrun') . '.json';
         Storage::put($path, json_encode(array_merge($report, $mismatched), JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
         $this->newLine();
+
+        // Rejestr obrobionych: statusy terminalne nie wracają w kolejnych paczkach.
+        // Błędy przejściowe (taxonomy_error, error wysyłki) NIE trafiają do rejestru — ponowią się.
+        if ($apply) {
+            $terminal = ['sent', 'sent_but_empty', 'unmatched', 'no_years', 'no_platform', 'title_mismatch'];
+            foreach (array_merge($report, $mismatched) as $r) {
+                if (in_array($r['status'], $terminal)) {
+                    $pushed[$r['item_id']] = $r['status'];
+                }
+            }
+            Storage::put($pushedPath, json_encode($pushed, JSON_PRETTY_PRINT));
+            $counts = array_count_values($pushed);
+            $this->info('Rejestr łącznie: ' . collect($counts)->map(fn ($n, $s) => "{$s}={$n}")->implode(', '));
+        }
+
         $this->info("Raport: storage/app/{$path}");
 
         return self::SUCCESS;
