@@ -72,6 +72,7 @@ class EbayKtypePush extends Command
 
         // Pilot: tylko engine=all (fitment „wszystkie wersje" jest wtedy jednoznaczny).
         $rows = [];
+        $mismatched = [];
         foreach ($offers as $offer) {
             $v = $this->vehicleAttrs($offer);
             if (! $v) {
@@ -80,10 +81,26 @@ class EbayKtypePush extends Command
             if ($v['engine'] !== 'all' && ! $this->option('items')) {
                 continue;
             }
+            // Strażnik: marka i model z atrybutów PIM muszą występować w tytule aukcji.
+            // Łapie bliźniaki badge'owe (aukcja „Suzuki SX4" ↔ produkt fiat/sedici) i błędne
+            // mapowania SKU (aukcja „Vitara" ↔ produkt s-cross) — fitment z cudzej marki to szkodnik.
+            $title = $this->norm($offer->title);
+            if (! str_contains($title, $this->norm($v['make'])) || ! str_contains($title, $this->norm($v['model']))) {
+                $mismatched[] = ['item_id' => $offer->item_id, 'status' => 'title_mismatch', 'title' => $offer->title, 'vehicle' => $v];
+                continue;
+            }
             $rows[] = ['offer' => $offer, 'vehicle' => $v];
             if (! $this->option('items') && count($rows) >= (int) $this->option('limit')) {
                 break;
             }
+        }
+
+        if ($mismatched !== []) {
+            $this->warn('Pominięte (marka/model z PIM nie występuje w tytule aukcji — do ręcznej decyzji): ' . count($mismatched));
+            foreach ($mismatched as $m) {
+                $this->line("   {$m['item_id']} | {$m['title']}  ↔  {$m['vehicle']['make']}/{$m['vehicle']['model']}");
+            }
+            $this->newLine();
         }
 
         if ($rows === []) {
@@ -148,7 +165,7 @@ class EbayKtypePush extends Command
         }
 
         $path = 'ebay/ktype-push-' . now()->format('Y-m-d-His') . ($apply ? '' : '-dryrun') . '.json';
-        Storage::put($path, json_encode($report, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+        Storage::put($path, json_encode(array_merge($report, $mismatched), JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
         $this->newLine();
         $this->info("Raport: storage/app/{$path}");
 
@@ -215,14 +232,19 @@ class EbayKtypePush extends Command
             : $normalized->filter(fn ($n) => $n === $base || str_starts_with($n, $base . ' '))->keys();
 
         // Zawęź po pokryciu roczników: model musi obejmować większość naszego zakresu.
+        // Remis pokrycia (generacje o nakładających się latach, np. Ignis II vs III) rozstrzyga
+        // początek produkcji najbliższy naszemu year_start.
         $best = null;
         $bestCover = 0;
+        $bestStartDiff = PHP_INT_MAX;
         foreach ($candidates as $model) {
             $years = $this->yearCache[$ebayMake . '|' . $model] ??= array_map('intval', $this->taxonomy->compatibilityPropertyValues($this->treeId, $this->categoryId, 'Year', ['Make' => $ebayMake, 'Model' => $model]));
             $overlap = array_values(array_filter($years, fn ($y) => $y >= $v['year_start'] && $y <= $v['year_stop']));
             $cover = count($overlap) / max(1, $v['year_stop'] - $v['year_start'] + 1);
-            if ($cover > $bestCover) {
+            $startDiff = $years === [] ? PHP_INT_MAX : abs(min($years) - $v['year_start']);
+            if ($cover > $bestCover || ($cover === $bestCover && $cover > 0 && $startDiff < $bestStartDiff)) {
                 $bestCover = $cover;
+                $bestStartDiff = $startDiff;
                 $best = [$model, $overlap];
             }
         }
