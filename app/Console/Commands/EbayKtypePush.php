@@ -231,6 +231,15 @@ class EbayKtypePush extends Command
             // Bez trafienia wprost: modele zaczynające się od bazy, rozstrzygną roczniki.
             : $normalized->filter(fn ($n) => $n === $base || str_starts_with($n, $base . ' '))->keys();
 
+        // Nadal nic? Nasza nazwa bywa szersza niż eBaya (hilux-invincible vs „Hilux VIII") —
+        // skracaj bazę od prawej po jednym członie; wybór generacji rozstrzygną roczniki.
+        $shrink = explode(' ', $base);
+        while ($candidates->isEmpty() && count($shrink) > 1) {
+            array_pop($shrink);
+            $prefix = implode(' ', $shrink);
+            $candidates = $normalized->filter(fn ($n) => $n === $prefix || str_starts_with($n, $prefix . ' '))->keys();
+        }
+
         // Zawęź po pokryciu roczników: model musi obejmować większość naszego zakresu.
         // Remis pokrycia (generacje o nakładających się latach, np. Ignis II vs III) rozstrzyga
         // początek produkcji najbliższy naszemu year_start.
