@@ -227,6 +227,41 @@ class EbaySellClient
         ];
     }
 
+    /**
+     * Ustaw listę kompatybilności pojazdów aukcji (ReviseFixedPriceItem — ZASTĘPUJE całą listę).
+     * $compat = lista wpisów ['Make'=>'Suzuki','Model'=>'Grand Vitara II','Year'=>'2005'].
+     * Zwraca listę ostrzeżeń eBay (nieprawidłowe kombinacje są pomijane, reszta się zapisuje).
+     */
+    public function reviseCompatibility(string $itemId, string $marketplace, array $compat): array
+    {
+        $compatXml = '';
+        foreach ($compat as $entry) {
+            $nv = '';
+            foreach ($entry as $name => $value) {
+                $nv .= '<NameValueList><Name>' . htmlspecialchars((string) $name, ENT_XML1)
+                    . '</Name><Value>' . htmlspecialchars((string) $value, ENT_XML1) . '</Value></NameValueList>';
+            }
+            $compatXml .= '<Compatibility>' . $nv . '</Compatibility>';
+        }
+
+        $body = '<?xml version="1.0" encoding="utf-8"?>'
+            . '<ReviseFixedPriceItemRequest xmlns="urn:ebay:apis:eBLBaseComponents">'
+            . '<Item>'
+            . "<ItemID>{$itemId}</ItemID>"
+            . '<ItemCompatibilityList>' . $compatXml . '</ItemCompatibilityList>'
+            . '</Item>'
+            . '</ReviseFixedPriceItemRequest>';
+
+        $xml = $this->call('ReviseFixedPriceItem', $body, $marketplace);
+
+        $warnings = [];
+        foreach ($xml->Errors ?? [] as $err) {
+            $warnings[] = (string) ($err->LongMessage ?? $err->ShortMessage ?? '');
+        }
+
+        return array_values(array_filter($warnings));
+    }
+
     /** Zmiana ceny pojedynczej pozycji (ReviseInventoryStatus). $sku puste → cała oferta (bez wariantów). */
     public function revisePrice(string $itemId, string $sku, float $price, string $marketplace): void
     {
