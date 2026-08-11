@@ -181,6 +181,35 @@ class EbaySellClient
         $this->call('ReviseInventoryStatus', $body, $marketplace);
     }
 
+    /** Lista kompatybilności pojazdów (fitment/kType) oferty — GetItem + IncludeItemCompatibilityList.
+     *  Zwraca ['count'=>int, 'list'=>[['props'=>[Name=>Value…], 'notes'=>string]…]]. Odczyt — nic nie zmienia. */
+    public function itemCompatibility(string $itemId, string $marketplace): array
+    {
+        $body = '<?xml version="1.0" encoding="utf-8"?>'
+            . '<GetItemRequest xmlns="urn:ebay:apis:eBLBaseComponents">'
+            . "<ItemID>{$itemId}</ItemID>"
+            . '<IncludeItemCompatibilityList>true</IncludeItemCompatibilityList>'
+            . '<OutputSelector>Item.ItemID,Item.ItemCompatibilityCount,Item.ItemCompatibilityList</OutputSelector>'
+            . '</GetItemRequest>';
+
+        $xml = $this->call('GetItem', $body, $marketplace);
+        $item = $xml->Item;
+
+        $list = [];
+        foreach ($item->ItemCompatibilityList->Compatibility ?? [] as $c) {
+            $props = [];
+            foreach ($c->NameValueList ?? [] as $nv) {
+                $props[(string) $nv->Name] = (string) $nv->Value;
+            }
+            $list[] = ['props' => $props, 'notes' => (string) ($c->CompatibilityNotes ?? '')];
+        }
+
+        return [
+            'count' => (int) ($item->ItemCompatibilityCount ?? 0) ?: count($list),
+            'list' => $list,
+        ];
+    }
+
     /** Zmiana ceny pojedynczej pozycji (ReviseInventoryStatus). $sku puste → cała oferta (bez wariantów). */
     public function revisePrice(string $itemId, string $sku, float $price, string $marketplace): void
     {
