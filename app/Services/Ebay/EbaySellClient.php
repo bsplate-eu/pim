@@ -181,6 +181,23 @@ class EbaySellClient
         $this->call('ReviseInventoryStatus', $body, $marketplace);
     }
 
+    /** Kategoria aukcji — GetItem, zwraca ['id'=>string, 'name'=>string] (PrimaryCategory). */
+    public function itemCategory(string $itemId, string $marketplace): array
+    {
+        $body = '<?xml version="1.0" encoding="utf-8"?>'
+            . '<GetItemRequest xmlns="urn:ebay:apis:eBLBaseComponents">'
+            . "<ItemID>{$itemId}</ItemID>"
+            . '<OutputSelector>Item.ItemID,Item.PrimaryCategory</OutputSelector>'
+            . '</GetItemRequest>';
+
+        $xml = $this->call('GetItem', $body, $marketplace);
+
+        return [
+            'id' => (string) ($xml->Item->PrimaryCategory->CategoryID ?? ''),
+            'name' => (string) ($xml->Item->PrimaryCategory->CategoryName ?? ''),
+        ];
+    }
+
     /** Lista kompatybilności pojazdów (fitment/kType) oferty — GetItem + IncludeItemCompatibilityList.
      *  Zwraca ['count'=>int, 'list'=>[['props'=>[Name=>Value…], 'notes'=>string]…]]. Odczyt — nic nie zmienia. */
     public function itemCompatibility(string $itemId, string $marketplace): array
