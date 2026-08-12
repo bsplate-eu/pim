@@ -438,11 +438,21 @@ class EbayKtypePush extends Command
         // Pokrycie roczników rozstrzyga, który wariant to nasz pojazd. Zbieramy WSZYSTKIE
         // o dobrym pokryciu — osłona pasuje do każdego nadwozia danej generacji (Vito Bus,
         // Kasten, Tourer…), więc ograniczanie się do jednego gubiłoby część kupujących.
-        $scored = [];
+        $yearsByModel = [];
         foreach ($candidates as $model) {
-            $years = $this->yearCache[$ebayMake . '|' . $model] ??= array_map('intval', $this->taxonomy->compatibilityPropertyValues($this->treeId, $this->categoryId, 'Year', ['Make' => $ebayMake, 'Model' => $model]));
+            $yearsByModel[$model] = $this->yearCache[$ebayMake . '|' . $model] ??= array_map('intval', $this->taxonomy->compatibilityPropertyValues($this->treeId, $this->categoryId, 'Year', ['Make' => $ebayMake, 'Model' => $model]));
+        }
+
+        // Nasz year_stop bywa „w produkcji" (2026), a baza eBaya sięga rocznika bieżącego —
+        // liczenie pokrycia po surowym zakresie karałoby aktualne modele za brakującą przyszłość.
+        $available = array_merge(...array_values($yearsByModel ?: [[]]));
+        $rangeStop = $available ? min($v['year_stop'], max($available)) : $v['year_stop'];
+        $span = max(1, $rangeStop - $v['year_start'] + 1);
+
+        $scored = [];
+        foreach ($yearsByModel as $model => $years) {
             $overlap = array_values(array_filter($years, fn ($y) => $y >= $v['year_start'] && $y <= $v['year_stop']));
-            $cover = count($overlap) / max(1, $v['year_stop'] - $v['year_start'] + 1);
+            $cover = count($overlap) / $span;
             if ($cover > 0) {
                 $scored[] = ['model' => $model, 'years' => $overlap, 'cover' => $cover, 'start_diff' => $years === [] ? PHP_INT_MAX : abs(min($years) - $v['year_start'])];
             }
