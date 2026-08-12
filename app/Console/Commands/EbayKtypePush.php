@@ -189,8 +189,15 @@ class EbayKtypePush extends Command
             // DE wymaga minimum Make+Model+Platform (sprawdzone na żywo: same Make/Model/Year
             // odrzuca). Wpisy per platforma × rocznik; kombinacje spoza bazy eBay pominie
             // (raportując ostrzeżeniem), reszta się zapisuje.
-            $platforms = $this->platformCache[$ebayMake . '|' . $ebayModel]
-                ??= $this->taxonomy->compatibilityPropertyValues($this->treeId, $this->categoryId, 'Platform', ['Make' => $ebayMake, 'Model' => $ebayModel]);
+            try {
+                $platforms = $this->platformCache[$ebayMake . '|' . $ebayModel]
+                    ??= $this->taxonomy->compatibilityPropertyValues($this->treeId, $this->categoryId, 'Platform', ['Make' => $ebayMake, 'Model' => $ebayModel]);
+            } catch (\Throwable $e) {
+                // Błąd Taxonomy nie może wywrócić całej paczki — aukcja wraca w kolejnym przebiegu.
+                $this->warn('   BŁĄD Taxonomy (platformy): ' . $e->getMessage());
+                $report[] = ['item_id' => $offer->item_id, 'status' => 'taxonomy_error', 'error' => $e->getMessage()];
+                continue;
+            }
             if ($platforms === []) {
                 $this->warn('   Brak platform w bazie eBaya — pomijam.');
                 $report[] = ['item_id' => $offer->item_id, 'status' => 'no_platform', 'vehicle' => $v, 'ebay_model' => $ebayModel];
