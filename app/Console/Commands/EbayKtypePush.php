@@ -33,6 +33,7 @@ class EbayKtypePush extends Command
         {--limit=10 : ile aukcji wziąć}
         {--marketplace=EBAY_DE : rynek}
         {--category=14769 : kategoria do zapytań Taxonomy}
+        {--retry= : ponów aukcje z rejestru o tym statusie (unmatched/no_years/no_platform)}
         {--apply : faktycznie wyślij na eBay (bez tego dry-run)}';
 
     protected $description = 'Pilot kType: wyślij kompatybilność pojazdów (Make/Model/Year) na wybrane aukcje eBay';
@@ -81,6 +82,14 @@ class EbayKtypePush extends Command
         $pushed = Storage::exists($pushedPath)
             ? (json_decode(Storage::get($pushedPath), true) ?: [])
             : [];
+
+        // Ponowienie po poprawce resolvera: zdejmij z rejestru wskazany status, żeby te aukcje
+        // wróciły do puli (np. --retry=unmatched po dodaniu aliasów marek).
+        if ($retry = (string) $this->option('retry')) {
+            $before = count($pushed);
+            $pushed = array_filter($pushed, fn ($s) => $s !== $retry);
+            $this->info("Ponawiam status [{$retry}]: " . ($before - count($pushed)) . ' aukcji wraca do puli.');
+        }
 
         // Pilot: tylko engine=all (fitment „wszystkie wersje" jest wtedy jednoznaczny).
         $rows = [];
@@ -270,9 +279,12 @@ class EbayKtypePush extends Command
     /** Dopasuj pojazd do bazy eBaya: [Make, Model, lata]. Null gdy niejednoznaczne. */
     private function resolveVehicle(array $v): ?array
     {
-        // Marka: wartości Make z bazy, dopasowanie bez wielkości liter (suzuki → Suzuki).
+        // Marka: wartości Make z bazy. Najpierw wprost (suzuki → Suzuki), potem po prefiksie —
+        // eBay pisze pełne nazwy: mercedes → „Mercedes-Benz”, baic → „Baic-ORV”.
         $makes = $this->modelCache['__makes'] ??= $this->taxonomy->compatibilityPropertyValues($this->treeId, $this->categoryId, 'Make');
-        $ebayMake = collect($makes)->first(fn ($m) => $this->norm($m) === $this->norm($v['make']));
+        $makeNorm = $this->norm($v['make']);
+        $ebayMake = collect($makes)->first(fn ($m) => $this->norm($m) === $makeNorm)
+            ?: collect($makes)->first(fn ($m) => str_starts_with($this->norm($m), $makeNorm . ' '));
         if (! $ebayMake) {
             return null;
         }
@@ -281,7 +293,7 @@ class EbayKtypePush extends Command
         $models = $this->modelCache[$ebayMake] ??= $this->taxonomy->compatibilityPropertyValues($this->treeId, $this->categoryId, 'Model', ['Make' => $ebayMake]);
 
         // Cel: baza modelu + generacja (rzymska w bazie eBaya: Grand Vitara II ↔ „grand vitara 2”).
-        $base = $this->norm($v['model']);
+        $base = $this->modelBase($v['model'], $makeNorm);
         $target = $v['generation'] ? "{$base} {$v['generation']}" : $base;
 
         $normalized = collect($models)->mapWithKeys(fn ($m) => [$m => $this->norm($m)]);
@@ -329,10 +341,45 @@ class EbayKtypePush extends Command
         return [$ebayMake, $best[0], $best[1]];
     }
 
-    /** Normalizacja do porównań: małe litery, myślniki→spacje, rzymskie→arabskie. */
+    /**
+     * Nazwa modelu sprowadzona do porównania z bazą eBaya:
+     * - zdejmuje prefiks marki („ssangyong tivoli” → „tivoli”),
+     * - tłumaczy nasze konwencje na niemieckie („seria 1” → „1er”, „e classe” → „e klasse”,
+     *   „ml” → „m klasse”).
+     */
+    private function modelBase(string $model, string $makeNorm): string
+    {
+        $base = $this->norm($model);
+
+        if (str_starts_with($base, $makeNorm . ' ')) {
+            $base = substr($base, strlen($makeNorm) + 1);
+        }
+
+        if (preg_match('/^seria (\d+)$/', $base, $m)) {
+            return $m[1] . 'er';
+        }
+        if (preg_match('/^(.+) (classe|class)$/', $base, $m)) {
+            return $m[1] . ' klasse';
+        }
+        // Mercedes: skróty nadwozia zamiast nazw klas (ML = M-Klasse, GL = GL-Klasse…).
+        if ($makeNorm === 'mercedes' && preg_match('/^(ml|gl|slk|clk|cls)$/', $base, $m)) {
+            return substr($m[1], 0, -1) . ' klasse';
+        }
+
+        return $base;
+    }
+
+    /** Normalizacja do porównań: bez diakrytyków, małe litery, myślniki→spacje, rzymskie→arabskie. */
     private function norm(string $s): string
     {
+        // Citroën ↔ citroen, Škoda ↔ skoda — bez tego marki z diakrytykami nigdy nie trafiają.
+        // Najpierw małe litery, potem podmiana (mapa pokrywa tylko małe znaki).
         $s = mb_strtolower(trim(preg_replace('/\s+/', ' ', str_replace(['-', '_'], ' ', $s))));
+        $s = strtr($s, [
+            'ë' => 'e', 'é' => 'e', 'è' => 'e', 'ê' => 'e', 'ä' => 'a', 'à' => 'a', 'â' => 'a',
+            'ö' => 'o', 'ô' => 'o', 'ü' => 'u', 'û' => 'u', 'ù' => 'u', 'ï' => 'i', 'î' => 'i',
+            'ç' => 'c', 'ñ' => 'n', 'š' => 's', 'ž' => 'z', 'č' => 'c', 'ß' => 'ss',
+        ]);
         $roman = ['i' => 1, 'ii' => 2, 'iii' => 3, 'iv' => 4, 'v' => 5, 'vi' => 6, 'vii' => 7, 'viii' => 8, 'ix' => 9, 'x' => 10, 'xi' => 11, 'xii' => 12];
 
         return implode(' ', array_map(
