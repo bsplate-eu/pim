@@ -32,7 +32,7 @@ class EbayKtypePush extends Command
         {--items= : konkretne ItemID po przecinku (nadpisuje --limit)}
         {--limit=10 : ile aukcji wziąć}
         {--marketplace=EBAY_DE : rynek}
-        {--category=14769 : kategoria do zapytań Taxonomy}
+        {--category= : kategoria do zapytań Taxonomy (domyślnie z pierwszej aukcji rynku)}
         {--retry= : ponów aukcje z rejestru o tym statusie (unmatched/no_years/no_platform)}
         {--from-title : pojazd czytaj z TYTUŁU aukcji, nie z atrybutów produktu (bliźniaki badge}
         {--apply : faktycznie wyślij na eBay (bez tego dry-run)}';
@@ -53,8 +53,17 @@ class EbayKtypePush extends Command
         'mercedes' => 'mercedes benz',
     ];
 
-    /** Niemieckie nazwy części — stoją w tytule przed marką, nigdy nie są modelem. */
-    private const PART_WORDS = 'stahl|aluminium|alu|unterfahrschutz|schutz|motor|getriebe|automatikgetriebe|verteilergetriebe|kuhler|katalysator|partikelfilter|differential|differentialschutz|adbluetank|treibstofftank|kraftstofftank|tank|fur|und';
+    /** Nazwy części z tytułów — stoją przed marką i nigdy nie są modelem. DE + FR + ES. */
+    private const PART_WORDS = 'stahl|aluminium|alu|unterfahrschutz|schutz|motor|getriebe|automatikgetriebe|verteilergetriebe|kuhler|katalysator|partikelfilter|differential|differentialschutz|adbluetank|treibstofftank|kraftstofftank|tank|fur|und'
+        . '|acier|plaque|couvercle|cache|protection|moteur|boite|vitesses|reservoir|carburant|radiateur|differentiel|sous|pour'
+        . '|cubre|carter|metalico|acero|protector|caja|cambios|deposito|combustible|radiador|diferencial|para'
+        . '|de|del|du|la|le|el|los|las|y';
+
+    /** Nazwy właściwości pojazdu — RÓŻNE per rynek: DE ma „Make", FR „FR_Make", ES „ES_Make". */
+    private string $propMake = 'Make';
+    private string $propModel = 'Model';
+    private string $propPlatform = 'Platform';
+    private string $propYear = 'Year';
 
     public function handle(): int
     {
@@ -68,7 +77,6 @@ class EbayKtypePush extends Command
         $marketplace = strtoupper((string) $this->option('marketplace'));
         $this->taxonomy = new EbayTaxonomyClient($settings->client_id, $settings->client_secret);
         $this->treeId = $this->taxonomy->categoryTreeId($marketplace);
-        $this->categoryId = (string) $this->option('category');
         $client = new EbaySellClient($settings, new EbayOAuthService($settings));
 
         // Status „Active" w bazie bywa martwy (aukcja skończyła się, wiersz zostaje z last_seen
@@ -86,6 +94,32 @@ class EbayKtypePush extends Command
         }
 
         $offers = $q->get()->unique('item_id')->values();
+
+        if ($offers->isEmpty()) {
+            $this->error("Brak aktywnych zmapowanych aukcji na rynku {$marketplace}.");
+
+            return self::FAILURE;
+        }
+
+        // Kategoria i nazewnictwo właściwości są własnością rynku — na DE „Make/Model/Platform"
+        // w kategorii 14769, na FR „FR_Make/…" w 9886. Czytamy z eBaya zamiast zgadywać.
+        $this->categoryId = (string) $this->option('category');
+        if ($this->categoryId === '') {
+            $this->categoryId = $client->itemCategory($offers->first()->item_id, $marketplace)['id'];
+        }
+
+        $names = collect($this->taxonomy->compatibilityProperties($this->treeId, $this->categoryId))->pluck('name');
+        if ($names->isEmpty()) {
+            $this->error("Kategoria {$this->categoryId} ({$marketplace}) nie wspiera kompatybilności pojazdów.");
+
+            return self::FAILURE;
+        }
+        $pick = fn (string $suffix, string $fallback) => $names->first(fn ($n) => $n === $suffix || str_ends_with($n, '_' . $suffix)) ?? $fallback;
+        $this->propMake = $pick('Make', 'Make');
+        $this->propModel = $pick('Model', 'Model');
+        $this->propPlatform = $pick('Platform', 'Platform');
+        $this->propYear = $pick('Year', 'Year');
+        $this->line("Rynek {$marketplace}: drzewo {$this->treeId}, kategoria {$this->categoryId}, właściwości {$this->propMake}/{$this->propModel}/{$this->propPlatform}/{$this->propYear}");
 
         // Rejestr obrobionych aukcji (wysłane + terminalnie pominięte) — kolejne paczki
         // biorą tylko nowe. --items wymusza ponowną obróbkę (np. po poprawce dopasowania).
@@ -206,7 +240,7 @@ class EbayKtypePush extends Command
             foreach ($ebayModels as $ebayModel) {
                 try {
                     $platforms = $this->platformCache[$ebayMake . '|' . $ebayModel]
-                        ??= $this->taxonomy->compatibilityPropertyValues($this->treeId, $this->categoryId, 'Platform', ['Make' => $ebayMake, 'Model' => $ebayModel]);
+                        ??= $this->taxonomy->compatibilityPropertyValues($this->treeId, $this->categoryId, $this->propPlatform, [$this->propMake => $ebayMake, $this->propModel => $ebayModel]);
                 } catch (\Throwable $e) {
                     // Błąd Taxonomy nie może wywrócić całej paczki — aukcja wraca w kolejnym przebiegu.
                     $taxonomyError = $e->getMessage();
@@ -218,7 +252,7 @@ class EbayKtypePush extends Command
                 $this->line("   {$ebayModel} → platformy: " . implode(' | ', $platforms));
                 foreach ($platforms as $platform) {
                     foreach ($years as $y) {
-                        $compat[] = ['Make' => $ebayMake, 'Model' => $ebayModel, 'Platform' => $platform, 'Year' => (string) $y];
+                        $compat[] = [$this->propMake => $ebayMake, $this->propModel => $ebayModel, $this->propPlatform => $platform, $this->propYear => (string) $y];
                     }
                 }
             }
@@ -339,7 +373,7 @@ class EbayKtypePush extends Command
         // Marka: ostatnie wystąpienie nazwy z bazy eBaya (nazwy części stoją PRZED marką);
         // przy tej samej pozycji wygrywa dłuższa („Land Rover" nad „Land"). Szukamy też pod
         // naszymi nazwami — w bazie jest „VW", a w tytułach „Volkswagen".
-        $makes = $this->modelCache['__makes'] ??= $this->taxonomy->compatibilityPropertyValues($this->treeId, $this->categoryId, 'Make');
+        $makes = $this->modelCache['__makes'] ??= $this->taxonomy->compatibilityPropertyValues($this->treeId, $this->categoryId, $this->propMake);
         $bestPos = -1;
         $bestLen = 0;
         $bestMake = null;
@@ -396,7 +430,7 @@ class EbayKtypePush extends Command
     {
         // Marka: wartości Make z bazy. Najpierw wprost (suzuki → Suzuki), potem po prefiksie —
         // eBay pisze pełne nazwy: mercedes → „Mercedes-Benz”, baic → „Baic-ORV”.
-        $makes = $this->modelCache['__makes'] ??= $this->taxonomy->compatibilityPropertyValues($this->treeId, $this->categoryId, 'Make');
+        $makes = $this->modelCache['__makes'] ??= $this->taxonomy->compatibilityPropertyValues($this->treeId, $this->categoryId, $this->propMake);
         $makeNorm = $this->norm($v['make']);
         $makeNorm = self::MAKE_ALIASES[$makeNorm] ?? $makeNorm;
         $ebayMake = collect($makes)->first(fn ($m) => $this->norm($m) === $makeNorm)
@@ -406,7 +440,7 @@ class EbayKtypePush extends Command
         }
 
         // Modele marki (cache per marka).
-        $models = $this->modelCache[$ebayMake] ??= $this->taxonomy->compatibilityPropertyValues($this->treeId, $this->categoryId, 'Model', ['Make' => $ebayMake]);
+        $models = $this->modelCache[$ebayMake] ??= $this->taxonomy->compatibilityPropertyValues($this->treeId, $this->categoryId, $this->propModel, [$this->propMake => $ebayMake]);
 
         // Cel: baza modelu + generacja (rzymska w bazie eBaya: Grand Vitara II ↔ „grand vitara 2”).
         $base = $this->modelBase($v['model'], $makeNorm);
@@ -445,7 +479,7 @@ class EbayKtypePush extends Command
         // Kasten, Tourer…), więc ograniczanie się do jednego gubiłoby część kupujących.
         $yearsByModel = [];
         foreach ($candidates as $model) {
-            $yearsByModel[$model] = $this->yearCache[$ebayMake . '|' . $model] ??= array_map('intval', $this->taxonomy->compatibilityPropertyValues($this->treeId, $this->categoryId, 'Year', ['Make' => $ebayMake, 'Model' => $model]));
+            $yearsByModel[$model] = $this->yearCache[$ebayMake . '|' . $model] ??= array_map('intval', $this->taxonomy->compatibilityPropertyValues($this->treeId, $this->categoryId, $this->propYear, [$this->propMake => $ebayMake, $this->propModel => $model]));
         }
 
         // Nasz year_stop bywa „w produkcji" (2026), a baza eBaya sięga rocznika bieżącego —
