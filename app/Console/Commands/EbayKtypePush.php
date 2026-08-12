@@ -138,9 +138,11 @@ class EbayKtypePush extends Command
         }
 
         if ($mismatched !== []) {
-            $this->warn('Pominięte (marka/model z PIM nie występuje w tytule aukcji — do ręcznej decyzji): ' . count($mismatched));
+            $this->warn('Pominięte (do ręcznej decyzji): ' . count($mismatched));
             foreach ($mismatched as $m) {
-                $this->line("   {$m['item_id']} | {$m['title']}  ↔  {$m['vehicle']['make']}/{$m['vehicle']['model']}");
+                // title_unparsed nie niesie pojazdu (nie dało się go wyczytać z tytułu).
+                $vehicle = isset($m['vehicle']) ? "  ↔  {$m['vehicle']['make']}/{$m['vehicle']['model']}" : '';
+                $this->line("   [{$m['status']}] {$m['item_id']} | {$m['title']}{$vehicle}");
             }
             $this->newLine();
         }
@@ -249,7 +251,7 @@ class EbayKtypePush extends Command
         // Rejestr obrobionych: statusy terminalne nie wracają w kolejnych paczkach.
         // Błędy przejściowe (taxonomy_error, error wysyłki) NIE trafiają do rejestru — ponowią się.
         if ($apply) {
-            $terminal = ['sent', 'sent_but_empty', 'unmatched', 'no_years', 'no_platform', 'title_mismatch'];
+            $terminal = ['sent', 'sent_but_empty', 'unmatched', 'no_years', 'no_platform', 'title_mismatch', 'title_unparsed'];
             foreach (array_merge($report, $mismatched) as $r) {
                 if (in_array($r['status'], $terminal)) {
                     $pushed[$r['item_id']] = $r['status'];
