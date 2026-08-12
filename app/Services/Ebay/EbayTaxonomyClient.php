@@ -78,11 +78,13 @@ class EbayTaxonomyClient
     /** Właściwości pojazdów wspierane w danej kategorii (np. KType, Marke, Modell…). */
     public function compatibilityProperties(string $treeId, string $categoryId): array
     {
-        $d = $this->get("/commerce/taxonomy/v1/category_tree/{$treeId}/get_compatibility_properties", [
-            'category_id' => $categoryId,
-        ]);
+        return Cache::remember("ebay.tax.props.{$treeId}.{$categoryId}", 604800, function () use ($treeId, $categoryId) {
+            $d = $this->get("/commerce/taxonomy/v1/category_tree/{$treeId}/get_compatibility_properties", [
+                'category_id' => $categoryId,
+            ]);
 
-        return $d['compatibilityProperties'] ?? [];
+            return $d['compatibilityProperties'] ?? [];
+        });
     }
 
     /**
@@ -100,8 +102,15 @@ class EbayTaxonomyClient
             $query['filter'] = collect($filters)->map(fn ($v, $k) => "{$k}:{$v}")->implode(',');
         }
 
-        $d = $this->get("/commerce/taxonomy/v1/category_tree/{$treeId}/get_compatibility_property_values", $query);
+        // Baza pojazdów eBaya zmienia się raz na rocznik, a masowa wysyłka fitmentu chodzi
+        // paczkami (każda = nowy proces) i bez tego cache'u pytałaby wciąż o te same listy
+        // marek i modeli — dzienny limit Taxonomy (5000) kończył się w pół drogi.
+        $key = 'ebay.tax.' . md5($treeId . '|' . json_encode($query));
 
-        return collect($d['compatibilityPropertyValues'] ?? [])->pluck('value')->all();
+        return Cache::remember($key, 604800, function () use ($treeId, $query) {
+            $d = $this->get("/commerce/taxonomy/v1/category_tree/{$treeId}/get_compatibility_property_values", $query);
+
+            return collect($d['compatibilityPropertyValues'] ?? [])->pluck('value')->all();
+        });
     }
 }
