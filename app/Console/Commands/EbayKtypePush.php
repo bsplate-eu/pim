@@ -46,10 +46,15 @@ class EbayKtypePush extends Command
     private array $yearCache = [];
     private array $platformCache = [];
 
-    /** Nasza nazwa marki → nazwa w bazie pojazdów eBaya (obie znormalizowane). */
+    /** Nasza nazwa marki (też ta z tytułów aukcji) → nazwa w bazie pojazdów eBaya; obie znormalizowane. */
     private const MAKE_ALIASES = [
         'volkswagen' => 'vw',
+        'volksvagen' => 'vw',      // literówka w części tytułów
+        'mercedes' => 'mercedes benz',
     ];
+
+    /** Niemieckie nazwy części — stoją w tytule przed marką, nigdy nie są modelem. */
+    private const PART_WORDS = 'stahl|aluminium|alu|unterfahrschutz|schutz|motor|getriebe|automatikgetriebe|verteilergetriebe|kuhler|katalysator|partikelfilter|differential|differentialschutz|adbluetank|treibstofftank|kraftstofftank|tank|fur|und';
 
     public function handle(): int
     {
@@ -365,7 +370,7 @@ class EbayKtypePush extends Command
 
         $model = trim(substr($before, $bestPos + $bestLen));
         // Gdy model wyszedł z początku tytułu (brak marki) — zdejmij opis części.
-        $model = trim(preg_replace('/^(stahl|aluminium|alu|unterfahrschutz|fur|und|,|\s)+/u', '', $model));
+        $model = trim(preg_replace('/^((' . self::PART_WORDS . '|,)\s*)+/u', '', $model));
         if ($model === '') {
             return null;
         }
@@ -486,6 +491,13 @@ class EbayKtypePush extends Command
 
         if (str_starts_with($base, $makeNorm . ' ')) {
             $base = substr($base, strlen($makeNorm) + 1);
+        }
+
+        // Kod nadwozia z tytułu („C-Class W204", „CLA C118", „GLA H247") — eBay trzyma go
+        // w Platform, nie w nazwie modelu. Generację i tak rozstrzygną roczniki.
+        $withoutCode = trim(preg_replace('/\b[a-z]\d{3}\b/u', '', $base));
+        if ($withoutCode !== '') {
+            $base = preg_replace('/\s+/', ' ', $withoutCode);
         }
 
         if (preg_match('/^seria (\d+)$/', $base, $m)) {
