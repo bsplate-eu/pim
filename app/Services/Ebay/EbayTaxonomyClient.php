@@ -53,6 +53,10 @@ class EbayTaxonomyClient
             'headers' => ['Authorization' => 'Bearer ' . $this->token(), 'Accept' => 'application/json'],
             'query' => $query,
         ]);
+        // 204 = eBay nie zna takiej kombinacji (np. marka spoza bazy) — to pusty wynik, nie błąd.
+        if ($res->getStatusCode() === 204) {
+            return [];
+        }
         $d = json_decode((string) $res->getBody(), true);
         if ($res->getStatusCode() !== 200) {
             throw new \RuntimeException('Taxonomy ' . $path . ' (' . $res->getStatusCode() . '): ' . ($d['errors'][0]['message'] ?? json_encode($d)));

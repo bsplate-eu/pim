@@ -46,6 +46,11 @@ class EbayKtypePush extends Command
     private array $yearCache = [];
     private array $platformCache = [];
 
+    /** Nasza nazwa marki → nazwa w bazie pojazdów eBaya (obie znormalizowane). */
+    private const MAKE_ALIASES = [
+        'volkswagen' => 'vw',
+    ];
+
     public function handle(): int
     {
         $settings = EbaySettings::first();
@@ -110,7 +115,7 @@ class EbayKtypePush extends Command
             // Tryb bliźniaków: pojazd bierzemy z tytułu aukcji. Aukcja „Toyota Proace" ma dostać
             // fitment Toyoty (tego szuka kupujący), choć produkt w PIM to citroen/jumpy.
             if ($this->option('from-title')) {
-                $fromTitle = $this->vehicleFromTitle($offer);
+                $fromTitle = $this->vehicleFromTitle($offer, $v);
                 if (! $fromTitle) {
                     $mismatched[] = ['item_id' => $offer->item_id, 'status' => 'title_unparsed', 'title' => $offer->title];
                     continue;
@@ -308,35 +313,49 @@ class EbayKtypePush extends Command
      * pod marką konstruktora, a aukcja sprzedaje wersję innej marki.
      * Format tytułów: „Stahl Unterfahrschutz für Motor <MARKA> <MODEL> (RRRR-RRRR)".
      */
-    private function vehicleFromTitle(EbayOffer $offer): ?array
+    private function vehicleFromTitle(EbayOffer $offer, array $fallback): ?array
     {
-        if (! preg_match('/\((\d{4})\s*[-–]\s*(\d{4})\)/u', $offer->title, $ym)) {
-            return null;
-        }
-
-        $before = $this->norm(substr($offer->title, 0, (int) mb_strpos($offer->title, $ym[0])));
+        // Zakres lat: zwykle „(2016-2026)", ale bywa i bez nawiasów. Gdy w tytule go nie ma
+        // („…für Vers ohne Werksschutz") — roczniki bierzemy z atrybutów produktu.
+        $hasYears = (bool) preg_match('/\(?\b(\d{4})\s*[-–]\s*(\d{4})\b\)?/u', $offer->title, $ym);
+        $cut = $hasYears ? (int) mb_strpos($offer->title, $ym[0]) : mb_strlen($offer->title);
+        $before = $this->norm(mb_substr($offer->title, 0, $cut));
 
         // Marka: ostatnie wystąpienie nazwy z bazy eBaya (nazwy części stoją PRZED marką);
-        // przy tej samej pozycji wygrywa dłuższa („Land Rover" nad „Land").
+        // przy tej samej pozycji wygrywa dłuższa („Land Rover" nad „Land"). Szukamy też pod
+        // naszymi nazwami — w bazie jest „VW", a w tytułach „Volkswagen".
         $makes = $this->modelCache['__makes'] ??= $this->taxonomy->compatibilityPropertyValues($this->treeId, $this->categoryId, 'Make');
         $bestPos = -1;
+        $bestLen = 0;
         $bestMake = null;
         foreach ($makes as $m) {
             $n = $this->norm($m);
-            if ($n === '' || ! preg_match('/\b' . preg_quote($n, '/') . '\b/u', $before, $mm, PREG_OFFSET_CAPTURE)) {
+            if ($n === '') {
                 continue;
             }
-            $pos = $mm[0][1];
-            if ($pos > $bestPos || ($pos === $bestPos && mb_strlen($n) > mb_strlen($this->norm($bestMake)))) {
-                $bestPos = $pos;
-                $bestMake = $m;
+            foreach (array_merge([$n], array_keys(self::MAKE_ALIASES, $n, true)) as $variant) {
+                if (! preg_match('/\b' . preg_quote($variant, '/') . '\b/u', $before, $mm, PREG_OFFSET_CAPTURE)) {
+                    continue;
+                }
+                $pos = $mm[0][1];
+                if ($pos > $bestPos || ($pos === $bestPos && strlen($variant) > $bestLen)) {
+                    $bestPos = $pos;
+                    $bestLen = strlen($variant);
+                    $bestMake = $m;
+                }
             }
         }
+
+        // Tytuł bez marki („Golf 4 (1998-2006)") — marka z produktu, model dalej z tytułu.
         if (! $bestMake) {
-            return null;
+            $bestMake = $fallback['make'];
+            $bestPos = 0;
+            $bestLen = 0;
         }
 
-        $model = trim(substr($before, $bestPos + strlen($this->norm($bestMake))));
+        $model = trim(substr($before, $bestPos + $bestLen));
+        // Gdy model wyszedł z początku tytułu (brak marki) — zdejmij opis części.
+        $model = trim(preg_replace('/^(stahl|aluminium|alu|unterfahrschutz|fur|und|,|\s)+/u', '', $model));
         if ($model === '') {
             return null;
         }
@@ -351,8 +370,8 @@ class EbayKtypePush extends Command
         return [
             'make' => $bestMake,
             'model' => $model,
-            'year_start' => (int) $ym[1],
-            'year_stop' => (int) $ym[2],
+            'year_start' => $hasYears ? (int) $ym[1] : $fallback['year_start'],
+            'year_stop' => $hasYears ? (int) $ym[2] : $fallback['year_stop'],
             'generation' => $generation,
         ];
     }
@@ -364,6 +383,7 @@ class EbayKtypePush extends Command
         // eBay pisze pełne nazwy: mercedes → „Mercedes-Benz”, baic → „Baic-ORV”.
         $makes = $this->modelCache['__makes'] ??= $this->taxonomy->compatibilityPropertyValues($this->treeId, $this->categoryId, 'Make');
         $makeNorm = $this->norm($v['make']);
+        $makeNorm = self::MAKE_ALIASES[$makeNorm] ?? $makeNorm;
         $ebayMake = collect($makes)->first(fn ($m) => $this->norm($m) === $makeNorm)
             ?: collect($makes)->first(fn ($m) => str_starts_with($this->norm($m), $makeNorm . ' '));
         if (! $ebayMake) {
