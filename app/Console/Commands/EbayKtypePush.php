@@ -184,43 +184,53 @@ class EbayKtypePush extends Command
                 continue;
             }
 
-            [$ebayMake, $ebayModel, $years] = $resolved;
-            $this->info("   → eBay: {$ebayMake} / {$ebayModel} / roczniki: " . implode(', ', $years));
+            [$ebayMake, $ebayModels, $years] = $resolved;
+            $this->info("   → eBay: {$ebayMake} / " . implode(' + ', $ebayModels) . ' / roczniki: ' . implode(', ', $years));
 
             if ($years === []) {
                 $this->warn('   Brak wspólnych roczników — pomijam.');
-                $report[] = ['item_id' => $offer->item_id, 'status' => 'no_years', 'vehicle' => $v, 'ebay_model' => $ebayModel];
+                $report[] = ['item_id' => $offer->item_id, 'status' => 'no_years', 'vehicle' => $v, 'ebay_model' => $ebayModels];
                 continue;
             }
 
             // DE wymaga minimum Make+Model+Platform (sprawdzone na żywo: same Make/Model/Year
-            // odrzuca). Wpisy per platforma × rocznik; kombinacje spoza bazy eBay pominie
+            // odrzuca). Wpisy per model × platforma × rocznik; kombinacje spoza bazy eBay pominie
             // (raportując ostrzeżeniem), reszta się zapisuje.
-            try {
-                $platforms = $this->platformCache[$ebayMake . '|' . $ebayModel]
-                    ??= $this->taxonomy->compatibilityPropertyValues($this->treeId, $this->categoryId, 'Platform', ['Make' => $ebayMake, 'Model' => $ebayModel]);
-            } catch (\Throwable $e) {
-                // Błąd Taxonomy nie może wywrócić całej paczki — aukcja wraca w kolejnym przebiegu.
-                $this->warn('   BŁĄD Taxonomy (platformy): ' . $e->getMessage());
-                $report[] = ['item_id' => $offer->item_id, 'status' => 'taxonomy_error', 'error' => $e->getMessage()];
-                continue;
-            }
-            if ($platforms === []) {
-                $this->warn('   Brak platform w bazie eBaya — pomijam.');
-                $report[] = ['item_id' => $offer->item_id, 'status' => 'no_platform', 'vehicle' => $v, 'ebay_model' => $ebayModel];
-                continue;
-            }
-            $this->line('   Platformy: ' . implode(' | ', $platforms));
-
             $compat = [];
-            foreach ($platforms as $platform) {
-                foreach ($years as $y) {
-                    $compat[] = ['Make' => $ebayMake, 'Model' => $ebayModel, 'Platform' => $platform, 'Year' => (string) $y];
+            $taxonomyError = null;
+            foreach ($ebayModels as $ebayModel) {
+                try {
+                    $platforms = $this->platformCache[$ebayMake . '|' . $ebayModel]
+                        ??= $this->taxonomy->compatibilityPropertyValues($this->treeId, $this->categoryId, 'Platform', ['Make' => $ebayMake, 'Model' => $ebayModel]);
+                } catch (\Throwable $e) {
+                    // Błąd Taxonomy nie może wywrócić całej paczki — aukcja wraca w kolejnym przebiegu.
+                    $taxonomyError = $e->getMessage();
+                    break;
+                }
+                if ($platforms === []) {
+                    continue;
+                }
+                $this->line("   {$ebayModel} → platformy: " . implode(' | ', $platforms));
+                foreach ($platforms as $platform) {
+                    foreach ($years as $y) {
+                        $compat[] = ['Make' => $ebayMake, 'Model' => $ebayModel, 'Platform' => $platform, 'Year' => (string) $y];
+                    }
                 }
             }
 
+            if ($taxonomyError !== null) {
+                $this->warn('   BŁĄD Taxonomy (platformy): ' . $taxonomyError);
+                $report[] = ['item_id' => $offer->item_id, 'status' => 'taxonomy_error', 'error' => $taxonomyError];
+                continue;
+            }
+            if ($compat === []) {
+                $this->warn('   Brak platform w bazie eBaya — pomijam.');
+                $report[] = ['item_id' => $offer->item_id, 'status' => 'no_platform', 'vehicle' => $v, 'ebay_model' => $ebayModels];
+                continue;
+            }
+
             if (! $apply) {
-                $report[] = ['item_id' => $offer->item_id, 'status' => 'dry_run', 'ebay_make' => $ebayMake, 'ebay_model' => $ebayModel, 'years' => $years];
+                $report[] = ['item_id' => $offer->item_id, 'status' => 'dry_run', 'ebay_make' => $ebayMake, 'ebay_model' => $ebayModels, 'years' => $years, 'entries' => count($compat)];
                 continue;
             }
 
@@ -242,7 +252,7 @@ class EbayKtypePush extends Command
                     $this->info('   ✓ wysłano ' . count($compat) . ' wpisów (bez weryfikacji odczytem)');
                 }
                 $status = $saved === 0 ? 'sent_but_empty' : 'sent';
-                $report[] = ['item_id' => $offer->item_id, 'status' => $status, 'ebay_make' => $ebayMake, 'ebay_model' => $ebayModel, 'years' => $years, 'sent' => count($compat), 'saved' => $saved, 'warnings' => $warnings];
+                $report[] = ['item_id' => $offer->item_id, 'status' => $status, 'ebay_make' => $ebayMake, 'ebay_model' => $ebayModels, 'years' => $years, 'sent' => count($compat), 'saved' => $saved, 'warnings' => $warnings];
             } catch (\Throwable $e) {
                 $this->error('   BŁĄD wysyłki: ' . $e->getMessage());
                 $report[] = ['item_id' => $offer->item_id, 'status' => 'error', 'error' => $e->getMessage()];
@@ -398,12 +408,23 @@ class EbayKtypePush extends Command
         $target = $v['generation'] ? "{$base} {$v['generation']}" : $base;
 
         $normalized = collect($models)->mapWithKeys(fn ($m) => [$m => $this->norm($m)]);
-        $exact = $normalized->filter(fn ($n) => $n === $target)->keys();
+        // Dodatkowe porównanie bez spacji: nasze „SX 4" ↔ eBayowe „SX4".
+        $squash = fn (string $s) => str_replace(' ', '', $s);
+        $exact = $normalized->filter(fn ($n) => $n === $target || $squash($n) === $squash($target))->keys();
 
-        $candidates = $exact->isNotEmpty()
-            ? $exact
-            // Bez trafienia wprost: modele zaczynające się od bazy, rozstrzygną roczniki.
-            : $normalized->filter(fn ($n) => $n === $base || str_starts_with($n, $base . ' '))->keys();
+        if ($exact->isNotEmpty() && $v['generation']) {
+            // Trafienie z generacją to mocny sygnał — nie rozszerzamy (Grand Vitara II ≠ Grand Vitara I).
+            $candidates = $exact;
+        } else {
+            // Bez generacji: nazwa naga bywa pustym rekordem, a dane siedzą w wariantach nadwozia
+            // („3008" ma 3 roczniki, „3008 SUV" pełne) — bierzemy oba i rozstrzygamy rocznikami.
+            $candidates = $normalized
+                ->filter(fn ($n) => $n === $base || $squash($n) === $squash($base) || str_starts_with($n, $base . ' '))
+                ->keys()
+                ->merge($exact)
+                ->unique()
+                ->values();
+        }
 
         // Nadal nic? Nasza nazwa bywa szersza niż eBaya (hilux-invincible vs „Hilux VIII") —
         // skracaj bazę od prawej po jednym członie; wybór generacji rozstrzygną roczniki.
@@ -414,23 +435,24 @@ class EbayKtypePush extends Command
             $candidates = $normalized->filter(fn ($n) => $n === $prefix || str_starts_with($n, $prefix . ' '))->keys();
         }
 
-        // Zawęź po pokryciu roczników: model musi obejmować większość naszego zakresu.
-        // Remis pokrycia (generacje o nakładających się latach, np. Ignis II vs III) rozstrzyga
-        // początek produkcji najbliższy naszemu year_start.
-        $best = null;
-        $bestCover = 0;
-        $bestStartDiff = PHP_INT_MAX;
+        // Pokrycie roczników rozstrzyga, który wariant to nasz pojazd. Zbieramy WSZYSTKIE
+        // o dobrym pokryciu — osłona pasuje do każdego nadwozia danej generacji (Vito Bus,
+        // Kasten, Tourer…), więc ograniczanie się do jednego gubiłoby część kupujących.
+        $scored = [];
         foreach ($candidates as $model) {
             $years = $this->yearCache[$ebayMake . '|' . $model] ??= array_map('intval', $this->taxonomy->compatibilityPropertyValues($this->treeId, $this->categoryId, 'Year', ['Make' => $ebayMake, 'Model' => $model]));
             $overlap = array_values(array_filter($years, fn ($y) => $y >= $v['year_start'] && $y <= $v['year_stop']));
             $cover = count($overlap) / max(1, $v['year_stop'] - $v['year_start'] + 1);
-            $startDiff = $years === [] ? PHP_INT_MAX : abs(min($years) - $v['year_start']);
-            if ($cover > $bestCover || ($cover === $bestCover && $cover > 0 && $startDiff < $bestStartDiff)) {
-                $bestCover = $cover;
-                $bestStartDiff = $startDiff;
-                $best = [$model, $overlap];
+            if ($cover > 0) {
+                $scored[] = ['model' => $model, 'years' => $overlap, 'cover' => $cover, 'start_diff' => $years === [] ? PHP_INT_MAX : abs(min($years) - $v['year_start'])];
             }
         }
+
+        usort($scored, fn ($a, $b) => [$b['cover'], $a['start_diff']] <=> [$a['cover'], $b['start_diff']]);
+        $bestCover = $scored[0]['cover'] ?? 0;
+        // Warianty muszą trzymać poziom najlepszego (0.8×) — inaczej wpadłaby sąsiednia generacja.
+        $accepted = array_slice(array_filter($scored, fn ($s) => $s['cover'] >= 0.6 && $s['cover'] >= 0.8 * $bestCover), 0, 8);
+        $best = $accepted ? [array_column($accepted, 'model'), array_values(array_unique(array_merge(...array_column($accepted, 'years'))))] : null;
 
         // Wymagamy sensownego pokrycia zakresu lat — inaczej to zgadywanie, nie dopasowanie.
         if (! $best || $bestCover < 0.6) {
