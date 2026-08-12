@@ -34,6 +34,7 @@ class EbayKtypePush extends Command
         {--marketplace=EBAY_DE : rynek}
         {--category=14769 : kategoria do zapytań Taxonomy}
         {--retry= : ponów aukcje z rejestru o tym statusie (unmatched/no_years/no_platform)}
+        {--from-title : pojazd czytaj z TYTUŁU aukcji, nie z atrybutów produktu (bliźniaki badge}
         {--apply : faktycznie wyślij na eBay (bez tego dry-run)}';
 
     protected $description = 'Pilot kType: wyślij kompatybilność pojazdów (Make/Model/Year) na wybrane aukcje eBay';
@@ -105,6 +106,23 @@ class EbayKtypePush extends Command
             if ($v['engine'] !== 'all' && ! $this->option('items')) {
                 continue;
             }
+
+            // Tryb bliźniaków: pojazd bierzemy z tytułu aukcji. Aukcja „Toyota Proace" ma dostać
+            // fitment Toyoty (tego szuka kupujący), choć produkt w PIM to citroen/jumpy.
+            if ($this->option('from-title')) {
+                $fromTitle = $this->vehicleFromTitle($offer);
+                if (! $fromTitle) {
+                    $mismatched[] = ['item_id' => $offer->item_id, 'status' => 'title_unparsed', 'title' => $offer->title];
+                    continue;
+                }
+                $v = $fromTitle + ['engine' => $v['engine']];
+                $rows[] = ['offer' => $offer, 'vehicle' => $v];
+                if (! $this->option('items') && count($rows) >= (int) $this->option('limit')) {
+                    break;
+                }
+                continue;
+            }
+
             // Strażnik: marka i model z atrybutów PIM muszą występować w tytule aukcji.
             // Łapie bliźniaki badge'owe (aukcja „Suzuki SX4" ↔ produkt fiat/sedici) i błędne
             // mapowania SKU (aukcja „Vitara" ↔ produkt s-cross) — fitment z cudzej marki to szkodnik.
@@ -272,6 +290,60 @@ class EbayKtypePush extends Command
             'year_start' => (int) $attrs['year-start'],
             'year_stop' => (int) $attrs['year-stop'],
             'engine' => strtolower($attrs['engine'] ?? 'all'),
+            'generation' => $generation,
+        ];
+    }
+
+    /**
+     * Pojazd wyczytany z tytułu aukcji — dla bliźniaków badge'owych, gdzie produkt w PIM jest
+     * pod marką konstruktora, a aukcja sprzedaje wersję innej marki.
+     * Format tytułów: „Stahl Unterfahrschutz für Motor <MARKA> <MODEL> (RRRR-RRRR)".
+     */
+    private function vehicleFromTitle(EbayOffer $offer): ?array
+    {
+        if (! preg_match('/\((\d{4})\s*[-–]\s*(\d{4})\)/u', $offer->title, $ym)) {
+            return null;
+        }
+
+        $before = $this->norm(substr($offer->title, 0, (int) mb_strpos($offer->title, $ym[0])));
+
+        // Marka: ostatnie wystąpienie nazwy z bazy eBaya (nazwy części stoją PRZED marką);
+        // przy tej samej pozycji wygrywa dłuższa („Land Rover" nad „Land").
+        $makes = $this->modelCache['__makes'] ??= $this->taxonomy->compatibilityPropertyValues($this->treeId, $this->categoryId, 'Make');
+        $bestPos = -1;
+        $bestMake = null;
+        foreach ($makes as $m) {
+            $n = $this->norm($m);
+            if ($n === '' || ! preg_match('/\b' . preg_quote($n, '/') . '\b/u', $before, $mm, PREG_OFFSET_CAPTURE)) {
+                continue;
+            }
+            $pos = $mm[0][1];
+            if ($pos > $bestPos || ($pos === $bestPos && mb_strlen($n) > mb_strlen($this->norm($bestMake)))) {
+                $bestPos = $pos;
+                $bestMake = $m;
+            }
+        }
+        if (! $bestMake) {
+            return null;
+        }
+
+        $model = trim(substr($before, $bestPos + strlen($this->norm($bestMake))));
+        if ($model === '') {
+            return null;
+        }
+
+        // Generacja z oznaczenia serii w samym modelu („land cruiser j90" → 90).
+        $generation = null;
+        if (preg_match('/^(.*?)\s+j?(\d{1,3})$/u', $model, $g)) {
+            $generation = (int) $g[2];
+            $model = $g[1];
+        }
+
+        return [
+            'make' => $bestMake,
+            'model' => $model,
+            'year_start' => (int) $ym[1],
+            'year_stop' => (int) $ym[2],
             'generation' => $generation,
         ];
     }
