@@ -135,7 +135,7 @@ ROUTES_EOF
 
 ## 6. Zaległości / TODO
 
-- 🔑 **Rotacje kluczy** (bezpieczeństwo): OpenAI key (był w `config/google.php`), eBay **Cert ID** (`PRD-…b51b`, pokazywany wielokrotnie), Auth'n'Auth **user token** (niepotrzebny — „Revoke a Token").
+- 🔑 **Rotacje kluczy** (bezpieczeństwo): OpenAI key (był w `config/google.php`), eBay **Cert ID** (wyciekł do sesji czatu — zrotować na developer.ebay.com), Auth'n'Auth **user token** (niepotrzebny — „Revoke a Token").
 - **~2142 / 3338 ofert bez mapowania** — auto-przypisanie po SKU (reguła w „Automatyczne akcje") łapie tylko te z `sku == product_code`; reszta ma inny format SKU. Do zbadania: alternatywny klucz (EAN / fragment kodu) — dziś świadomie **tylko SKU**.
 - **„Ustaw wg magazynu"** (4. tryb ilości jak w BaseLinker) — pominięty, bo `Product` nie trzyma stanu magazynowego; dodać, gdy będzie źródło stanu.
 - **Cron** `ebay:sync-offers` (cykliczne odświeżanie stanów) — do dołożenia w crontab, jeśli auto-restock ma reagować szybko.
