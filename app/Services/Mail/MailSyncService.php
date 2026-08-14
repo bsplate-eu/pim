@@ -11,12 +11,16 @@ use App\Models\Mail\SenderRule;
 use App\Models\Mail\SpamSender;
 use App\Models\Mail\ThreadExclude;
 use App\Notifications\NewMailNotification;
+use Illuminate\Support\Facades\Log;
 use Webklex\IMAP\Facades\Client;
 
 class MailSyncService
 {
     /** Cache ID-ków obsługujących pocztę (mail_users) — adresaci push o nowym mailu bez przypisania. */
     private ?array $mailHandlerIds = null;
+
+    /** Maile większe niż ten limit zapisujemy bez treści — webklex parsuje całe MIME w RAM (strażnik OOM). */
+    private const MAX_MESSAGE_BYTES = 25 * 1024 * 1024; // 25 MB
 
     /**
      * Synchronizuje wszystkie zwykłe foldery skrzynki (INBOX + foldery własne, np. „GlobKurier")
@@ -28,7 +32,7 @@ class MailSyncService
      */
     public function sync(Account $account, int $cap = 200): array
     {
-        @ini_set('memory_limit', '512M'); // webklex parsuje całe MIME w pamięci — 128M CLI bywa za mało na duże maile
+        @ini_set('memory_limit', '1024M'); // zapas na pojedyncze duże maile (treści ciągniemy POJEDYNCZO — patrz pętla niżej)
 
         $account->forceFill(['sync_status' => Account::SYNC_SYNCING])->save();
 
@@ -68,10 +72,17 @@ class MailSyncService
                     ['name' => $imapFolder->name]
                 );
 
+                // Faza 1: SAME nagłówki+flagi (lekko). Treści dociągamy niżej POJEDYNCZO —
+                // wcześniej get() trzymał w RAM pełne MIME całej paczki (do 200 maili naraz)
+                // i przy kilku dużych załącznikach zabijał proces (OOM 512M co minutę, incydent 2026-08).
                 $query = $imapFolder->messages()
-                    ->setFetchBody(true)
+                    ->setFetchBody(false)
                     ->setFetchOrder('desc')
                     ->limit($cap);
+
+                if (method_exists($query, 'setExtensions')) {
+                    $query->setExtensions(['RFC822.SIZE']); // rozmiar wiadomości do strażnika pamięci
+                }
 
                 if ($folder->last_uid > 0) {
                     // przyrostowo — ostatnie kilka dni (łapie nowe maile; istniejące pomija updateOrCreate)
@@ -93,7 +104,32 @@ class MailSyncService
 
                 foreach ($messages as $message) {
                     try {
+                        $uid = (int) $message->uid;
+                        if ($uid <= 0) {
+                            continue;
+                        }
+
+                        // Strażnik pamięci: kolosy zapisujemy BEZ treści (metadane widać w panelu,
+                        // rekord istnieje → sync nie wraca do nich co minutę i nie umiera na OOM).
+                        $size = (int) ($message->size ?? 0);
+                        if ($size > self::MAX_MESSAGE_BYTES) {
+                            Log::warning('Argo Mail: pominięto treść wiadomości — przekracza limit rozmiaru', [
+                                'account' => $account->label,
+                                'folder'  => $folder->path,
+                                'uid'     => $uid,
+                                'size_mb' => round($size / 1048576, 1),
+                            ]);
+                        } else {
+                            // Faza 2: pełna treść JEDNEJ wiadomości naraz — szczyt pamięci to
+                            // największy pojedynczy mail, nie suma całej paczki.
+                            $full = $imapFolder->messages()->whereUid($uid)->setFetchBody(true)->limit(1)->get()->first();
+                            if ($full) {
+                                $message = $full;
+                            }
+                        }
+
                         $row = $this->persistMessage($account, $folder, $message, $rules, $spam, $noGroup);
+                        unset($full);
                         if (! $row) {
                             continue;
                         }
@@ -167,7 +203,7 @@ class MailSyncService
     public function import(Account $account, int $months = 0, int $batch = 100, ?string $folderPath = null, ?callable $progress = null): array
     {
         @set_time_limit(0);
-        @ini_set('memory_limit', '512M');
+        @ini_set('memory_limit', '1024M');
 
         $previousTimeout = ini_get('default_socket_timeout');
         ini_set('default_socket_timeout', '60');
