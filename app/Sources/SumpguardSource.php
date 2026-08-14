@@ -105,7 +105,10 @@ class SumpguardSource extends BaseSource implements SourceInterface
     {
         $this->synchronizeAttributes();
 
-        $this->products = Product::select(['id', 'external_id'])->get()->keyBy('external_id');
+        // 'name' MUSI być w select — bez niego getTranslations('name') przy ochronie locków
+        // zwraca pustkę i update() kasuje wszystkie sloty językowe
+        // (incydent 2026-08-11: wycięte de/cs/sk/fr/es/lt/lv/et/pl na 1634 produktach).
+        $this->products = Product::select(['id', 'external_id', 'name'])->get()->keyBy('external_id');
         $locales = $this->locales;
         $base_locale = array_shift($locales);
 
@@ -242,8 +245,14 @@ class SumpguardSource extends BaseSource implements SourceInterface
         ];
 
         if (isset($this->product_translations[$item['id']])) {
-            foreach ($this->product_translations[$item['id']]['name'] as $locale => $value) {
-                $names[$locale] = $value;
+            $base = trim((string) $item['name']);
+            foreach ($this->product_translations[$item['id']]['name'] as $trLocale => $value) {
+                // Feed potrafi oddać polski tekst pod obcym językiem (pliki de/fr/... identyczne z pl —
+                // stan z 2026-08-11+). Wartość równa bazowej nie jest tłumaczeniem — nie wpisuj jej do slotu.
+                if ($trLocale !== $locale && trim((string) $value) === $base) {
+                    continue;
+                }
+                $names[$trLocale] = $value;
             }
         }
 
@@ -336,24 +345,20 @@ class SumpguardSource extends BaseSource implements SourceInterface
 
             $product = $this->products->get($item['id']);
             if ($product) {
-                // Ochrona ręcznych tłumaczeń: usuń z payloadu sloty `name->{locale}` które user lub import oznaczyli jako 'manual'/'sheet_import'.
-                // Pozostałe locale wciąż dostają fallback z Sumpguard.
-                $lockedLocales = TranslationOverride::lockedLocales($product, 'name');
-                if (!empty($lockedLocales) && is_array($data['name'])) {
-                    foreach ($lockedLocales as $lockedLocale) {
-                        unset($data['name'][$lockedLocale]);
+                // Ochrona tłumaczeń: merge per-slot, NIGDY podmiana całego JSON-a `name`.
+                // Sloty zablokowane (manual/sheet_import/auto_matrix) zostają jak są; feed może
+                // nadpisać wyłącznie sloty niezablokowane. Istniejące sloty, których feed nie
+                // przysłał, też zostają (incydent 2026-08-11: podmiana całości wycięła tłumaczenia).
+                if (is_array($data['name'] ?? null)) {
+                    $incoming = $data['name'];
+                    foreach (TranslationOverride::lockedLocales($product, 'name') as $lockedLocale) {
+                        unset($incoming[$lockedLocale]);
                     }
-                    if (empty($data['name'])) {
-                        // Wszystkie sloty zablokowane → nie ruszaj kolumny `name` w ogóle.
-                        unset($data['name']);
+                    $merged = array_merge($product->getTranslations('name'), $incoming);
+                    if (!empty($merged)) {
+                        $data['name'] = $merged;
                     } else {
-                        // Zostaw tylko niezablokowane sloty + zachowaj istniejące zablokowane (merge).
-                        $existing = $product->getTranslations('name');
-                        foreach ($lockedLocales as $lockedLocale) {
-                            if (isset($existing[$lockedLocale])) {
-                                $data['name'][$lockedLocale] = $existing[$lockedLocale];
-                            }
-                        }
+                        unset($data['name']);
                     }
                 }
 
