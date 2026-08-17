@@ -39,7 +39,11 @@
                         <td class="px-3 py-2">{{ row.source }}</td>
                         <td class="px-3 py-2 font-mono">{{ row.nr_full }}</td>
                         <td class="px-3 py-2">{{ row.customer_name || '—' }}</td>
-                        <td class="px-3 py-2 text-right font-mono whitespace-nowrap">{{ formatMoney(row.total_brutto, row.currency) }}</td>
+                        <td class="px-3 py-2 text-right font-mono whitespace-nowrap"
+                            :class="row.type === 'correction' ? 'text-orange-700' : ''">
+                            <span v-if="row.amount_uncertain" title="Brak faktury nadrzędnej — kwota korekty niepewna">⚠ </span>
+                            {{ formatMoney(row.total_brutto, row.currency) }}
+                        </td>
                         <td class="px-3 py-2">
                             <span
                                 class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium uppercase tracking-wide"
@@ -55,7 +59,7 @@
 
                     <tr v-if="rows.length === 0">
                         <td colspan="9" class="px-3 py-6 text-center text-sm text-gray-400">
-                            Brak faktur/korekt dla tego miesiąca (źródła: ebay / BSP DE).
+                            Brak faktur/korekt dla tego miesiąca (serie: Faktura BSP / Korekta BSP).
                         </td>
                     </tr>
                 </tbody>
@@ -109,6 +113,7 @@ interface Row {
     nr_full: string;
     customer_name: string | null;
     total_brutto: number;
+    amount_uncertain: boolean;
     currency: string | null;
     issue_date: string | null;
     order_date: string | null;

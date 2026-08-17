@@ -17,15 +17,15 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 class CostPlannerSummaryController extends Controller
 {
     /**
-     * Dozwolone źródła zamówień (order_source z BaseLinkera).
-     * Edytuj tę listę, gdy poznasz dokładne wartości dla BSP DE.
+     * Serie numeracji BSP w BaseLinkerze (metoda getSeries).
+     * 134900 = "Faktura BSP", 135506 = "Korekta BSP".
+     *
+     * Zestawienie idzie po serii, nie po źródle zamówienia — źródło gubiło faktury
+     * ze sklepu (order_source = "shop") i korekty do zamówień, których nie ma już w BL.
      */
-    private const ALLOWED_SOURCES = [
-        'ebay',
-        'BSP [DE]',
-        'BSP DE',
-        'bsp_black_steel_plate_gmbh',
-    ];
+    private const BSP_INVOICE_SERIES = 134900;
+
+    private const BSP_CORRECTION_SERIES = 135506;
 
     public function index(): Response
     {
@@ -144,9 +144,12 @@ class CostPlannerSummaryController extends Controller
     }
 
     /**
-     * Zbiera faktury (FV) i korekty (KOR) z dozwolonych źródeł.
+     * Zbiera faktury (FV) i korekty (KOR) z serii BSP.
      * Każda faktura/korekta = osobny wiersz. Miesiąc/rok parsowane z numeru (nr_full).
      * Korekta bez własnego order_id dziedziczy źródło/datę po fakturze nadrzędnej.
+     *
+     * Kwota korekty to RÓŻNICA względem faktury nadrzędnej (BaseLinker w getInvoices
+     * podaje dla korekty kwotę PO korekcie, dodatnią — sama z siebie zawyżałaby sumę).
      *
      * @return array<int, array<string, mixed>>
      */
@@ -157,7 +160,8 @@ class CostPlannerSummaryController extends Controller
             ->leftJoin('connect_invoices as p', 'p.baselinker_invoice_id', '=', 'i.corrected_invoice_id')
             ->leftJoin('orders as po', 'po.id', '=', 'p.order_id')
             ->selectRaw('i.id, i.type, i.nr, i.nr_full, i.issue_date, '
-                . 'i.total_brutto, i.currency, '
+                . 'i.total_brutto, i.currency, i.series_id, '
+                . 'p.series_id AS parent_series_id, p.total_brutto AS parent_brutto, '
                 . 'COALESCE(o.order_source, po.order_source) AS source, '
                 . 'COALESCE(o.date_add, po.date_add) AS order_date, '
                 . "COALESCE(NULLIF(o.invoice_fullname, ''), o.delivery_fullname, "
@@ -166,7 +170,7 @@ class CostPlannerSummaryController extends Controller
 
         $rows = [];
         foreach ($raw as $r) {
-            if (! $r->source || ! in_array($r->source, self::ALLOWED_SOURCES, true)) {
+            if (! $this->belongsToBsp($r)) {
                 continue;
             }
 
@@ -179,6 +183,19 @@ class CostPlannerSummaryController extends Controller
                 continue;
             }
 
+            // Korekta liczy się jako delta (kwota po korekcie − kwota faktury nadrzędnej).
+            $brutto = (float) $r->total_brutto;
+            $amountUncertain = false;
+
+            if ($r->type === 'correction') {
+                if ($r->parent_brutto !== null) {
+                    $brutto = round($brutto - (float) $r->parent_brutto, 2);
+                } else {
+                    // Brak faktury nadrzędnej w bazie — delty nie da się policzyć.
+                    $amountUncertain = true;
+                }
+            }
+
             $rows[] = [
                 'id'           => (int) $r->id,
                 'type'         => $r->type, // invoice | correction
@@ -186,7 +203,8 @@ class CostPlannerSummaryController extends Controller
                 'nr'           => (int) ($r->nr ?? $parsed['nr']),
                 'nr_full'      => $r->nr_full,
                 'customer_name' => $r->customer_name ?: null,
-                'total_brutto' => (float) $r->total_brutto,
+                'total_brutto' => $brutto,
+                'amount_uncertain' => $amountUncertain,
                 'currency'     => $r->currency,
                 'issue_date'   => $r->issue_date ? substr($r->issue_date, 0, 10) : null,
                 'order_date' => $r->order_date ? substr($r->order_date, 0, 10) : null,
@@ -197,6 +215,22 @@ class CostPlannerSummaryController extends Controller
         }
 
         return $rows;
+    }
+
+    /**
+     * Dokument należy do BSP, gdy sam jest w serii BSP albo koryguje fakturę z serii BSP
+     * (korekty bywają wystawiane w serii domyślnej, np. "1/5/2026/K" do "28/5/2026/BSP").
+     */
+    private function belongsToBsp(object $r): bool
+    {
+        $series = (int) ($r->series_id ?? 0);
+
+        if ($series === self::BSP_INVOICE_SERIES || $series === self::BSP_CORRECTION_SERIES) {
+            return true;
+        }
+
+        return $r->type === 'correction'
+            && (int) ($r->parent_series_id ?? 0) === self::BSP_INVOICE_SERIES;
     }
 
     /**
