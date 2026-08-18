@@ -717,6 +717,43 @@ Route::middleware(['crafter.base', 'auth', 'crafter.verified'])->prefix('admin')
 });
 
 
+/* Argo Connect → Marketplace → eBay — wystawianie ofert (wzorzec: moduł Allegro z OMS ARGO).
+ * Rozdział jak w OMS: `connect/integrations/ebay` = ustawienia i OAuth, `connect/marketplace/ebay/*`
+ * = ekrany robocze (kategorie, szablony, schematy, wystawianie). Docelowo przenosi się tu też
+ * ekran ofert — dziś siedzi pod `integrations/ebay/offers` (osobne zadanie, ruszy trasy i sidebar).
+ */
+Route::middleware(['crafter.base', 'auth', 'crafter.verified'])->prefix('admin')->name('crafter.')->group(function () {
+    Route::get('connect/marketplace/ebay/categories', [App\Http\Controllers\Admin\Connect\Marketplace\EbayCategoryController::class, 'index'])
+        ->name('connect.marketplace.ebay.categories.index');
+    Route::post('connect/marketplace/ebay/categories/search', [App\Http\Controllers\Admin\Connect\Marketplace\EbayCategoryController::class, 'search'])
+        ->name('connect.marketplace.ebay.categories.search');
+    Route::post('connect/marketplace/ebay/categories/activate', [App\Http\Controllers\Admin\Connect\Marketplace\EbayCategoryController::class, 'activate'])
+        ->name('connect.marketplace.ebay.categories.activate');
+    Route::put('connect/marketplace/ebay/categories/{category}', [App\Http\Controllers\Admin\Connect\Marketplace\EbayCategoryController::class, 'updateMapping'])
+        ->name('connect.marketplace.ebay.categories.update');
+    Route::post('connect/marketplace/ebay/categories/{category}/refresh', [App\Http\Controllers\Admin\Connect\Marketplace\EbayCategoryController::class, 'refresh'])
+        ->name('connect.marketplace.ebay.categories.refresh');
+    Route::delete('connect/marketplace/ebay/categories/{category}', [App\Http\Controllers\Admin\Connect\Marketplace\EbayCategoryController::class, 'destroy'])
+        ->name('connect.marketplace.ebay.categories.destroy');
+
+    Route::get('connect/marketplace/ebay/schemes', [App\Http\Controllers\Admin\Connect\Marketplace\EbaySchemeController::class, 'index'])
+        ->name('connect.marketplace.ebay.schemes.index');
+    Route::post('connect/marketplace/ebay/schemes', [App\Http\Controllers\Admin\Connect\Marketplace\EbaySchemeController::class, 'store'])
+        ->name('connect.marketplace.ebay.schemes.store');
+    Route::put('connect/marketplace/ebay/schemes/{scheme}', [App\Http\Controllers\Admin\Connect\Marketplace\EbaySchemeController::class, 'update'])
+        ->name('connect.marketplace.ebay.schemes.update');
+    Route::delete('connect/marketplace/ebay/schemes/{scheme}', [App\Http\Controllers\Admin\Connect\Marketplace\EbaySchemeController::class, 'destroy'])
+        ->name('connect.marketplace.ebay.schemes.destroy');
+
+    Route::get('connect/marketplace/ebay/listing', [App\Http\Controllers\Admin\Connect\Marketplace\EbayListingController::class, 'index'])
+        ->name('connect.marketplace.ebay.listing.index');
+    Route::post('connect/marketplace/ebay/listing/publish-preview', [App\Http\Controllers\Admin\Connect\Marketplace\EbayListingController::class, 'publishPreview'])
+        ->name('connect.marketplace.ebay.listing.publish-preview');
+    Route::post('connect/marketplace/ebay/listing/publish', [App\Http\Controllers\Admin\Connect\Marketplace\EbayListingController::class, 'publish'])
+        ->name('connect.marketplace.ebay.listing.publish');
+});
+
+
 /* Argo Connect → Integracje → KSeF — poświadczenia integracji per firma (Pareto / BSP) */
 Route::middleware(['crafter.base', 'auth', 'crafter.verified'])->prefix('admin')->name('crafter.')->group(function () {
     Route::get('connect/integrations/ksef', [App\Http\Controllers\Admin\Connect\IntegrationKsefController::class, 'index'])

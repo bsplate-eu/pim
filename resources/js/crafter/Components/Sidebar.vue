@@ -130,7 +130,16 @@
                 </SidebarItem>
                 <SidebarSubGroup title="Marketplace">
                     <SidebarItem :href="route('crafter.connect.integrations.ebay.offers.index')">
-                        Ebay
+                        Ebay · Aukcje
+                    </SidebarItem>
+                    <SidebarItem :href="route('crafter.connect.marketplace.ebay.categories.index')">
+                        Ebay · Kategorie
+                    </SidebarItem>
+                    <SidebarItem :href="route('crafter.connect.marketplace.ebay.schemes.index')">
+                        Ebay · Schematy
+                    </SidebarItem>
+                    <SidebarItem :href="route('crafter.connect.marketplace.ebay.listing.index')">
+                        Ebay · Wystawianie
                     </SidebarItem>
                 </SidebarSubGroup>
             </SidebarGroup>

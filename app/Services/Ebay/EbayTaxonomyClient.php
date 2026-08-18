@@ -17,6 +17,9 @@ class EbayTaxonomyClient
     private Client $http;
     private string $api = 'https://api.ebay.com';
 
+    /** Ile wartości aspektu FREE_TEXT trzymamy w cache jako podpowiedzi (dłuższe listy pomijamy). */
+    private const MAX_INLINE_VALUES = 200;
+
     public function __construct(
         private string $clientId,
         private string $clientSecret,
@@ -85,6 +88,72 @@ class EbayTaxonomyClient
 
             return $d['compatibilityProperties'] ?? [];
         });
+    }
+
+    /**
+     * Item Specifics (aspekty) wymagane/dopuszczalne w kategorii — podstawa wystawiania oferty.
+     * To CO INNEGO niż compatibilityProperties() (tamto = baza pojazdów, kType/fitment).
+     *
+     * Nazwy aspektów są własnością rynku: kategoria 14769 na DE ma „Hersteller", 9886 na FR
+     * „Marque" + „Numéro de pièce fabricant" — dlatego czytamy je z eBaya per rynek, nie zgadujemy.
+     *
+     * Zwraca listę:
+     *   ['name'=>string, 'required'=>bool, 'mode'=>'FREE_TEXT'|'SELECTION_ONLY',
+     *    'cardinality'=>'SINGLE'|'MULTI', 'value_count'=>int, 'values'=>list<string>]
+     *
+     * `values` wypełniamy tylko tam, gdzie mają sens w UI mapowania: dla SELECTION_ONLY zawsze
+     * (bez listy nie da się wybrać), dla FREE_TEXT wyłącznie gdy lista jest krótka — „Hersteller"
+     * ma 5878 pozycji i wpychanie ich do JSON-a kategorii zamieniłoby cache w kilkumegabajtowy blob.
+     */
+    public function itemAspectsForCategory(string $treeId, string $categoryId): array
+    {
+        return Cache::remember("ebay.tax.aspects.{$treeId}.{$categoryId}", 604800, function () use ($treeId, $categoryId) {
+            $d = $this->get("/commerce/taxonomy/v1/category_tree/{$treeId}/get_item_aspects_for_category", [
+                'category_id' => $categoryId,
+            ]);
+
+            return collect($d['aspects'] ?? [])->map(function (array $a) {
+                $con = $a['aspectConstraint'] ?? [];
+                $mode = (string) ($con['aspectMode'] ?? 'FREE_TEXT');
+                $values = array_values(array_filter(array_column($a['aspectValues'] ?? [], 'localizedValue')));
+
+                return [
+                    'name' => (string) ($a['localizedAspectName'] ?? ''),
+                    'required' => (bool) ($con['aspectRequired'] ?? false),
+                    'mode' => $mode,
+                    'cardinality' => (string) ($con['itemToAspectCardinality'] ?? 'SINGLE'),
+                    'value_count' => count($values),
+                    'values' => ($mode === 'SELECTION_ONLY' || count($values) <= self::MAX_INLINE_VALUES)
+                        ? $values
+                        : [],
+                ];
+            })->filter(fn (array $a) => $a['name'] !== '')->values()->all();
+        });
+    }
+
+    /**
+     * Podpowiedzi kategorii po nazwie (ekran „Kategorie i parametry" — wyszukiwarka).
+     * Zwraca ['id'=>string, 'name'=>string, 'path'=>string] — path z przodków, od korzenia.
+     */
+    public function categorySuggestions(string $treeId, string $query): array
+    {
+        $d = $this->get("/commerce/taxonomy/v1/category_tree/{$treeId}/get_category_suggestions", ['q' => $query]);
+
+        return collect($d['categorySuggestions'] ?? [])->map(function (array $s) {
+            // Przodkowie przychodzą od najbliższego — odwracamy, żeby ścieżka czytała się od korzenia.
+            $path = collect($s['categoryTreeNodeAncestors'] ?? [])
+                ->pluck('categoryName')
+                ->reverse()
+                ->push($s['category']['categoryName'] ?? '')
+                ->filter()
+                ->implode(' → ');
+
+            return [
+                'id' => (string) ($s['category']['categoryId'] ?? ''),
+                'name' => (string) ($s['category']['categoryName'] ?? ''),
+                'path' => $path,
+            ];
+        })->filter(fn (array $c) => $c['id'] !== '')->values()->all();
     }
 
     /**
