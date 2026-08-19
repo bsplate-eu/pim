@@ -11,8 +11,18 @@
             </SidebarItem>
 
             <!-- Argo HQ -->
-            <SidebarGroup title="Argo HQ" :toggable="true" :open="false" :icon="BuildingOffice2Icon">
-                <SidebarGroup title="Koszty" :toggable="false">
+            <SidebarGroup
+                title="Argo HQ"
+                :toggable="true"
+                :open="false"
+                :icon="BuildingOffice2Icon"
+                v-can:any="[
+                    'crafter.module.costs',
+                    'crafter.module.kasa',
+                    'crafter.module.ksef',
+                ]"
+            >
+                <SidebarGroup title="Koszty" :toggable="false" v-can="'crafter.module.costs'">
                     <SidebarItem :href="route('crafter.cost-planner.index')">
                         Planer kosztów
                     </SidebarItem>
@@ -29,12 +39,12 @@
                         Wyciąg z konta
                     </SidebarItem>
                 </SidebarGroup>
-                <SidebarGroup title="Kasa" :toggable="false">
+                <SidebarGroup title="Kasa" :toggable="false" v-can="'crafter.module.kasa'">
                     <SidebarItem :href="route('crafter.kasa.index')">
                         Kasa
                     </SidebarItem>
                 </SidebarGroup>
-                <SidebarGroup title="Ksef" :toggable="false">
+                <SidebarGroup title="Ksef" :toggable="false" v-can="'crafter.module.ksef'">
                     <SidebarItem :href="route('crafter.ksef.pareto')">
                         Ksef Pareto
                     </SidebarItem>
@@ -45,7 +55,22 @@
             </SidebarGroup>
 
             <!-- Argo PIM -->
-            <SidebarGroup title="Argo PIM" :toggable="true" :open="false" :icon="CubeIcon">
+            <SidebarGroup
+                title="Argo PIM"
+                :toggable="true"
+                :open="false"
+                :icon="CubeIcon"
+                v-can:any="[
+                    'crafter.integration.index',
+                    'crafter.product.index',
+                    'crafter.category.index',
+                    'crafter.pricelist.index',
+                    'crafter.source.index',
+                    'crafter.attribute.index',
+                    'crafter.template.index',
+                    'crafter.media.index',
+                ]"
+            >
                 <SidebarSubGroup title="Integracje" v-can="'crafter.integration.index'">
                     <SidebarItem :href="route('crafter.integrations.index')">
                         {{ $t("crafter", "Integrations") }}
@@ -106,46 +131,82 @@
             </SidebarGroup>
 
             <!-- Argo Connect -->
-            <SidebarGroup title="Argo Connect" :toggable="true" :open="true" :icon="LinkIcon">
-                <SidebarItem :href="route('crafter.connect.orders.index')">
-                    Zamówienia
-                </SidebarItem>
-                <SidebarItem :href="route('crafter.connect.customers.index')">
-                    Klienci
-                </SidebarItem>
-                <SidebarItem :href="route('crafter.connect.map.index')">
-                    Mapa
-                </SidebarItem>
-                <SidebarItem :href="route('crafter.connect.integrations.base.index')">
-                    Integracje · Base
-                </SidebarItem>
-                <SidebarItem :href="route('crafter.connect.integrations.ebay.index')">
-                    Integracje · Ebay
-                </SidebarItem>
-                <SidebarItem :href="route('crafter.connect.integrations.ksef.index')">
-                    Integracje · KSEF
-                </SidebarItem>
-                <SidebarItem :href="route('crafter.connect.chatbot.index')">
-                    Integracja chatboot
-                </SidebarItem>
-                <SidebarSubGroup title="Marketplace">
-                    <SidebarItem :href="route('crafter.connect.integrations.ebay.offers.index')">
-                        Ebay · Aukcje
+            <SidebarGroup
+                title="Argo Connect"
+                :toggable="true"
+                :open="true"
+                :icon="LinkIcon"
+                v-can:any="[
+                    'crafter.module.connect',
+                    'crafter.module.marketplace',
+                    'crafter.module.ksef',
+                ]"
+            >
+                <!-- Sprzedaż: zamówienia i ich okolice (jeden zestaw uprawnień → v-can na grupie). -->
+                <SidebarSubGroup title="Zamówienia" v-can="'crafter.module.connect'">
+                    <SidebarItem :href="route('crafter.connect.orders.index')">
+                        Zamówienia
                     </SidebarItem>
-                    <SidebarItem :href="route('crafter.connect.marketplace.ebay.categories.index')">
-                        Ebay · Kategorie
+                    <SidebarItem :href="route('crafter.connect.customers.index')">
+                        Klienci
                     </SidebarItem>
-                    <SidebarItem :href="route('crafter.connect.marketplace.ebay.schemes.index')">
-                        Ebay · Schematy
+                    <SidebarItem :href="route('crafter.connect.map.index')">
+                        Mapa
                     </SidebarItem>
-                    <SidebarItem :href="route('crafter.connect.marketplace.ebay.listing.index')">
-                        Ebay · Wystawianie
+                </SidebarSubGroup>
+
+                <!-- Konfiguracja połączeń. Każda pozycja ma własne uprawnienie (KSeF ≠ marketplace),
+                     więc v-can zostaje na pozycjach, a grupa znika dopiero gdy nie ma ŻADNEJ. -->
+                <SidebarSubGroup
+                    title="Integracje"
+                    v-can:any="[
+                        'crafter.module.connect',
+                        'crafter.module.marketplace',
+                        'crafter.module.ksef',
+                    ]"
+                >
+                    <SidebarItem :href="route('crafter.connect.integrations.base.index')" v-can="'crafter.module.connect'">
+                        Base
                     </SidebarItem>
+                    <SidebarItem :href="route('crafter.connect.integrations.ebay.index')" v-can="'crafter.module.marketplace'">
+                        Ebay
+                    </SidebarItem>
+                    <SidebarItem :href="route('crafter.connect.integrations.ksef.index')" v-can="'crafter.module.ksef'">
+                        Ksef
+                    </SidebarItem>
+                    <SidebarItem :href="route('crafter.connect.chatbot.index')" v-can="'crafter.module.connect'">
+                        Chatboot
+                    </SidebarItem>
+                </SidebarSubGroup>
+
+                <!-- Praca na aukcjach. Podgrupa per marketplace — kolejne rynki (Allegro, Kaufland…)
+                     dokładamy obok „Ebay", bez przebudowy menu. -->
+                <SidebarSubGroup title="Marketplace" v-can="'crafter.module.marketplace'">
+                    <SidebarSubGroup title="Ebay">
+                        <SidebarItem :href="route('crafter.connect.integrations.ebay.offers.index')">
+                            Aukcje
+                        </SidebarItem>
+                        <SidebarItem :href="route('crafter.connect.marketplace.ebay.listing.index')">
+                            Wystawianie
+                        </SidebarItem>
+                        <SidebarItem :href="route('crafter.connect.marketplace.ebay.schemes.index')">
+                            Schematy
+                        </SidebarItem>
+                        <SidebarItem :href="route('crafter.connect.marketplace.ebay.categories.index')">
+                            Kategorie i parametry
+                        </SidebarItem>
+                    </SidebarSubGroup>
                 </SidebarSubGroup>
             </SidebarGroup>
 
             <!-- Argo Scope -->
-            <SidebarGroup title="Argo Scope" :toggable="true" :open="false" :icon="MagnifyingGlassIcon">
+            <SidebarGroup
+                title="Argo Scope"
+                :toggable="true"
+                :open="false"
+                :icon="MagnifyingGlassIcon"
+                v-can="'crafter.module.scope'"
+            >
                 <SidebarSubGroup title="Scrapy">
                     <SidebarItem :href="route('crafter.scope.rumuni.index')">
                         Rumuni
@@ -154,7 +215,13 @@
             </SidebarGroup>
 
             <!-- Argo Task -->
-            <SidebarGroup title="Argo Task" :toggable="true" :open="false" :icon="ClipboardDocumentListIcon">
+            <SidebarGroup
+                title="Argo Task"
+                :toggable="true"
+                :open="false"
+                :icon="ClipboardDocumentListIcon"
+                v-can="'crafter.module.task'"
+            >
                 <SidebarGroup
                     v-for="group in argoProjectGroups"
                     :key="group.id"
@@ -182,7 +249,13 @@
             </SidebarGroup>
 
             <!-- [argo-mail-pkg] Argo Mail -->
-            <SidebarGroup title="Argo Mail" :toggable="true" :open="false" :icon="EnvelopeIcon">
+            <SidebarGroup
+                title="Argo Mail"
+                :toggable="true"
+                :open="false"
+                :icon="EnvelopeIcon"
+                v-can="'crafter.module.mail'"
+            >
                 <SidebarItem :href="route('crafter.argo-mail.index')">
                     Skrzynka
                 </SidebarItem>
@@ -210,7 +283,13 @@
             </SidebarItem>
 
             <!-- Tłumaczenia -->
-            <SidebarGroup title="Tłumaczenia" :toggable="true" :open="false" :icon="LanguageIcon">
+            <SidebarGroup
+                title="Tłumaczenia"
+                :toggable="true"
+                :open="false"
+                :icon="LanguageIcon"
+                v-can="'crafter.module.translations'"
+            >
                 <SidebarItem :href="route('crafter.translation-phrases.index')">
                     Matryca tłumaczeń
                 </SidebarItem>
@@ -225,14 +304,37 @@
                 </SidebarItem>
             </SidebarGroup>
 
-            <!-- Użytkownicy -->
-            <SidebarItem
-                :href="route('crafter.admin-users.index')"
+            <!-- Użytkownicy i uprawnienia -->
+            <SidebarGroup
+                title="Użytkownicy i uprawnienia"
+                :toggable="true"
+                :open="false"
                 :icon="UsersIcon"
-                v-can="'crafter.admin-user.index'"
+                v-can:any="[
+                    'crafter.admin-user.index',
+                    'crafter.role.index',
+                    'crafter.permission.index',
+                ]"
             >
-                {{ $t("crafter", "Users") }}
-            </SidebarItem>
+                <SidebarItem
+                    :href="route('crafter.admin-users.index')"
+                    v-can="'crafter.admin-user.index'"
+                >
+                    {{ $t("crafter", "Users") }}
+                </SidebarItem>
+                <SidebarItem
+                    :href="route('crafter.roles.index')"
+                    v-can="'crafter.role.index'"
+                >
+                    Role
+                </SidebarItem>
+                <SidebarItem
+                    :href="route('crafter.permissions.index')"
+                    v-can="'crafter.permission.index'"
+                >
+                    Uprawnienia (macierz)
+                </SidebarItem>
+            </SidebarGroup>
 
             <!-- [argo-mail-pkg] Poczta (SMTP transakcyjny) -->
             <SidebarGroup title="Poczta (SMTP)" :toggable="true" :open="false" :icon="EnvelopeIcon" v-can="'crafter.mail.view'">
@@ -247,33 +349,26 @@
                 </SidebarItem>
             </SidebarGroup>
 
+            <!-- System — do 2026-08-19 ta grupa miała v-if="false", przez co Role,
+                 Lokalizacja i Ustawienia były nieosiągalne z menu. -->
             <SidebarGroup
-                v-if="false"
                 :title="$t('crafter', 'System')"
+                :toggable="true"
+                :open="false"
+                :icon="Cog8ToothIcon"
                 v-can:any="[
-                      'crafter.admin-user.index',
-                      'crafter.role.index',
-                      'crafter.translation.index',
-                      'crafter.settings.edit',
-                    ]"
+                    'crafter.translation.index',
+                    'crafter.settings.edit',
+                ]"
             >
                 <SidebarItem
-                    :href="route('crafter.roles.index')"
-                    :icon="KeyIcon"
-                    v-can="'crafter.role.index'"
-                >
-                    {{ $t("crafter", "Roles") }}
-                </SidebarItem>
-                <SidebarItem
                     :href="route('crafter.translations.index')"
-                    :icon="LanguageIcon"
                     v-can="'crafter.translation.index'"
                 >
                     {{ $t("crafter", "Localization") }}
                 </SidebarItem>
                 <SidebarItem
                     :href="route('crafter.settings.index')"
-                    :icon="Cog8ToothIcon"
                     v-can="'crafter.settings.edit'"
                 >
                     {{ $t("crafter", "Settings") }}
@@ -287,7 +382,6 @@
 import { computed } from "vue";
 import { usePage } from "@inertiajs/vue3";
 import {
-    KeyIcon,
     LanguageIcon,
     UsersIcon,
     Cog8ToothIcon,
