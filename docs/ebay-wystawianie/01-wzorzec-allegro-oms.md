@@ -412,12 +412,23 @@ user-tokena ani publicznych adresów zdjęć (MediaLibrary zwraca `http://pim.te
 
 - **F** — operacje masowe: zakończ/aktywuj, masowa aktualizacja opisu, `runPerAccount`
   (u nas: grupowanie po rynku) i odczyt faktycznego wyniku zamiast zakładania sukcesu.
-- **Wybór polityk w UI** — dziś `fulfillment/payment/return_policy_id` i `merchant_location_key`
-  to kolumny bez ekranu; `EbayInventoryClient::businessPolicies()` już je pobiera, brakuje
-  dropdownów w schemacie. Potrzebne do trybu `active`.
+- ~~Wybór polityk w UI~~ — **zrobione**, patrz niżej.
 - *(osobno)* przeniesienie ekranu ofert pod `marketplace/ebay/offers`.
 - *(osobno)* poprawki szablonów: tytuł FR, tłumaczenie wartości atrybutów, sierota `EAN`, `bsp-es`.
 - *(osobno)* `EbayOffersController::setQuantity` — zapisuje żądaną ilość bez odczytu wyniku.
+
+### ✅ Polityki eBay w schemacie (2026-08-18)
+
+`EbaySchemeController::policies` (POST, per rynek) → `EbayInventoryClient::businessPolicies()`
++ `inventoryLocations()`. W schemacie doszła sekcja „Polityki eBay i lokalizacja" z przyciskiem
+„Pobierz z konta eBay" i czterema polami: dostawa / płatności / zwroty / lokalizacja.
+
+Zachowanie bez OAuth (tak jest lokalnie): endpoint zwraca **200** z komunikatem i pustymi listami,
+a pola spadają na wpisywanie ID ręcznie. Lepsze niż błąd — konfiguracja schematu nie blokuje się
+o niepołączone konto.
+
+Ostrzeżenie przy trybie `active` liczy braki **na żywo z formularza**: dopóki któregoś ID nie ma,
+ramka jest czerwona i mówi czego brakuje, zamiast obiecywać publikację, która i tak by nie przeszła.
 
 ### 🚀 Pierwsze uruchomienie na produkcji
 

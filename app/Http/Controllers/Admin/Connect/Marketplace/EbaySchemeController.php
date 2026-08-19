@@ -6,7 +6,10 @@ use App\Http\Controllers\Admin\Controller;
 use App\Models\Ebay\EbayCategory;
 use App\Models\Ebay\EbayScheme;
 use App\Models\Pricelist;
+use App\Models\Scrap\EbaySettings;
 use App\Models\Template;
+use App\Services\Ebay\EbayInventoryClient;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -39,9 +42,21 @@ class EbaySchemeController extends Controller
                 'price_multiplier' => $s->price_multiplier,
                 'tax_percent' => $s->tax_percent,
                 'default_stock' => $s->default_stock,
+                'fulfillment_policy_id' => $s->fulfillment_policy_id,
+                'payment_policy_id' => $s->payment_policy_id,
+                'return_policy_id' => $s->return_policy_id,
+                'merchant_location_key' => $s->merchant_location_key,
                 'publication_mode' => $s->publication_mode,
                 'enabled' => $s->enabled,
                 'problems' => $s->problems(),
+                // Braki blokujące AKTYWACJĘ (szkic przejdzie bez nich) — pokazujemy osobno,
+                // żeby nie mylić ich z brakami blokującymi cokolwiek.
+                'missing_for_active' => array_values(array_filter([
+                    $s->fulfillment_policy_id ? null : 'dostawa',
+                    $s->payment_policy_id ? null : 'płatności',
+                    $s->return_policy_id ? null : 'zwroty',
+                    $s->merchant_location_key ? null : 'lokalizacja',
+                ])),
             ]);
 
         return Inertia::render('Connect/Marketplace/Ebay/Schemes/Index', [
@@ -60,6 +75,36 @@ class EbaySchemeController extends Controller
             'marketplaces' => array_keys(EbayScheme::MARKETPLACE_LOCALE),
             'marketplaceLocales' => EbayScheme::MARKETPLACE_LOCALE,
         ]);
+    }
+
+    /**
+     * Polityki biznesowe i lokalizacje magazynowe konta dla danego rynku.
+     * Wołane z ekranu przy zmianie rynku — eBay trzyma je per marketplace, więc lista
+     * dla DE i FR bywa inna. Wymaga OAuth (Account API), stąd czytelny komunikat zamiast błędu.
+     */
+    public function policies(Request $request): JsonResponse
+    {
+        $data = $request->validate(['marketplace' => ['required', 'string', 'max:16']]);
+
+        $settings = EbaySettings::first();
+        if (! $settings || ! $settings->isOauthConnected()) {
+            return response()->json([
+                'error' => 'Konto eBay nie jest połączone — polityk nie da się pobrać (Integracje → Ebay).',
+                'fulfillment' => [], 'payment' => [], 'return' => [], 'locations' => [],
+            ]);
+        }
+
+        try {
+            $client = EbayInventoryClient::fromSettings($settings);
+            $policies = $client->businessPolicies($data['marketplace']);
+
+            return response()->json($policies + ['error' => null, 'locations' => $client->inventoryLocations()]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'error' => $e->getMessage(),
+                'fulfillment' => [], 'payment' => [], 'return' => [], 'locations' => [],
+            ]);
+        }
     }
 
     public function store(Request $request): RedirectResponse
@@ -95,6 +140,10 @@ class EbaySchemeController extends Controller
             'price_multiplier' => ['required', 'numeric', 'min:0.0001', 'max:1000'],
             'tax_percent' => ['required', 'numeric', 'min:0', 'max:100'],
             'default_stock' => ['required', 'integer', 'min:0', 'max:10000'],
+            'fulfillment_policy_id' => ['nullable', 'string', 'max:80'],
+            'payment_policy_id' => ['nullable', 'string', 'max:80'],
+            'return_policy_id' => ['nullable', 'string', 'max:80'],
+            'merchant_location_key' => ['nullable', 'string', 'max:80'],
             'publication_mode' => ['required', 'in:draft,active'],
             'enabled' => ['required', 'boolean'],
         ]);

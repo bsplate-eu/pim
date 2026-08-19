@@ -740,6 +740,8 @@ Route::middleware(['crafter.base', 'auth', 'crafter.verified'])->prefix('admin')
         ->name('connect.marketplace.ebay.schemes.index');
     Route::post('connect/marketplace/ebay/schemes', [App\Http\Controllers\Admin\Connect\Marketplace\EbaySchemeController::class, 'store'])
         ->name('connect.marketplace.ebay.schemes.store');
+    Route::post('connect/marketplace/ebay/schemes/policies', [App\Http\Controllers\Admin\Connect\Marketplace\EbaySchemeController::class, 'policies'])
+        ->name('connect.marketplace.ebay.schemes.policies');
     Route::put('connect/marketplace/ebay/schemes/{scheme}', [App\Http\Controllers\Admin\Connect\Marketplace\EbaySchemeController::class, 'update'])
         ->name('connect.marketplace.ebay.schemes.update');
     Route::delete('connect/marketplace/ebay/schemes/{scheme}', [App\Http\Controllers\Admin\Connect\Marketplace\EbaySchemeController::class, 'destroy'])

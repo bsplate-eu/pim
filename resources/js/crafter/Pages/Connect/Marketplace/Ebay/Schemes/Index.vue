@@ -100,8 +100,44 @@
                     </div>
                 </div>
 
-                <div v-if="form.publication_mode === 'active'" class="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-                    Ten schemat wystawi oferty <span class="font-medium">od razu aktywne</span> — trafią do sprzedaży bez ręcznej akceptacji.
+                <!-- POLITYKI eBAY — wymagane dopiero przy aktywacji, szkic przejdzie bez nich. -->
+                <div class="mt-6 border-t border-gray-200 pt-5">
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <div>
+                            <h3 class="text-sm font-semibold text-gray-900">Polityki eBay i lokalizacja</h3>
+                            <p class="text-xs text-gray-500">
+                                Potrzebne tylko do <span class="font-medium">aktywacji</span> oferty — szkic powstanie i bez nich.
+                            </p>
+                        </div>
+                        <Button variant="outline" color="gray" size="sm" :loading="loadingPolicies" @click="loadPolicies">
+                            Pobierz z konta eBay
+                        </Button>
+                    </div>
+
+                    <p v-if="policyError" class="mt-2 text-xs text-amber-700">{{ policyError }}</p>
+
+                    <div class="mt-3 grid grid-cols-1 gap-4 md:grid-cols-4">
+                        <div v-for="p in policyFields" :key="p.key">
+                            <label class="mb-1 block text-xs font-medium text-gray-600">{{ p.label }}</label>
+                            <select v-if="policies[p.list].length" v-model="form[p.key]" class="w-full rounded-md border-gray-300 text-sm focus:border-primary-500 focus:ring-primary-500">
+                                <option :value="null">— brak —</option>
+                                <option v-for="o in policies[p.list]" :key="o.id ?? o.key" :value="o.id ?? o.key">{{ o.name }}</option>
+                            </select>
+                            <input v-else v-model="form[p.key]" type="text" :placeholder="p.placeholder"
+                                   class="w-full rounded-md border-gray-300 text-sm focus:border-primary-500 focus:ring-primary-500" />
+                        </div>
+                    </div>
+                </div>
+
+                <div v-if="form.publication_mode === 'active'" class="mt-4 rounded-lg border p-3 text-sm"
+                     :class="missingForActive.length ? 'border-red-200 bg-red-50 text-red-800' : 'border-amber-200 bg-amber-50 text-amber-800'">
+                    <template v-if="missingForActive.length">
+                        Tryb „od razu aktywna" nie zadziała bez: <span class="font-semibold">{{ missingForActive.join(', ') }}</span>.
+                        Uzupełnij powyżej albo przełącz na szkic.
+                    </template>
+                    <template v-else>
+                        Ten schemat wystawi oferty <span class="font-medium">od razu aktywne</span> — trafią do sprzedaży bez ręcznej akceptacji.
+                    </template>
                 </div>
 
                 <div class="mt-5 flex items-center gap-3">
@@ -148,8 +184,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, reactive, ref } from "vue";
 import { Link, router } from "@inertiajs/vue3";
+import axios from "axios";
 import { PlusIcon } from "@heroicons/vue/24/outline";
 import { useToast } from "@brackets/vue-toastification";
 import { PageHeader, PageContent, Button, Card, CardHeader, CardContent } from "crafter/Components";
@@ -167,10 +204,16 @@ interface Scheme {
     price_multiplier: number;
     tax_percent: number;
     default_stock: number;
+    fulfillment_policy_id: string | null;
+    payment_policy_id: string | null;
+    return_policy_id: string | null;
+    merchant_location_key: string | null;
     publication_mode: string;
     enabled: boolean;
     problems: string[];
+    missing_for_active?: string[];
 }
+interface PolicyOption { id?: string; key?: string; name: string }
 interface Props {
     schemes: Scheme[];
     categories: Array<{ id: number; marketplace: string; label: string; ready: boolean }>;
@@ -191,6 +234,47 @@ const DEFAULT_VAT: Record<string, number> = {
 
 const expectedLocale = computed(() => props.marketplaceLocales[form.value?.marketplace ?? ""] ?? "en");
 
+// --- Polityki eBay (Account API) ---
+const policyFields = [
+    { key: "fulfillment_policy_id", list: "fulfillment", label: "Dostawa", placeholder: "ID polityki dostawy" },
+    { key: "payment_policy_id", list: "payment", label: "Płatności", placeholder: "ID polityki płatności" },
+    { key: "return_policy_id", list: "return", label: "Zwroty", placeholder: "ID polityki zwrotów" },
+    { key: "merchant_location_key", list: "locations", label: "Lokalizacja magazynu", placeholder: "merchantLocationKey" },
+] as const;
+
+const policies = reactive<Record<string, PolicyOption[]>>({ fulfillment: [], payment: [], return: [], locations: [] });
+const loadingPolicies = ref(false);
+const policyError = ref<string | null>(null);
+
+/**
+ * Polityki są własnością rynku — lista dla DE bywa inna niż dla FR, więc pobieramy je
+ * dla rynku aktualnie wybranego w formularzu, a nie raz na cały ekran.
+ */
+function loadPolicies() {
+    if (!form.value?.marketplace) return;
+    loadingPolicies.value = true;
+    policyError.value = null;
+    axios
+        .post(route("crafter.connect.marketplace.ebay.schemes.policies"), { marketplace: form.value.marketplace })
+        .then((r) => {
+            policies.fulfillment = r.data.fulfillment ?? [];
+            policies.payment = r.data.payment ?? [];
+            policies.return = r.data.return ?? [];
+            policies.locations = r.data.locations ?? [];
+            policyError.value = r.data.error ?? null;
+            if (!policyError.value && !policies.fulfillment.length) {
+                policyError.value = "Konto nie ma jeszcze polityk dla tego rynku — załóż je w panelu eBay (Business Policies).";
+            }
+        })
+        .catch(() => toast.error("Nie udało się pobrać polityk"))
+        .finally(() => { loadingPolicies.value = false; });
+}
+
+/** Czego brakuje do trybu „od razu aktywna" — liczone na żywo z formularza. */
+const missingForActive = computed(() =>
+    policyFields.filter((p) => !form.value?.[p.key]).map((p) => p.label.toLowerCase()),
+);
+
 // Kategoria z innego rynku dałaby ofertę odrzuconą przez eBay — nie pokazujemy jej w ogóle.
 const categoriesForMarket = computed(() =>
     props.categories.filter((c) => c.marketplace === form.value?.marketplace),
@@ -201,7 +285,9 @@ function startNew() {
         id: null, name: "", marketplace: props.marketplaces[0] ?? "EBAY_DE",
         ebay_category_id: null, template_id: null, pricelist_id: null,
         price_multiplier: 1, tax_percent: DEFAULT_VAT[props.marketplaces[0] ?? "EBAY_DE"] ?? 19,
-        default_stock: 5, publication_mode: "draft", enabled: true, problems: [],
+        default_stock: 5,
+        fulfillment_policy_id: null, payment_policy_id: null, return_policy_id: null, merchant_location_key: null,
+        publication_mode: "draft", enabled: true, problems: [],
     };
 }
 
@@ -220,6 +306,10 @@ function save() {
         price_multiplier: form.value.price_multiplier,
         tax_percent: form.value.tax_percent,
         default_stock: form.value.default_stock,
+        fulfillment_policy_id: form.value.fulfillment_policy_id,
+        payment_policy_id: form.value.payment_policy_id,
+        return_policy_id: form.value.return_policy_id,
+        merchant_location_key: form.value.merchant_location_key,
         publication_mode: form.value.publication_mode,
         enabled: form.value.enabled,
     };
