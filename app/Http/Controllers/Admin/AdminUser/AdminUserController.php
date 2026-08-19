@@ -10,6 +10,7 @@ use App\Http\Requests\Admin\AdminUser\IndexAdminUserRequest;
 use App\Http\Requests\Admin\AdminUser\StoreAdminUserRequest;
 use App\Http\Requests\Admin\AdminUser\UpdateAdminUserRequest;
 use App\Models\AdminUser;
+use App\Models\Mail\Account as MailAccount;
 use App\Queries\Filters\FuzzyFilter;
 use App\Queries\Sorts\SortNullsLast;
 use App\Settings\GeneralSettings;
@@ -84,7 +85,38 @@ class AdminUserController extends Controller
             'locales' => app(GeneralSettings::class)->available_locales,
             'defaultLocale' => app(GeneralSettings::class)->default_locale,
             'roles' => $roles,
+            'mailAccounts' => self::mailAccountOptions(),
+            'mailAccountIds' => [],
+            'rolesWithAllMailAccess' => self::rolesWithAllMailAccess(),
         ]);
+    }
+
+    /**
+     * Lista skrzynek Argo Mail do przypisania — bez danych logowania.
+     */
+    private static function mailAccountOptions(): \Illuminate\Support\Collection
+    {
+        return MailAccount::query()
+            ->orderBy('label')
+            ->get(['id', 'label', 'email', 'is_active'])
+            ->map(fn (MailAccount $a) => [
+                'id' => $a->id,
+                'name' => ($a->label ?: $a->email) . ($a->is_active ? '' : ' (nieaktywna)'),
+            ]);
+    }
+
+    /**
+     * Role, które i tak widzą wszystkie skrzynki — front pokazuje wtedy podpowiedź,
+     * że imienne przypisania nic nie zmienią.
+     *
+     * @return array<int, int>
+     */
+    private static function rolesWithAllMailAccess(): array
+    {
+        return Role::query()
+            ->whereHas('permissions', fn ($q) => $q->where('name', MailAccount::PERMISSION_ALL))
+            ->pluck('id')
+            ->all();
     }
 
     /**
@@ -99,6 +131,7 @@ class AdminUserController extends Controller
         $adminUser = AdminUser::create($validated);
 
         $adminUser->roles()->sync([$request->input('role_id')]);
+        $adminUser->mailAccounts()->sync($request->input('mail_account_ids', []));
 
         return redirect()->route('crafter.admin-users.index')->with(['message' => ___('crafter', 'Operation successful')]);
     }
@@ -135,6 +168,9 @@ class AdminUserController extends Controller
             'avatar' => $adminUser->getMedia('avatar'),
             'locales' => app(GeneralSettings::class)->available_locales,
             'roles' => $roles,
+            'mailAccounts' => self::mailAccountOptions(),
+            'mailAccountIds' => $adminUser->mailAccounts()->pluck('mail_accounts.id'),
+            'rolesWithAllMailAccess' => self::rolesWithAllMailAccess(),
         ]);
     }
 
@@ -152,6 +188,13 @@ class AdminUserController extends Controller
 
         if ($request->input('role_id')) {
             $adminUser->roles()->sync([$request->input('role_id')]);
+        }
+
+        // Tylko formularz edycji użytkownika zarządza skrzynkami. Inline'owe
+        // akcje z listy (aktywacja itd.) też lecą przez update() i nie mogą
+        // wyczyścić przypisań tylko dlatego, że nie wysłały tego pola.
+        if ($request->boolean('sync_mail_accounts')) {
+            $adminUser->mailAccounts()->sync($request->input('mail_account_ids', []));
         }
 
         if ($request->wantsJson()) {

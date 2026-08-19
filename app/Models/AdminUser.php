@@ -145,6 +145,21 @@ class AdminUser extends Authenticatable implements MustVerifyEmail, HasMedia
         return $this->invitation_sent_at !== null && $this->invitation_accepted_at === null;
     }
 
+    /**
+     * Skrzynki Argo Mail przypisane temu użytkownikowi imiennie.
+     * Liczy się tylko przy rolach BEZ uprawnienia `crafter.mail-account.all`
+     * — patrz App\Models\Mail\Account::scopeVisibleTo().
+     */
+    public function mailAccounts(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(
+            \App\Models\Mail\Account::class,
+            'mail_account_admin_user',
+            'admin_user_id',
+            'mail_account_id'
+        )->withTimestamps();
+    }
+
     public function assignedTasks(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
     {
         return $this->belongsToMany(ArgoTask::class, 'argo_task_assignees', 'admin_user_id', 'argo_task_id')

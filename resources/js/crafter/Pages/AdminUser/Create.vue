@@ -12,7 +12,14 @@
   </PageHeader>
 
   <PageContent>
-    <Form :locales="locales" :form="form" :submit="submit" :roles="roles" />
+    <Form
+      :locales="locales"
+      :form="form"
+      :submit="submit"
+      :roles="roles"
+      :mailAccounts="mailAccounts"
+      :rolesWithAllMailAccess="rolesWithAllMailAccess"
+    />
   </PageContent>
 </template>
 
@@ -27,11 +34,15 @@ interface Props {
   roles: any[];
   locales?: string[];
   defaultLocale: string;
+  mailAccounts?: { id: number; name: string }[];
+  rolesWithAllMailAccess?: number[];
 }
 
 const props = withDefaults(defineProps<Props>(), {
   locales: () => ["en"],
-  defaultLocale: 'en'
+  defaultLocale: 'en',
+  mailAccounts: () => [],
+  rolesWithAllMailAccess: () => [],
 });
 
 const { form, submit } = useForm<AdminUserForm>(
@@ -45,6 +56,7 @@ const { form, submit } = useForm<AdminUserForm>(
     active: true,
     role_id: null,
     avatar: [],
+    mail_account_ids: [],
   },
   route("crafter.admin-users.store"),
   "post"

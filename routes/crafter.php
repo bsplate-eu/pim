@@ -509,7 +509,9 @@ Route::middleware(['crafter.base', 'auth', 'crafter.verified'])->prefix('admin')
  */
 
 /* Argo Mail — menedżer poczty (agregacja skrzynek IMAP + wysyłka SMTP) */
-Route::middleware(['crafter.base', 'auth', 'crafter.verified'])->prefix('admin')->name('crafter.')->group(function () {
+// 'mail.account' pilnuje, że użytkownik dotyka tylko przypisanych mu skrzynek
+// (rola z 'crafter.mail-account.all' widzi wszystkie) — patrz EnsureMailAccountAccess.
+Route::middleware(['crafter.base', 'auth', 'crafter.verified', 'mail.account'])->prefix('admin')->name('crafter.')->group(function () {
     Route::get('argo-mail', [App\Http\Controllers\Admin\Mail\MailController::class, 'index'])
         ->name('argo-mail.index');
 

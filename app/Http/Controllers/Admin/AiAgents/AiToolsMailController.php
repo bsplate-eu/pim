@@ -23,6 +23,7 @@ class AiToolsMailController extends Controller
     public function administrator(): Response
     {
         $accounts = Account::query()
+            ->visibleTo(auth()->user())
             ->orderBy('label')
             ->get(['id', 'label', 'email', 'color', 'is_active']);
 

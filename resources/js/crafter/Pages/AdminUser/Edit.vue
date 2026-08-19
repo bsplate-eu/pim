@@ -22,6 +22,8 @@
       :adminUser="adminUser"
       :submit="submit"
       :roles="roles"
+      :mailAccounts="mailAccounts"
+      :rolesWithAllMailAccess="rolesWithAllMailAccess"
     />
   </PageContent>
 </template>
@@ -43,9 +45,16 @@ interface Props {
   avatar: UploadedFile[];
   roles: Role[];
   locales: string[];
+  mailAccounts?: { id: number; name: string }[];
+  mailAccountIds?: number[];
+  rolesWithAllMailAccess?: number[];
 }
 
-const props = defineProps<Props>();
+const props = withDefaults(defineProps<Props>(), {
+  mailAccounts: () => [],
+  mailAccountIds: () => [],
+  rolesWithAllMailAccess: () => [],
+});
 
 const form = useForm({
   first_name: props.adminUser.first_name ?? "",
@@ -59,6 +68,10 @@ const form = useForm({
     ? props.adminUser.roles?.[0]?.id
     : null,
   avatar: props.adminUser.avatar ?? [],
+  mail_account_ids: props.mailAccountIds ?? [],
+  // Jawny znacznik: pusta tablica znika przy serializacji do FormData (avatar),
+  // więc bez tego nie dałoby się odebrać użytkownikowi WSZYSTKICH skrzynek.
+  sync_mail_accounts: true,
 });
 
 const submit = () => {

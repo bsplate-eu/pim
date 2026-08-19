@@ -17,6 +17,12 @@
         class="col-span-6 sm:col-span-3"
       />
     </PasswordCard>
+
+    <MailAccountsCard
+      :form="form"
+      :mailAccounts="mailAccounts"
+      :rolesWithAllMailAccess="rolesWithAllMailAccess"
+    />
   </div>
 </template>
 
@@ -27,6 +33,7 @@ import type { AdminUserForm } from "./types";
 import { AdminUser } from "crafter/types/models";
 import ProfileCard from "./Components/ProfileCard.vue";
 import PasswordCard from "./Components/PasswordCard.vue";
+import MailAccountsCard from "./Components/MailAccountsCard.vue";
 
 interface Props {
   form: InertiaForm<AdminUserForm>;
@@ -34,9 +41,13 @@ interface Props {
   adminUser?: AdminUser;
   roles: any[];
   locales?: string[];
+  mailAccounts?: { id: number; name: string }[];
+  rolesWithAllMailAccess?: number[];
 }
 
 const props = withDefaults(defineProps<Props>(), {
   locales: () => ["en"],
+  mailAccounts: () => [],
+  rolesWithAllMailAccess: () => [],
 });
 </script>

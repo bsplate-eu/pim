@@ -3,6 +3,8 @@ export type AdminUserForm = AdminUserPasswordForm &
     locale: string;
     active: boolean;
     role_id: number | null;
+    // Skrzynki Argo Mail przypisane imiennie (patrz MailAccountsCard.vue)
+    mail_account_ids?: number[];
   };
 
 export type AdminUserPasswordForm = {

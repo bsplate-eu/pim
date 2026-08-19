@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Models\Mail\Account;
 use App\Models\Mail\Catalog;
 use App\Models\Mail\Category;
 use App\Models\Mail\Message;
@@ -39,7 +40,12 @@ class MobileController extends Controller
             'q'           => trim((string) $request->get('q')) ?: null,
         ];
 
+        // Widok mobilny czytał maile ze WSZYSTKICH skrzynek — zawężamy do
+        // przypisanych użytkownikowi, tak samo jak desktopowy Argo Mail.
+        $visibleAccountIds = Account::visibleIdsFor($request->user());
+
         $query = Message::query()
+            ->whereIn('account_id', $visibleAccountIds)
             ->where('is_spam', false)
             ->where('is_trashed', false)
             ->with(['catalog:id,name,color', 'category:id,name,color']);
@@ -93,6 +99,7 @@ class MobileController extends Controller
             'categories'  => Category::query()->orderBy('sort')->orderBy('name')->get(['id', 'name', 'color']),
             'colorCounts' => (object) $colorCounts->toArray(),
             'filters'     => $filters,
+            'accounts'    => Account::query()->visibleTo($request->user())->where('is_active', true)->orderBy('id')->get(['id', 'email', 'label']),
         ]);
     }
 

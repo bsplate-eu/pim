@@ -34,6 +34,10 @@ class StoreAdminUserRequest extends FormRequest
             'locale' => ['required', 'string'],
             'role_id' => ['required', 'exists:roles,id'],
             'active' => [Rule::requiredIf(config('crafter.allow_only_active_users_login')), 'boolean'],
+            // Skrzynki Argo Mail widoczne dla tego użytkownika (gdy jego rola
+            // nie ma uprawnienia `crafter.mail-account.all`).
+            'mail_account_ids' => ['sometimes', 'array'],
+            'mail_account_ids.*' => ['integer', 'exists:mail_accounts,id'],
         ];
     }
 

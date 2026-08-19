@@ -18,7 +18,8 @@ class AccountController extends Controller
 {
     public function index(): Response
     {
-        $accounts = Account::query()->orderBy('label')->get();
+        // Konfigurator skrzynek pokazuje tylko te, do których użytkownik ma dostęp.
+        $accounts = Account::query()->visibleTo(auth()->user())->orderBy('label')->get();
 
         $stats = Message::query()
             ->selectRaw('account_id, COUNT(*) as total, SUM(is_read = 0) as unread')
@@ -280,7 +281,7 @@ class AccountController extends Controller
             'username'           => ['nullable', 'string', 'max:190'],
             'password'           => [$ignoreId ? 'nullable' : 'required', 'string', 'max:255'],
             'sync_window_months' => ['required', 'integer', 'between:1,24'],
-            'signature'          => ['nullable', 'string', 'max:5000'],
+            'signature'          => ['nullable', 'string', 'max:50000'],
             'is_active'          => ['nullable', 'boolean'],
         ]);
     }

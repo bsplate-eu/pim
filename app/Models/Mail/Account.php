@@ -2,8 +2,11 @@
 
 namespace App\Models\Mail;
 
+use App\Models\AdminUser;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
@@ -22,6 +25,9 @@ class Account extends Model
 
     public const AUTH_PASSWORD = 'password';
     public const AUTH_OAUTH2 = 'oauth2';
+
+    /** Uprawnienie omijające przypisania — „widzi wszystkie skrzynki". */
+    public const PERMISSION_ALL = 'crafter.mail-account.all';
 
     protected $table = 'mail_accounts';
 
@@ -66,5 +72,56 @@ class Account extends Model
     public function messages(): HasMany
     {
         return $this->hasMany(Message::class, 'account_id');
+    }
+
+    /**
+     * Użytkownicy panelu, którym ta skrzynka została przypisana imiennie.
+     * Ma znaczenie tylko dla ról BEZ uprawnienia `crafter.mail-account.all`.
+     */
+    public function adminUsers(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            AdminUser::class,
+            'mail_account_admin_user',
+            'mail_account_id',
+            'admin_user_id'
+        )->withTimestamps();
+    }
+
+    /**
+     * Skrzynki widoczne dla danego użytkownika.
+     *
+     * Zasada: uprawnienie `crafter.mail-account.all` = wszystkie skrzynki;
+     * bez niego — tylko te przypisane imiennie. Brak użytkownika (kolejki, CLI)
+     * traktujemy jak pełny dostęp, bo tam nie ma kogo ograniczać.
+     */
+    public function scopeVisibleTo(Builder $query, ?AdminUser $user): Builder
+    {
+        if ($user === null || $user->can(self::PERMISSION_ALL)) {
+            return $query;
+        }
+
+        return $query->whereIn('id', self::visibleIdsFor($user));
+    }
+
+    /**
+     * @return array<int, int>
+     */
+    public static function visibleIdsFor(?AdminUser $user): array
+    {
+        if ($user === null || $user->can(self::PERMISSION_ALL)) {
+            return self::query()->pluck('id')->all();
+        }
+
+        return $user->mailAccounts()->pluck('mail_accounts.id')->all();
+    }
+
+    public static function isVisibleTo(?AdminUser $user, int $accountId): bool
+    {
+        if ($user === null || $user->can(self::PERMISSION_ALL)) {
+            return true;
+        }
+
+        return in_array($accountId, self::visibleIdsFor($user), true);
     }
 }

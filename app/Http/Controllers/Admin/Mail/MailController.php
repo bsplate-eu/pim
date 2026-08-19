@@ -33,7 +33,9 @@ class MailController extends Controller
      */
     public function index(Request $request): Response
     {
-        $accounts = Account::query()->orderBy('label')->get();
+        // Tylko skrzynki przypisane użytkownikowi — $accountIds zawęża dalej całą
+        // listę maili, liczniki nieprzeczytanych i taby.
+        $accounts = Account::query()->visibleTo($request->user())->orderBy('label')->get();
         $accountIds = $accounts->pluck('id');
 
         $filters = [
@@ -801,7 +803,11 @@ class MailController extends Controller
             'attachments.*' => ['file', 'max:15360'], // 15 MB / plik
         ]);
 
-        $account = Account::findOrFail($data['account_id']);
+        // Nie da się wysłać „z cudzej" skrzynki — nawet gdyby ktoś podmienił
+        // account_id w żądaniu (middleware mail.account łapie to samo wcześniej).
+        $account = Account::query()
+            ->visibleTo($request->user())
+            ->findOrFail($data['account_id']);
 
         $to = $this->parseEmails($data['to']);
         $cc = $this->parseEmails($data['cc'] ?? '');
