@@ -261,7 +261,7 @@ Route::name('crafter.')->middleware('crafter.base')->prefix('admin')->group(func
 
 
 /* Auto-generated admin routes */
-Route::middleware('crafter.base')->prefix('admin')->name('crafter.')->group(function () {
+Route::middleware(['crafter.base', 'auth', 'crafter.verified'])->prefix('admin')->name('crafter.')->group(function () {
     Route::get('categories', [App\Http\Controllers\Admin\CategoryController::class, 'index'])->name('categories.index');
     Route::get('categories/create', [App\Http\Controllers\Admin\CategoryController::class, 'create'])->name('categories.create');
     Route::post('categories', [App\Http\Controllers\Admin\CategoryController::class, 'store'])->name('categories.store');
@@ -273,7 +273,7 @@ Route::middleware('crafter.base')->prefix('admin')->name('crafter.')->group(func
 
 
 /* Auto-generated admin routes */
-Route::middleware('crafter.base')->prefix('admin')->name('crafter.')->group(function () {
+Route::middleware(['crafter.base', 'auth', 'crafter.verified'])->prefix('admin')->name('crafter.')->group(function () {
     Route::get('ai-tools', [App\Http\Controllers\Admin\AiToolController::class, 'index'])->name('ai-tools.index');
     Route::get('api/ai-tools', [App\Http\Controllers\Admin\AiToolController::class, 'getTools'])->name('api.ai-tools');
     Route::post('api/ai-tools/execute', [App\Http\Controllers\Admin\AiToolController::class, 'execute'])->name('api.ai-tools.execute');
@@ -293,7 +293,7 @@ Route::middleware('crafter.base')->prefix('admin')->name('crafter.')->group(func
 
 
 /* Translation matrix — matryca tłumaczeń (frazy + per-kanał + review queue) */
-Route::middleware('crafter.base')->prefix('admin')->name('crafter.')->group(function () {
+Route::middleware(['crafter.base', 'auth', 'crafter.verified'])->prefix('admin')->name('crafter.')->group(function () {
     Route::get('translation-phrases', [App\Http\Controllers\Admin\TranslationPhraseController::class, 'index'])->name('translation-phrases.index');
     Route::get('translation-phrases/{translationPhrase}/edit', [App\Http\Controllers\Admin\TranslationPhraseController::class, 'edit'])->name('translation-phrases.edit');
     Route::match(['put', 'patch'], 'translation-phrases/{translationPhrase}', [App\Http\Controllers\Admin\TranslationPhraseController::class, 'update'])->name('translation-phrases.update');
