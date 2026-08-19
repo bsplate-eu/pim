@@ -4,6 +4,7 @@ namespace App\Http;
 
 use App\Http\Middleware\Authenticate;
 use App\Http\Middleware\EnsureEmailIsVerified;
+use App\Http\Middleware\EnsureModuleAccess;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\RedirectIfAuthenticated;
 use App\Http\Middleware\SetLocale;
@@ -55,6 +56,9 @@ class Kernel extends HttpKernel
             SetLocale::class,
             TrackLastActive::class,
             HandleInertiaRequests::class,
+            // Bramka modułowa Argo — patrz config/module-permissions.php.
+            // Przepuszcza gościa (od tego jest 'auth') i trasy bez mapowania.
+            EnsureModuleAccess::class,
         ],
 
         'crafter.auth' => [

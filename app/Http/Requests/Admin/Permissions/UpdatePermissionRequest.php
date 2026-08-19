@@ -26,7 +26,11 @@ class UpdatePermissionRequest extends FormRequest
     {
         return [
             'roles' => ['required', 'array'],
-            'roles.permissions.*' => ['required', 'string'],
+            // Poprzednio: 'roles.permissions.*' — ścieżka nigdy nie istniała, więc
+            // nic nie było walidowane. Payload to lista ról, każda z tablicą nazw.
+            'roles.*.id' => ['required', 'integer', 'exists:roles,id'],
+            'roles.*.permissions' => ['present', 'array'],
+            'roles.*.permissions.*' => ['string', 'exists:permissions,name'],
         ];
     }
 

@@ -32,13 +32,14 @@
         <div
           class="text-sm text-slate-900"
           :class="{ 'font-medium': level === 0 }"
+          :title="hasChildren ? String(permissionName) : String(permission)"
         >
           <template v-if="hasChildren">
-            {{ $t("permissions", permissionName) }}
+            {{ permissionLabel(permissionName) }}
           </template>
 
           <template v-else>
-            {{ $t("permissions", permission) }}
+            {{ permissionLabel(permission as string) }}
           </template>
         </div>
       </div>
@@ -93,6 +94,9 @@ import { ChevronDownIcon, ChevronUpIcon } from "@heroicons/vue/24/outline";
 import { FolderIcon } from "@heroicons/vue/24/solid";
 import { Checkbox } from "crafter/Components";
 import { ListingDataCell } from "crafter/Components";
+import { usePermissionLabels } from "crafter/hooks/usePermissionLabels";
+
+const { permissionLabel } = usePermissionLabels();
 
 interface Permission {
   [key: string]: Permission | string;

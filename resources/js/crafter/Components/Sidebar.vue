@@ -273,106 +273,114 @@
                 </SidebarItem>
             </SidebarGroup>
 
-            <!-- Narzędzia AI -->
-            <SidebarItem
-                :href="route('crafter.ai-tools.index')"
-                :icon="CursorArrowRippleIcon"
-                v-can="'crafter.ai-tool.index'"
-            >
-                {{ $t("crafter", "AI Tools") }}
-            </SidebarItem>
-
-            <!-- Tłumaczenia -->
+            <!-- ADMIN — wszystko administracyjne w jednym miejscu: narzędzia AI,
+                 tłumaczenia, konta i uprawnienia, poczta transakcyjna, ustawienia.
+                 Grupa znika w całości, gdy użytkownik nie ma żadnego z tych uprawnień. -->
             <SidebarGroup
-                title="Tłumaczenia"
-                :toggable="true"
-                :open="false"
-                :icon="LanguageIcon"
-                v-can="'crafter.module.translations'"
-            >
-                <SidebarItem :href="route('crafter.translation-phrases.index')">
-                    Matryca tłumaczeń
-                </SidebarItem>
-                <SidebarItem :href="route('crafter.translation-review.index')">
-                    Tłumaczenia (review)
-                </SidebarItem>
-                <SidebarItem :href="route('crafter.translation-logs.index')">
-                    Logi
-                </SidebarItem>
-                <SidebarItem :href="route('crafter.translation-settings.index')">
-                    Ustawienia
-                </SidebarItem>
-            </SidebarGroup>
-
-            <!-- Użytkownicy i uprawnienia -->
-            <SidebarGroup
-                title="Użytkownicy i uprawnienia"
-                :toggable="true"
-                :open="false"
-                :icon="UsersIcon"
-                v-can:any="[
-                    'crafter.admin-user.index',
-                    'crafter.role.index',
-                    'crafter.permission.index',
-                ]"
-            >
-                <SidebarItem
-                    :href="route('crafter.admin-users.index')"
-                    v-can="'crafter.admin-user.index'"
-                >
-                    {{ $t("crafter", "Users") }}
-                </SidebarItem>
-                <SidebarItem
-                    :href="route('crafter.roles.index')"
-                    v-can="'crafter.role.index'"
-                >
-                    Role
-                </SidebarItem>
-                <SidebarItem
-                    :href="route('crafter.permissions.index')"
-                    v-can="'crafter.permission.index'"
-                >
-                    Uprawnienia (macierz)
-                </SidebarItem>
-            </SidebarGroup>
-
-            <!-- [argo-mail-pkg] Poczta (SMTP transakcyjny) -->
-            <SidebarGroup title="Poczta (SMTP)" :toggable="true" :open="false" :icon="EnvelopeIcon" v-can="'crafter.mail.view'">
-                <SidebarItem :href="route('crafter.mail.smtp')">
-                    Mail SMTP
-                </SidebarItem>
-                <SidebarItem :href="route('crafter.mail.templates')">
-                    Szablony maili
-                </SidebarItem>
-                <SidebarItem :href="route('crafter.mail.logs')">
-                    Logi poczty
-                </SidebarItem>
-            </SidebarGroup>
-
-            <!-- System — do 2026-08-19 ta grupa miała v-if="false", przez co Role,
-                 Lokalizacja i Ustawienia były nieosiągalne z menu. -->
-            <SidebarGroup
-                :title="$t('crafter', 'System')"
+                title="Admin"
                 :toggable="true"
                 :open="false"
                 :icon="Cog8ToothIcon"
                 v-can:any="[
+                    'crafter.ai-tool.index',
+                    'crafter.module.translations',
+                    'crafter.admin-user.index',
+                    'crafter.role.index',
+                    'crafter.permission.index',
+                    'crafter.mail.view',
                     'crafter.translation.index',
                     'crafter.settings.edit',
                 ]"
             >
+                <!-- Narzędzia AI — pojedyncza pozycja, bez podgrupy -->
                 <SidebarItem
-                    :href="route('crafter.translations.index')"
-                    v-can="'crafter.translation.index'"
+                    :href="route('crafter.ai-tools.index')"
+                    v-can="'crafter.ai-tool.index'"
                 >
-                    {{ $t("crafter", "Localization") }}
+                    {{ $t("crafter", "AI Tools") }}
                 </SidebarItem>
-                <SidebarItem
-                    :href="route('crafter.settings.index')"
-                    v-can="'crafter.settings.edit'"
+
+                <SidebarSubGroup
+                    title="Tłumaczenia"
+                    v-can="'crafter.module.translations'"
                 >
-                    {{ $t("crafter", "Settings") }}
-                </SidebarItem>
+                    <SidebarItem :href="route('crafter.translation-phrases.index')">
+                        Matryca tłumaczeń
+                    </SidebarItem>
+                    <SidebarItem :href="route('crafter.translation-review.index')">
+                        Tłumaczenia (review)
+                    </SidebarItem>
+                    <SidebarItem :href="route('crafter.translation-logs.index')">
+                        Logi
+                    </SidebarItem>
+                    <SidebarItem :href="route('crafter.translation-settings.index')">
+                        Ustawienia
+                    </SidebarItem>
+                </SidebarSubGroup>
+
+                <SidebarSubGroup
+                    title="Użytkownicy i uprawnienia"
+                    v-can:any="[
+                        'crafter.admin-user.index',
+                        'crafter.role.index',
+                        'crafter.permission.index',
+                    ]"
+                >
+                    <SidebarItem
+                        :href="route('crafter.admin-users.index')"
+                        v-can="'crafter.admin-user.index'"
+                    >
+                        {{ $t("crafter", "Users") }}
+                    </SidebarItem>
+                    <SidebarItem
+                        :href="route('crafter.roles.index')"
+                        v-can="'crafter.role.index'"
+                    >
+                        Role
+                    </SidebarItem>
+                    <SidebarItem
+                        :href="route('crafter.permissions.index')"
+                        v-can="'crafter.permission.index'"
+                    >
+                        Uprawnienia (macierz)
+                    </SidebarItem>
+                </SidebarSubGroup>
+
+                <!-- [argo-mail-pkg] Poczta (SMTP transakcyjny) -->
+                <SidebarSubGroup title="Poczty (SMTP)" v-can="'crafter.mail.view'">
+                    <SidebarItem :href="route('crafter.mail.smtp')">
+                        Mail SMTP
+                    </SidebarItem>
+                    <SidebarItem :href="route('crafter.mail.templates')">
+                        Szablony maili
+                    </SidebarItem>
+                    <SidebarItem :href="route('crafter.mail.logs')">
+                        Logi poczty
+                    </SidebarItem>
+                </SidebarSubGroup>
+
+                <!-- System — do 2026-08-19 ta grupa miała v-if="false", przez co Role,
+                     Lokalizacja i Ustawienia były nieosiągalne z menu. -->
+                <SidebarSubGroup
+                    :title="$t('crafter', 'System')"
+                    v-can:any="[
+                        'crafter.translation.index',
+                        'crafter.settings.edit',
+                    ]"
+                >
+                    <SidebarItem
+                        :href="route('crafter.translations.index')"
+                        v-can="'crafter.translation.index'"
+                    >
+                        {{ $t("crafter", "Localization") }}
+                    </SidebarItem>
+                    <SidebarItem
+                        :href="route('crafter.settings.index')"
+                        v-can="'crafter.settings.edit'"
+                    >
+                        {{ $t("crafter", "Settings") }}
+                    </SidebarItem>
+                </SidebarSubGroup>
             </SidebarGroup>
         </nav>
     </div>
@@ -382,8 +390,6 @@
 import { computed } from "vue";
 import { usePage } from "@inertiajs/vue3";
 import {
-    LanguageIcon,
-    UsersIcon,
     Cog8ToothIcon,
     HomeIcon,
     LinkIcon,
@@ -395,7 +401,6 @@ import {
     MagnifyingGlassIcon
 } from "@heroicons/vue/24/outline";
 import {SidebarItem, SidebarGroup, SidebarSubGroup} from "crafter/Components";
-import {CursorArrowRippleIcon} from "@heroicons/vue/16/solid";
 
 interface ArgoProjectItem {
     id: number;

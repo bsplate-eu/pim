@@ -14,7 +14,6 @@ class IndexAdminUserRequest extends FormRequest
      */
     public function authorize()
     {
-        return true;
         return Gate::allows('crafter.admin-user.index');
     }
 

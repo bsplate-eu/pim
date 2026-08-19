@@ -3,9 +3,11 @@
     <template v-if="typeof value !== 'boolean'">
       <Accordion :default-open="defaultOpen">
         <template #title>
-          <span :class="permissionTitleFontClass()">{{
-            $t("permissions", permissionTitle(key))
-          }}</span>
+          <span
+            :class="permissionTitleFontClass()"
+            :title="permissionTitle(key)"
+            >{{ permissionLabel(permissionTitle(key)) }}</span
+          >
         </template>
         <template #content>
           <Permission
@@ -22,7 +24,7 @@
         v-model="parentPermissions[key]"
         :key="permissionTitle(key)"
         :name="permissionTitle(key)"
-        :label="$t('permissions', permissionTitle(key))"
+        :label="permissionLabel(permissionTitle(key))"
         :value="key"
         :checked="value"
         @change="permissionCheck(permissionTitle(key))"
@@ -35,7 +37,10 @@
 import { Accordion, Checkbox } from "crafter/Components";
 import { computed } from "vue";
 import { trans } from "crafter/plugins/laravel-vue-i18n";
+import { usePermissionLabels } from "crafter/hooks/usePermissionLabels";
 import findLast from "lodash/findLast";
+
+const { permissionLabel } = usePermissionLabels();
 
 interface Props {
   modelValue: any;
