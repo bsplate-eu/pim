@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\Controller;
 use App\Models\Ebay\EbayScheme;
 use App\Models\Ebay\EbayTemplate;
 use App\Models\Product;
+use App\Services\Ebay\Listing\EbayAuctionSkin;
 use App\Services\Ebay\Listing\EbayListingRenderer;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -128,8 +129,19 @@ class EbayTemplateController extends Controller
         }
 
         $title = $renderer->title($template, $product);
+        $description = $renderer->description($template, $product);
+        $images = $renderer->images($product);
 
         return response()->json([
+            // Podgląd aukcji: nasza treść wpuszczona w szablon BaseLinkera, żeby było widać
+            // to, co zobaczy kupujący — z logo, galerią i tabelą parametrów z list opisu.
+            'auction_html' => EbayAuctionSkin::wrap(
+                (string) $template->marketplace,
+                $title['title'],
+                (string) $product->product_code,
+                $images,
+                $description,
+            ),
             'product' => [
                 'id' => $product->id,
                 'product_code' => $product->product_code,
@@ -141,8 +153,8 @@ class EbayTemplateController extends Controller
             'title_max' => EbayListingRenderer::TITLE_MAX,
             'title_truncated' => $title['truncated'],
             'title_original_length' => $title['original_length'],
-            'description' => $renderer->description($template, $product),
-            'images' => $renderer->images($product),
+            'description' => $description,
+            'images' => $images,
             'problems' => $renderer->problems($template, $product),
         ]);
     }

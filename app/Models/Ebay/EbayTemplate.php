@@ -43,6 +43,49 @@ class EbayTemplate extends Model
     }
 
     /**
+     * Zmienne do Blade: to co daje `Product::getVariables()`, ale z wartościami atrybutów
+     * w locale RYNKU.
+     *
+     * `getVariables($locale)` stosuje locale do `name`/`info_*` produktu, ale wartości atrybutów
+     * bierze przez `$values->implode('name', ', ')` — a to zwraca tłumaczenie w bieżącym locale
+     * aplikacji (`pl`), mimo że `AttributeValue.name` jest translatable i ma komplet języków.
+     * Skutek: na niemieckiej aukcji stało „Geschützte Unterbodenelemente: silnik, skrzynię biegów"
+     * zamiast „Motor, Getriebe".
+     *
+     * Poprawiamy to TYLKO dla eBaya — ta sama wada dotyczy `templates` zasilających sklepy,
+     * ale zmiana tam przestawiłaby treść na żywych kanałach i jest osobną decyzją.
+     *
+     * @return array<string,mixed>
+     */
+    private function variables(Product $product): array
+    {
+        $locale = $this->locale();
+        $vars = $product->getVariables($locale);
+
+        foreach ($product->attributeValues->groupBy('attribute_id') as $values) {
+            $attribute = $values->first()?->attribute;
+            if (! $attribute) {
+                continue;
+            }
+
+            $translated = $values
+                ->map(function ($v) use ($locale) {
+                    $t = trim((string) $v->getTranslation('name', $locale));
+
+                    // Pusty slot językowy → zostaw to, co model daje domyślnie, zamiast
+                    // gubić parametr; brak wartości i tak zgłosi walidator kontraktu.
+                    return $t !== '' ? $t : trim((string) $v->name);
+                })
+                ->filter()
+                ->implode(', ');
+
+            $vars['attribute_'.\Illuminate\Support\Str::slug($attribute->slug, '_')] = $translated ?: null;
+        }
+
+        return $vars;
+    }
+
+    /**
      * Blade po zmiennych produktu. Wyjątek renderu (literówka w szablonie, brak zmiennej)
      * NIE może wywrócić listy produktów ani audytu — zwracamy pusty string, a brak treści
      * i tak zgłosi `EbayListingRenderer::problems()` jako blokadę wystawienia.
@@ -54,7 +97,7 @@ class EbayTemplate extends Model
         }
 
         try {
-            $html = Blade::render($template, $product->getVariables($this->locale()));
+            $html = Blade::render($template, $this->variables($product));
         } catch (\Throwable) {
             return '';
         }

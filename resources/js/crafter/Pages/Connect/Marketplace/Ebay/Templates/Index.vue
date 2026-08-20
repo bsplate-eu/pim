@@ -167,12 +167,36 @@
                 </div>
 
                 <div class="mt-4">
-                    <div class="text-xs font-medium uppercase text-gray-500">Opis ({{ preview.description.length }} B HTML)</div>
-                    <!-- Treść z naszego szablonu, po białej liście tagów w rendererze. -->
-                    <div class="prose prose-sm mt-1 max-w-none overflow-x-auto rounded-lg border border-gray-200 p-3" v-html="preview.description" />
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <div class="text-xs font-medium uppercase text-gray-500">
+                            {{ showAuction ? 'Aukcja — tak zobaczy to kupujący' : `Sam opis (${preview.description.length} B HTML)` }}
+                        </div>
+                        <div v-if="preview.auction_html" class="flex gap-1">
+                            <button type="button" class="rounded px-2 py-1 text-xs"
+                                    :class="showAuction ? 'bg-primary-600 text-white' : 'text-gray-600 hover:bg-gray-100'"
+                                    @click="showAuction = true">Podgląd aukcji</button>
+                            <button type="button" class="rounded px-2 py-1 text-xs"
+                                    :class="!showAuction ? 'bg-primary-600 text-white' : 'text-gray-600 hover:bg-gray-100'"
+                                    @click="showAuction = false">Sam opis</button>
+                        </div>
+                    </div>
+
+                    <p v-if="!preview.auction_html" class="mt-1 text-xs text-amber-700">
+                        Brak skóry aukcji dla rynku {{ preview.template.marketplace }} — pokazuję sam opis.
+                        Wgraj plik <code>resources/ebay/skins/{{ preview.template.marketplace }}.html</code>, żeby zobaczyć całą aukcję.
+                    </p>
+
+                    <!-- Skóra aukcji ma CSS ograniczony do `.bspx`, więc nie rozjeżdża panelu.
+                         Treść jest nasza (szablon PIM + szablon BaseLinkera z repo), nie zewnętrzna. -->
+                    <div v-if="showAuction && preview.auction_html"
+                         class="mt-2 overflow-x-auto rounded-lg border border-gray-200 bg-white p-2"
+                         v-html="preview.auction_html" />
+                    <div v-else
+                         class="prose prose-sm mt-2 max-w-none overflow-x-auto rounded-lg border border-gray-200 p-3"
+                         v-html="preview.description" />
                 </div>
 
-                <div class="mt-4">
+                <div v-if="!showAuction" class="mt-4">
                     <div class="text-xs font-medium uppercase text-gray-500">Zdjęcia ({{ preview.images.length }})</div>
                     <div class="mt-1 flex flex-wrap gap-2">
                         <img v-for="(src, i) in preview.images.slice(0, 8)" :key="i" :src="src"
@@ -231,6 +255,8 @@ const preview = ref<any>(null);
 const previewId = ref<number | null>(null);
 const previewLoading = ref(false);
 const previewError = ref<string | null>(null);
+// Domyślnie pokazujemy złożoną aukcję — sam opis mówi mało o tym, jak to wyjdzie kupującemu.
+const showAuction = ref(true);
 const productSearch = ref("");
 const auditId = ref<number | null>(null);
 
