@@ -101,7 +101,9 @@ class AdminUserController extends Controller
             ->get(['id', 'label', 'email', 'is_active'])
             ->map(fn (MailAccount $a) => [
                 'id' => $a->id,
-                'name' => ($a->label ?: $a->email) . ($a->is_active ? '' : ' (nieaktywna)'),
+                'name' => $a->label ?: $a->email,
+                // Front oznacza wyłączone skrzynki plakietką zamiast dopiskiem w nazwie.
+                'is_active' => (bool) $a->is_active,
             ]);
     }
 

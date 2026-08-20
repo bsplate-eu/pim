@@ -1,1 +1,0 @@
-import{R as n,cc as o,cd as p}from"./vendor-945c7bea.js";import{_ as i}from"./_baseIteratee-751b4ffb.js";import{a2 as u}from"./index-9726ea49.js";var y=o,c=i,f=u,l=p;function m(r,a){if(r==null)return{};var s=y(l(r),function(t){return[t]});return a=c(a),f(r,s,function(t,e){return a(t,e[0])})}var _=m;const g=n(_);export{g as a,_ as p};
