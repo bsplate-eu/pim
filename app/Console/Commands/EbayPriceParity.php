@@ -39,7 +39,8 @@ class EbayPriceParity extends Command
         {--max-drop= : pomiń oferty, które spadłyby o więcej niż N%}
         {--max-raise= : pomiń oferty, które wzrosłyby o więcej niż N%}
         {--limit= : ogranicz liczbę wysyłanych ofert (test na małej próbce)}
-        {--show=15 : ile pozycji pokazać w raporcie}';
+        {--show=15 : ile pozycji pokazać w raporcie}
+        {--stale : NIE odfiltrowuj ofert nieobecnych w ostatnim syncu (odradzane)}';
 
     protected $description = 'Wyrównuje ceny naszych aukcji eBay 1:1 do ceny konkurenta (zestawienie aukcja↔aukcja po Art.-Nr)';
 
@@ -63,11 +64,27 @@ class EbayPriceParity extends Command
             return self::FAILURE;
         }
 
-        $offers = EbayOffer::query()
+        // `listing_status` sam z siebie NIE wystarcza: syncActiveListings tylko dopisuje to, co eBay
+        // zwrócił, i nigdy nie oznacza brakujących ofert jako zakończonych — zakończona aukcja zostaje
+        // w bazie jako „Active" na zawsze. Jedyny wiarygodny sygnał to `last_seen`: żywe oferty dostają
+        // świeży znacznik przy każdym syncu. Bez tego filtra eBay odrzuca próby zmiany ceny
+        // („Bereits beendete Angebote können nicht bearbeitet werden").
+        $base = EbayOffer::query()
             ->with('product:id,product_code')
             ->where('marketplace', $marketplace)
-            ->where('listing_status', 'Active')
-            ->get(['id', 'item_id', 'sku', 'title', 'price', 'currency', 'product_id', 'marketplace']);
+            ->where('listing_status', 'Active');
+
+        $stale = 0;
+        if (! $this->option('stale')) {
+            $lastSync = (clone $base)->max('last_seen');
+            if ($lastSync !== null) {
+                $cutoff = \Illuminate\Support\Carbon::parse($lastSync)->subHour();
+                $stale = (clone $base)->where('last_seen', '<', $cutoff)->count();
+                $base->where('last_seen', '>=', $cutoff);
+            }
+        }
+
+        $offers = $base->get(['id', 'item_id', 'sku', 'title', 'price', 'currency', 'product_id', 'marketplace', 'last_seen']);
 
         $maxDrop = $this->option('max-drop') !== null ? (float) $this->option('max-drop') : null;
         $maxRaise = $this->option('max-raise') !== null ? (float) $this->option('max-raise') : null;
@@ -112,7 +129,7 @@ class EbayPriceParity extends Command
             $plan[] = ['offer' => $o, 'old' => $old, 'new' => $target, 'pct' => $pct];
         }
 
-        $this->report($marketplace, $source, $offers->count(), count($index), $stat, $plan, $ambiguous, $guard);
+        $this->report($marketplace, $source, $offers->count(), count($index), $stat, $plan, $ambiguous, $guard, $stale);
 
         if (empty($plan)) {
             $this->info('Nic do zmiany.');
@@ -218,7 +235,7 @@ class EbayPriceParity extends Command
     }
 
     /** @param  list<array{offer:EbayOffer,old:float,new:float,pct:float}>  $plan */
-    private function report(string $marketplace, string $source, int $offerCount, int $refCount, array $stat, array $plan, array $ambiguous, array $guard): void
+    private function report(string $marketplace, string $source, int $offerCount, int $refCount, array $stat, array $plan, array $ambiguous, array $guard, int $stale = 0): void
     {
         $show = (int) $this->option('show');
         $sumOld = array_sum(array_column($plan, 'old'));
@@ -227,6 +244,9 @@ class EbayPriceParity extends Command
 
         $this->info("=== {$marketplace}  (odniesienie: {$source}) ===");
         $this->line('nasze aktywne aukcje            : ' . $offerCount);
+        if ($stale > 0) {
+            $this->line('pominięte jako zakończone       : ' . $stale . '  (status „Active", ale brak w ostatnim syncu)');
+        }
         $this->line('numery części u konkurenta      : ' . $refCount);
         $this->line('bez numeru po naszej stronie    : ' . $stat['brak_numeru']);
         $this->line('konkurent nie ma tego numeru    : ' . $stat['brak_oferty']);
