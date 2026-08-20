@@ -343,14 +343,10 @@ class SumpguardSource extends BaseSource implements SourceInterface
                 'comment' => $item['comment'],
             ];
 
-            // EAN dostawcy (GS1 Rumunia, prefiks 594) jest nadrzędny — nadpisuje nasz kod z puli 590.
-            // Feed przysyłał to pole od dawna, ale importer go nigdy nie czytał, przez co katalog
-            // jechał na własnych EAN-ach i żaden produkt nie zgadzał się z dostawcą (audyt 2026-08-20).
-            // Gdy feed przysyła pusto, pola NIE dotykamy: zostaje nasz kod (14 pozycji bez EAN u dostawcy).
-            $feedEan = $this->normalizeEan((string)($item['ean'] ?? ''));
-            if ($feedEan !== null) {
-                $data['ean'] = $feedEan;
-            }
+            // UWAGA: `products.ean` celowo NIE jest ruszany przez feed.
+            // Kolumna główna „EAN" trzyma NASZE kody z puli GS1 Polska (prefiks 5906118).
+            // Kod dostawcy (GS1 Rumunia, 594) jedzie osobno, do pola „EAN (nadpisanie)"
+            // per integracja — patrz `integrations:ean-overrides`.
 
             $product = $this->products->get($item['id']);
             if ($product) {
@@ -418,36 +414,6 @@ class SumpguardSource extends BaseSource implements SourceInterface
 
         });
 
-    }
-    /**
-     * EAN-13 z feedu → czysty ciąg 13 cyfr albo null.
-     *
-     * Null oznacza „nie ruszaj tego, co mamy" — dotyczy zarówno pustego pola w feedzie,
-     * jak i kodu, który nie przechodzi walidacji. Wpuszczenie uszkodzonego GTIN-u do katalogu
-     * jest gorsze niż zostawienie starego: marketplace'y odbijają ofertę albo, co gorsza,
-     * podpinają ją pod cudzy produkt.
-     */
-    private function normalizeEan(string $raw): ?string
-    {
-        $ean = preg_replace('/\D/', '', $raw);
-
-        if ($ean === '' || strlen($ean) !== 13) {
-            if ($ean !== '') {
-                Log::warning('Sumpguard: EAN z feedu odrzucony (zła długość)', ['ean' => $raw]);
-            }
-            return null;
-        }
-
-        $sum = 0;
-        for ($i = 0; $i < 12; $i++) {
-            $sum += ((int)$ean[$i]) * ($i % 2 ? 3 : 1);
-        }
-        if (((10 - $sum % 10) % 10) !== (int)$ean[12]) {
-            Log::warning('Sumpguard: EAN z feedu odrzucony (zła cyfra kontrolna)', ['ean' => $ean]);
-            return null;
-        }
-
-        return $ean;
     }
 
     private function buildNameTranslations(string $raw): array
