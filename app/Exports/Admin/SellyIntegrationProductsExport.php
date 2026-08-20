@@ -190,6 +190,9 @@ class SellyIntegrationProductsExport implements FromCollection, WithHeadings, Wi
             "Zdjecie_glowne" => array_shift($images),
             "Zdjecia" => implode(',',$images),
             "Kolejnosc_w_kategorii" => 0, // uzupełniane w assignCategoryOrder()
+            // Dopisane na końcu, żeby nie przesunąć kolumn już zmapowanych w panelu Selly.
+            // WYMAGA włączenia odpowiadającej kolumny w integratorze — jak „Kategoria ID" (c_7).
+            "Kod_kreskowy" => (string)($product->ean ?? ''),
         ];
 
         // metadane do sortowania w kategorii (materiał / rocznik / typ / zestaw)
@@ -354,6 +357,7 @@ class SellyIntegrationProductsExport implements FromCollection, WithHeadings, Wi
             "Zdjęcie główne",
             "Zdjęcia",
             "Kolejność w kategorii",
+            "Kod kreskowy",
         ];
     }
 
