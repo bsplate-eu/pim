@@ -522,6 +522,8 @@ Route::middleware(['crafter.base', 'auth', 'crafter.verified', 'mail.account'])-
         ->name('argo-mail.messages.thread');
     Route::get('argo-mail/messages/{message}/attachments/{attachment}', [App\Http\Controllers\Admin\Mail\MailController::class, 'downloadAttachment'])
         ->name('argo-mail.messages.attachment');
+    Route::get('argo-mail/messages/{message}/inline', [App\Http\Controllers\Admin\Mail\MailController::class, 'inlineImage'])
+        ->name('argo-mail.messages.inline');
 
     // Skrzynki (konta) — lista + wpięcie + test połączenia
     Route::get('argo-mail/accounts', [App\Http\Controllers\Admin\Mail\AccountController::class, 'index'])
@@ -556,6 +558,8 @@ Route::middleware(['crafter.base', 'auth', 'crafter.verified', 'mail.account'])-
         ->name('argo-mail.catalogs.move');
     Route::put('argo-mail/catalogs/{catalog}', [App\Http\Controllers\Admin\Mail\CatalogController::class, 'update'])
         ->name('argo-mail.catalogs.update');
+    Route::post('argo-mail/catalogs/{catalog}/collapse', [App\Http\Controllers\Admin\Mail\CatalogController::class, 'collapse'])
+        ->name('argo-mail.catalogs.collapse');
     Route::delete('argo-mail/catalogs/{catalog}', [App\Http\Controllers\Admin\Mail\CatalogController::class, 'destroy'])
         ->name('argo-mail.catalogs.destroy');
 
@@ -595,6 +599,10 @@ Route::middleware(['crafter.base', 'auth', 'crafter.verified', 'mail.account'])-
     // Operacje masowe (multi-select)
     Route::post('argo-mail/messages/bulk', [App\Http\Controllers\Admin\Mail\MailController::class, 'bulk'])
         ->name('argo-mail.messages.bulk');
+    Route::post('argo-mail/messages/empty-trash', [App\Http\Controllers\Admin\Mail\MailController::class, 'emptyTrash'])
+        ->name('argo-mail.messages.empty-trash');
+    Route::post('argo-mail/messages/empty-spam', [App\Http\Controllers\Admin\Mail\MailController::class, 'emptySpam'])
+        ->name('argo-mail.messages.empty-spam');
     Route::post('argo-mail/messages/color', [App\Http\Controllers\Admin\Mail\MailController::class, 'setColor'])
         ->name('argo-mail.messages.color');
 
@@ -615,6 +623,9 @@ Route::middleware(['crafter.base', 'auth', 'crafter.verified', 'mail.account'])-
     // Wysyłka (nowa / odpowiedź / przekazanie)
     Route::post('argo-mail/send', [App\Http\Controllers\Admin\Mail\MailController::class, 'send'])
         ->name('argo-mail.send');
+
+    // Podpowiedzi adresow do kompozytora (autouzupelnianie Do/DW)
+    Route::get('argo-mail/contacts', [App\Http\Controllers\Admin\Mail\MailController::class, 'contacts'])->name('argo-mail.contacts');
 });
 
 
@@ -758,6 +769,15 @@ Route::middleware(['crafter.base', 'auth', 'crafter.verified'])->prefix('admin')
         ->name('connect.marketplace.ebay.listing.publish-preview');
     Route::post('connect/marketplace/ebay/listing/publish', [App\Http\Controllers\Admin\Connect\Marketplace\EbayListingController::class, 'publish'])
         ->name('connect.marketplace.ebay.listing.publish');
+
+    Route::get('connect/marketplace/ebay/ktype', [App\Http\Controllers\Admin\Connect\Marketplace\EbayKtypeController::class, 'index'])
+        ->name('connect.marketplace.ebay.ktype.index');
+    Route::get('connect/marketplace/ebay/ktype/{offer}/fitment', [App\Http\Controllers\Admin\Connect\Marketplace\EbayKtypeController::class, 'fitment'])
+        ->name('connect.marketplace.ebay.ktype.fitment');
+    Route::post('connect/marketplace/ebay/ktype/refresh', [App\Http\Controllers\Admin\Connect\Marketplace\EbayKtypeController::class, 'refresh'])
+        ->name('connect.marketplace.ebay.ktype.refresh');
+    Route::post('connect/marketplace/ebay/ktype/run', [App\Http\Controllers\Admin\Connect\Marketplace\EbayKtypeController::class, 'run'])
+        ->name('connect.marketplace.ebay.ktype.run');
 });
 
 

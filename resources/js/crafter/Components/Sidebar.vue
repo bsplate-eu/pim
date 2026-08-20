@@ -189,6 +189,9 @@
                         <SidebarItem :href="route('crafter.connect.marketplace.ebay.listing.index')">
                             Wystawianie
                         </SidebarItem>
+                        <SidebarItem :href="route('crafter.connect.marketplace.ebay.ktype.index')">
+                            kType (pojazdy)
+                        </SidebarItem>
                         <SidebarItem :href="route('crafter.connect.marketplace.ebay.schemes.index')">
                             Schematy
                         </SidebarItem>
