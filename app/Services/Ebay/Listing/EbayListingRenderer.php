@@ -92,8 +92,13 @@ class EbayListingRenderer
             $problems[] = "tytuł przycięty z {$title['original_length']} do ".self::TITLE_MAX.' znaków';
         }
 
-        if (trim(strip_tags($this->description($template, $product))) === '') {
+        $description = $this->description($template, $product);
+        if (trim(strip_tags($description)) === '') {
             $problems[] = 'pusty opis';
+        } else {
+            // Kontrakt PIM–eBay: tabela parametrów na aukcji powstaje ze struktury opisu,
+            // więc jej naruszenie psuje WYGLĄD oferty, a nie tylko treść.
+            $problems = array_merge($problems, EbayDescriptionContract::check($description, (string) $template->marketplace));
         }
 
         if ($this->images($product) === []) {
