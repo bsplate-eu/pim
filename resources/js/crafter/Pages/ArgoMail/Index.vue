@@ -136,9 +136,9 @@
                     <option value="">Kategoria…</option>
                     <option v-for="c in categories" :key="c.id" :value="c.id">{{ c.name }}</option>
                 </select>
-                <select v-if="assignableUsers.length" @change="bulkSelect('user', $event)" class="text-xs rounded-md border-gray-300 py-1">
+                <select v-if="assignUserList.length" @change="bulkSelect('user', $event)" class="text-xs rounded-md border-gray-300 py-1">
                     <option value="">Osoba…</option>
-                    <option v-for="u in assignableUsers" :key="u.id" :value="u.id">{{ u.name }}</option>
+                    <option v-for="u in assignUserList" :key="u.id" :value="u.id">{{ u.name }}</option>
                 </select>
                 <span class="text-xs text-gray-500 ml-1">Kolor:</span>
                 <button type="button" @click="bulkColor('red')" class="h-5 w-5 rounded-full bg-red-500 ring-1 ring-gray-300" title="Czerwony (1)"></button>
@@ -354,11 +354,11 @@
                         Na stałe (kolejne od tego nadawcy)
                     </label>
                     <div class="max-h-36 overflow-y-auto">
-                        <button v-for="u in assignableUsers" :key="u.id" type="button" :class="ctxItem" @click="assignUserCtx(u.id)">
+                        <button v-for="u in assignUserList" :key="u.id" type="button" :class="ctxItem" @click="assignUserCtx(u.id)">
                             <span class="h-2.5 w-2.5 rounded-full" :style="{ backgroundColor: u.color || '#9ca3af' }"></span> {{ u.name }}
                         </button>
                         <button type="button" :class="[ctxItem, 'text-gray-500']" @click="assignUserCtx(null)">— bez osoby —</button>
-                        <div v-if="assignableUsers.length === 0" class="px-3 py-1.5 text-xs text-gray-400">Brak aktywnych użytkowników</div>
+                        <div v-if="assignUserList.length === 0" class="px-3 py-1.5 text-xs text-gray-400">Brak aktywnych użytkowników</div>
                     </div>
                     <div class="border-t border-gray-100 my-1"></div>
                     <div class="px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-gray-400">Kategoria</div>
@@ -545,8 +545,12 @@ import RecipientInput from "./RecipientInput.vue";
 const props = defineProps<{
     accounts: Array<{ id: number; label: string; email: string; color: string | null; is_active: boolean; sync_status: string; last_sync_at: string | null; unread: number; signature?: string | null }>;
     users: Array<{ id: number; name: string; color: string | null; unread: number }>;
-    /** Wszyscy aktywni użytkownicy PIM — do przypisywania maila (skonfigurowane „Osoby" na górze). */
-    assignableUsers: Array<{ id: number; name: string; color: string | null; is_mail_user: boolean }>;
+    /**
+     * Wszyscy aktywni użytkownicy PIM — do przypisywania maila (skonfigurowane „Osoby" na górze).
+     * OPCJONALNY celowo: build frontu bywa wdrożony przed backendem (public/build jest w repo),
+     * a brak propa nie może wywalić całej strony — patrz assignUserList().
+     */
+    assignableUsers?: Array<{ id: number; name: string; color: string | null; is_mail_user: boolean }>;
     messages: any;
     categories: Array<{ id: number; name: string; color: string; unread: number }>;
     catalogs: Array<{ id: number; name: string; color: string | null; parent_id: number | null; depth: number; unread: number; total: number; collapsed: boolean }>;
@@ -567,6 +571,10 @@ const localFilters = reactive({ q: props.filters.q ?? "", unread: props.filters.
 const collapsedCats = ref<Set<number>>(new Set(props.catalogs.filter((c) => c.collapsed).map((c) => c.id)));
 
 // Adres skrzynki (konta), na którą przyszedł mail — do etykiety „Do:" w liście (wspólna skrzynka 10 kont).
+// Lista osób do przypisania maila. Fallback na „Osoby" (props.users), gdy backend jest starszy
+// niż front i nie przysyła assignableUsers — bez tego cała strona leciała na undefined.length.
+const assignUserList = computed(() => props.assignableUsers ?? props.users ?? []);
+
 const accountEmailById = computed(() => {
     const m = new Map<number, string>();
     props.accounts.forEach((a) => m.set(a.id, a.email));
