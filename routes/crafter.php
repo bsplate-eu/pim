@@ -770,6 +770,13 @@ Route::middleware(['crafter.base', 'auth', 'crafter.verified'])->prefix('admin')
     Route::post('connect/marketplace/ebay/listing/publish', [App\Http\Controllers\Admin\Connect\Marketplace\EbayListingController::class, 'publish'])
         ->name('connect.marketplace.ebay.listing.publish');
 
+    Route::get('connect/marketplace/ebay/templates', [App\Http\Controllers\Admin\Connect\Marketplace\EbayTemplateController::class, 'index'])
+        ->name('connect.marketplace.ebay.templates.index');
+    Route::post('connect/marketplace/ebay/templates/preview', [App\Http\Controllers\Admin\Connect\Marketplace\EbayTemplateController::class, 'preview'])
+        ->name('connect.marketplace.ebay.templates.preview');
+    Route::post('connect/marketplace/ebay/templates/audit', [App\Http\Controllers\Admin\Connect\Marketplace\EbayTemplateController::class, 'audit'])
+        ->name('connect.marketplace.ebay.templates.audit');
+
     Route::get('connect/marketplace/ebay/ktype', [App\Http\Controllers\Admin\Connect\Marketplace\EbayKtypeController::class, 'index'])
         ->name('connect.marketplace.ebay.ktype.index');
     Route::get('connect/marketplace/ebay/ktype/{offer}/fitment', [App\Http\Controllers\Admin\Connect\Marketplace\EbayKtypeController::class, 'fitment'])

@@ -195,6 +195,9 @@
                         <SidebarItem :href="route('crafter.connect.marketplace.ebay.schemes.index')">
                             Schematy
                         </SidebarItem>
+                        <SidebarItem :href="route('crafter.connect.marketplace.ebay.templates.index')">
+                            Szablony
+                        </SidebarItem>
                         <SidebarItem :href="route('crafter.connect.marketplace.ebay.categories.index')">
                             Kategorie i parametry
                         </SidebarItem>
