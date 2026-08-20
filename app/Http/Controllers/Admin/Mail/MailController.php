@@ -17,7 +17,9 @@ use App\Models\Mail\ThreadExclude;
 use App\Services\Mail\MailSyncService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
 use Symfony\Component\HttpFoundation\Response as HttpResponse;
@@ -111,10 +113,12 @@ class MailController extends Controller
         }
 
         // ===== Grupowanie w wątki (konwersacje) =====
-        // Strona = lista wątków (po thread_key), porządek wg ostatniego maila / paska sortowania.
+        // Strona = lista wątków (po thread_key). W KOSZU i SPAMIE grupujemy po `id` (każdy mail osobno),
+        // by pokazać WSZYSTKIE maile — inaczej skasowane bez thread_key (SQL zlepia NULL-e w 1 grupę) lub z jednej rozmowy zlepiają się w jeden wiersz.
+        $groupCol = ($filters['trash'] || $filters['spam']) ? 'id' : 'thread_key';
         $threadPage = (clone $query)->setEagerLoads([])->reorder()
-            ->selectRaw('thread_key, MAX(date) as last_date, COUNT(*) as cnt, SUM(CASE WHEN is_read = 0 THEN 1 ELSE 0 END) as unread_cnt')
-            ->groupBy('thread_key')
+            ->selectRaw("{$groupCol} as thread_key, MAX(date) as last_date, COUNT(*) as cnt, SUM(CASE WHEN is_read = 0 THEN 1 ELSE 0 END) as unread_cnt")
+            ->groupBy($groupCol)
             ->when($filters['sort'] === 'date_asc', fn ($q) => $q->orderBy('last_date'))
             ->when($filters['sort'] === 'subject', fn ($q) => $q->orderByRaw("COALESCE(NULLIF(MIN(subject), ''), '~') asc"))
             ->when($filters['sort'] === 'sender', fn ($q) => $q->orderByRaw("COALESCE(NULLIF(MIN(from_name), ''), MIN(from_email)) asc"))
@@ -125,10 +129,10 @@ class MailController extends Controller
         // Maile wątków z bieżącej strony (reprezentant wiersza + lista id do zaznaczania) — bez treści.
         $pageKeys = collect($threadPage->items())->pluck('thread_key')->filter()->values();
         $members = $pageKeys->isEmpty() ? collect() : (clone $query)->reorder()
-            ->whereIn('thread_key', $pageKeys->all())
+            ->whereIn($groupCol, $pageKeys->all())
             ->orderByDesc('date')->orderByDesc('id')
             ->get(['id', 'account_id', 'thread_key', 'from_email', 'from_name', 'subject', 'snippet', 'date', 'is_read', 'is_flagged', 'has_attachments', 'color_flag', 'category_id', 'catalog_id', 'assigned_admin_user_id', 'is_sent', 'to_recipients'])
-            ->groupBy('thread_key');
+            ->groupBy($groupCol);
 
         $threadData = collect($threadPage->items())->map(function ($t) use ($members, $userColors) {
             $group = $members[$t->thread_key] ?? collect();
@@ -156,6 +160,7 @@ class MailController extends Controller
                     ])->all()
                     : [],
                 'account_id'      => $rep->account_id,
+                'is_sent'         => (bool) $rep->is_sent,
                 'from_email'      => $rep->from_email,
                 'from_name'       => $this->threadParticipants($group),
                 'subject'         => $rep->subject,
@@ -212,6 +217,11 @@ class MailController extends Controller
                 'color'  => $mu->color,
                 'unread' => (int) ($userUnread[$mu->admin_user_id] ?? 0),
             ])->values(),
+            // Do przypisywania maila (prawy-klik / akcje masowe) bierzemy WSZYSTKICH aktywnych
+            // użytkowników PIM, nie tylko skonfigurowane „Osoby" — inaczej na świeżej instalacji
+            // (mail_users puste) menu „Przypisz osobę" jest puste. „Osoby" nadal sterują tabami
+            // filtrów i kolorami etykiet; kto jest na tej liście, idzie na górę.
+            'assignableUsers' => $this->assignableUsers($userColors),
             'categories'  => Category::query()->orderBy('sort')->orderBy('name')->get(['id', 'name', 'color'])
                 ->map(fn (Category $c) => [
                     'id'     => $c->id,
@@ -328,19 +338,24 @@ class MailController extends Controller
         }
 
         $message->load([
-            'attachments:id,message_id,part_index,filename,mime,size',
+            'attachments:id,message_id,part_index,filename,mime,size,cost_planner_item_id',
             'category:id,name,color',
             'catalog:id,name,color',
             'assignedUser:id,first_name,last_name,email',
+            'account:id,email,label',
         ]);
 
         $userColor = $message->assigned_admin_user_id
             ? (MailUser::where('admin_user_id', $message->assigned_admin_user_id)->value('color') ?? '#9ca3af')
             : null;
 
+        $costMap = $this->costMapFor($message->attachments->pluck('cost_planner_item_id'));
+
         return response()->json([
             'id'            => $message->id,
             'message_id'    => $message->message_id,
+            'account_id'    => $message->account_id,
+            'account_email' => $message->account?->email,
             'subject'       => $message->subject,
             'from_email'    => $message->from_email,
             'from_name'     => $message->from_name,
@@ -349,18 +364,13 @@ class MailController extends Controller
             'date'          => $message->date?->toIso8601String(),
             'is_sent'       => $message->is_sent,
             'has_attachments' => $message->has_attachments,
-            'body_html'     => $message->body_html,
+            'body_html'     => $this->inlineBody($message),
             'body_text'     => $message->body_text,
             'category'      => $message->category ? ['id' => $message->category->id, 'name' => $message->category->name, 'color' => $message->category->color] : null,
             'catalog_id'    => $message->catalog_id,
             'catalog'       => $message->catalog ? ['id' => $message->catalog->id, 'name' => $message->catalog->name, 'color' => $message->catalog->color] : null,
             'assigned_user' => $message->assignedUser ? ['id' => $message->assigned_admin_user_id, 'name' => $this->userName($message->assignedUser), 'color' => $userColor] : null,
-            'attachments'   => $message->attachments->map(fn (Attachment $a) => [
-                'id'       => $a->id,
-                'filename' => $a->filename,
-                'mime'     => $a->mime,
-                'size'     => $a->size,
-            ]),
+            'attachments'   => $message->attachments->map(fn (Attachment $a) => $this->attachmentArr($a, $costMap)),
         ]);
     }
 
@@ -381,11 +391,13 @@ class MailController extends Controller
 
         $messages = $query->orderBy('date')->orderBy('id')
             ->with([
-                'attachments:id,message_id,part_index,filename,mime,size',
+                'attachments:id,message_id,part_index,filename,mime,size,cost_planner_item_id',
                 'category:id,name,color',
                 'catalog:id,name,color',
                 'assignedUser:id,first_name,last_name,email',
             ])->get();
+
+        $costMap = $this->costMapFor($messages->pluck('attachments')->flatten()->pluck('cost_planner_item_id'));
 
         // oznacz całą rozmowę jako przeczytaną
         $unreadIds = $messages->where('is_read', false)->pluck('id');
@@ -396,7 +408,7 @@ class MailController extends Controller
         return response()->json([
             'thread_key' => $message->thread_key,
             'subject'    => $message->subject,
-            'messages'   => $messages->map(function (Message $m) {
+            'messages'   => $messages->map(function (Message $m) use ($costMap) {
                 $userColor = $m->assigned_admin_user_id
                     ? (MailUser::where('admin_user_id', $m->assigned_admin_user_id)->value('color') ?? '#9ca3af')
                     : null;
@@ -413,7 +425,7 @@ class MailController extends Controller
                     'date'            => $m->date?->toIso8601String(),
                     'is_sent'         => $m->is_sent,
                     'is_read'         => true,
-                    'body_html'       => $m->body_html,
+                    'body_html'       => $this->inlineBody($m),
                     'body_text'       => $m->body_text,
                     'has_attachments' => $m->has_attachments,
                     'color_flag'      => $m->color_flag,
@@ -421,12 +433,7 @@ class MailController extends Controller
                     'catalog'         => $m->catalog ? ['id' => $m->catalog->id, 'name' => $m->catalog->name, 'color' => $m->catalog->color] : null,
                     'category'        => $m->category ? ['id' => $m->category->id, 'name' => $m->category->name, 'color' => $m->category->color] : null,
                     'assigned_user'   => $m->assignedUser ? ['id' => $m->assigned_admin_user_id, 'name' => $this->userName($m->assignedUser), 'color' => $userColor] : null,
-                    'attachments'     => $m->attachments->map(fn (Attachment $a) => [
-                        'id'       => $a->id,
-                        'filename' => $a->filename,
-                        'mime'     => $a->mime,
-                        'size'     => $a->size,
-                    ]),
+                    'attachments'     => $m->attachments->map(fn (Attachment $a) => $this->attachmentArr($a, $costMap)),
                 ];
             }),
         ]);
@@ -771,6 +778,54 @@ class MailController extends Controller
     }
 
     /**
+     * Wyczyść kosz — TRWALE usuwa wszystkie maile w koszu (is_trashed = true) ze wszystkich kont.
+     * Załączniki kasują się kaskadowo (FK cascadeOnDelete). Operacja NIEODWRACALNA.
+     */
+    public function emptyTrash(): JsonResponse
+    {
+        // Czyszczenie obejmuje wyłącznie skrzynki widoczne dla tego użytkownika.
+        $accountIds = Account::query()->visibleTo(auth()->user())->pluck('id');
+        $base = Message::query()->whereIn('account_id', $accountIds)->where('is_trashed', true);
+
+        $this->purgeLocalAttachmentFiles($base->clone());
+        $count = $base->delete();
+
+        return response()->json(['ok' => true, 'count' => $count]);
+    }
+
+    /**
+     * Wyczyść spam — TRWALE usuwa wszystkie maile oznaczone jako spam (is_spam = true).
+     * Lista zablokowanych nadawców (SpamSender) ZOSTAJE — kolejne maile od nich dalej trafią do spamu.
+     * Załączniki kaskadowo. Operacja NIEODWRACALNA.
+     */
+    public function emptySpam(): JsonResponse
+    {
+        // Czyszczenie obejmuje wyłącznie skrzynki widoczne dla tego użytkownika.
+        $accountIds = Account::query()->visibleTo(auth()->user())->pluck('id');
+        $base = Message::query()->whereIn('account_id', $accountIds)->where('is_spam', true);
+
+        $this->purgeLocalAttachmentFiles($base->clone());
+        $count = $base->delete();
+
+        return response()->json(['ok' => true, 'count' => $count]);
+    }
+
+    /**
+     * Usuwa z dysku pliki lokalnych załączników (maile wysłane) dla wiadomości z podanego zapytania,
+     * ZANIM skasujemy je z bazy (kaskada DB kasuje same wiersze mail_attachments, ale nie pliki).
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder<Message>  $messageQuery
+     */
+    private function purgeLocalAttachmentFiles($messageQuery): void
+    {
+        Attachment::query()
+            ->whereNotNull('storage_path')
+            ->whereIn('message_id', $messageQuery->select('id'))
+            ->pluck('storage_path')
+            ->each(fn ($path) => $path ? Storage::disk('local')->delete($path) : null);
+    }
+
+    /**
      * Kolor-flaga (czerwony/zielony/niebieski) na zaznaczonych wiadomościach.
      */
     public function setColor(Request $request): JsonResponse
@@ -831,6 +886,22 @@ class MailController extends Controller
             $bodyHtml = nl2br(e($rawBody));
         }
 
+        // ── Stopka (podpis) konta ────────────────────────────────────────────
+        // Doklejamy ją TU, na backendzie, jako SUROWY HTML — żeby pełny design
+        // stopki (tabela, kolory, logo) NIE był obcinany przez edytor TipTap
+        // w oknie pisania. Dlatego front (bodyFor) już jej nie wstawia.
+        $sig = trim((string) ($account->signature ?? ''));
+        if ($sig !== '') {
+            $sigIsHtml = (bool) preg_match('/<[a-z][\s\S]*>/iu', $sig);
+            $sigHtml   = $sigIsHtml ? $sig : nl2br(e($sig));
+            $sigText   = trim($sigIsHtml ? strip_tags($sig) : $sig);
+
+            $bodyHtml = ($bodyHtml !== '' ? $bodyHtml : '').'<br><br>'.$sigHtml;
+            if ($sigText !== '') {
+                $bodyText = trim($bodyText)."\n\n-- \n".$sigText;
+            }
+        }
+
         $previousTimeout = ini_get('default_socket_timeout');
         ini_set('default_socket_timeout', '30');
 
@@ -877,7 +948,9 @@ class MailController extends Controller
         );
         $uid = (int) Message::where('account_id', $account->id)->where('folder_id', $sentFolder->id)->max('uid') + 1;
 
-        Message::create([
+        $files = array_values(array_filter($request->file('attachments', []), fn ($f) => $f && $f->isValid()));
+
+        $sentMessage = Message::create([
             'account_id'      => $account->id,
             'folder_id'       => $sentFolder->id,
             'uid'             => $uid,
@@ -890,14 +963,98 @@ class MailController extends Controller
             'snippet'         => mb_substr(trim(preg_replace('/\s+/', ' ', $bodyText) ?? ''), 0, 200),
             'body_html'       => $bodyHtml,
             'body_text'       => $bodyText,
-            'has_attachments' => ! empty($request->file('attachments')),
+            'has_attachments' => ! empty($files),
             'is_read'         => true,
             'is_sent'         => true,
             'thread_key'      => Message::threadKeyFor($subject, $to[0] ?? ''),
             'catalog_id'      => $this->sendCatalogId($account),
         ]);
 
+        // Zapisz treści załączników lokalnie (mail wysłany nie jest na IMAP → nie da się ich
+        // dociągnąć później). part_index tylko dla porządku; pobieranie idzie po storage_path.
+        foreach ($files as $idx => $file) {
+            $safeName = preg_replace('/[^\w.\-]+/u', '_', $file->getClientOriginalName()) ?: ('zalacznik-'.($idx + 1));
+            $stored = $file->storeAs("mail/sent/{$sentMessage->id}", $idx.'_'.$safeName, 'local');
+
+            $sentMessage->attachments()->create([
+                'part_index'   => $idx,
+                'filename'     => mb_substr($file->getClientOriginalName(), 0, 255),
+                'mime'         => $file->getClientMimeType(),
+                'size'         => (int) $file->getSize() ?: null,
+                'storage_path' => $stored,
+            ]);
+        }
+
         return response()->json(['ok' => true]);
+    }
+
+    /**
+     * Podpowiedzi adresów e-mail do kompozytora (autouzupełnianie pól Do/DW).
+     *
+     * Źródło: nadawcy odebranych wiadomości (from_email/from_name) + odbiorcy wysłanych
+     * (to_recipients/cc_recipients). Dedup po adresie (lowercase), ranking po częstości użycia.
+     */
+    public function contacts(Request $request): JsonResponse
+    {
+        $q = mb_strtolower(trim((string) $request->query('q', '')));
+
+        // Mapa [email => ['email','name','count']]; $add scala duplikaty i uzupełnia brakującą nazwę.
+        $contacts = [];
+        $add = function (?string $email, ?string $name, int $count = 1) use (&$contacts) {
+            $email = mb_strtolower(trim((string) $email));
+            if ($email === '' || ! str_contains($email, '@')) {
+                return;
+            }
+            $name = trim((string) $name);
+            if (! isset($contacts[$email])) {
+                $contacts[$email] = ['email' => $email, 'name' => $name, 'count' => 0];
+            } elseif ($contacts[$email]['name'] === '' && $name !== '') {
+                $contacts[$email]['name'] = $name;
+            }
+            $contacts[$email]['count'] += $count;
+        };
+
+        // 1) Nadawcy odebranych — grupowane w SQL (od razu ranking, bez ładowania wszystkich maili).
+        $from = Message::query()
+            ->whereNotNull('from_email')->where('from_email', '!=', '')
+            ->where('is_sent', false)->where('is_spam', false);
+        if ($q !== '') {
+            $from->where(function ($w) use ($q) {
+                $w->whereRaw('LOWER(from_email) LIKE ?', ['%'.$q.'%'])
+                    ->orWhereRaw('LOWER(from_name) LIKE ?', ['%'.$q.'%']);
+            });
+        }
+        $from->selectRaw('LOWER(from_email) as email, MAX(from_name) as name, COUNT(*) as cnt')
+            ->groupBy(DB::raw('LOWER(from_email)'))
+            ->orderByDesc('cnt')->limit(50)->get()
+            ->each(fn ($r) => $add($r->email, $r->name, (int) $r->cnt));
+
+        // 2) Odbiorcy wysłanych (to + cc) — pola JSON, więc czytane w PHP z próbki ostatnich wysłanych.
+        Message::query()->where('is_sent', true)
+            ->select(['to_recipients', 'cc_recipients', 'date'])
+            ->orderByDesc('date')->limit(500)->get()
+            ->each(function ($m) use ($add) {
+                foreach (array_merge((array) $m->to_recipients, (array) $m->cc_recipients) as $r) {
+                    $add($r['email'] ?? null, $r['name'] ?? null);
+                }
+            });
+
+        // Filtr po fragmencie dla adresów z wysłanych (odebrane już przefiltrowane w SQL).
+        $items = array_values($contacts);
+        if ($q !== '') {
+            $items = array_values(array_filter(
+                $items,
+                fn ($c) => str_contains($c['email'], $q) || str_contains(mb_strtolower($c['name']), $q)
+            ));
+        }
+        usort($items, fn ($a, $b) => $b['count'] <=> $a['count']);
+
+        return response()->json([
+            'contacts' => array_map(
+                fn ($c) => ['email' => $c['email'], 'name' => $c['name']],
+                array_slice($items, 0, 8)
+            ),
+        ]);
     }
 
     private function sendCatalogId(Account $account): int
@@ -985,6 +1142,16 @@ class MailController extends Controller
     {
         abort_unless((int) $attachment->message_id === (int) $message->id, 404);
 
+        // Załącznik maila wysłanego — treść leży lokalnie (nie ma go na IMAP). Serwuj z dysku.
+        if ($attachment->storage_path) {
+            abort_unless(Storage::disk('local')->exists($attachment->storage_path), 404, 'Nie znaleziono pliku załącznika.');
+
+            return response(Storage::disk('local')->get($attachment->storage_path), 200, [
+                'Content-Type'        => $attachment->mime ?: 'application/octet-stream',
+                'Content-Disposition' => 'attachment; filename="'.addslashes($attachment->filename).'"',
+            ]);
+        }
+
         $account = $message->account;
         abort_unless($account !== null, 404);
 
@@ -1026,6 +1193,211 @@ class MailController extends Controller
         } finally {
             ini_set('default_socket_timeout', (string) $previousTimeout);
         }
+    }
+
+    /**
+     * Zwraca body_html z obrazkami inline podmienionymi na URL asynchronicznego endpointu:
+     * `src="cid:<Content-ID>"` → `.../messages/{id}/inline?cid=<Content-ID>`. To CZYSTA podmiana
+     * (regex) — BEZ dotykania IMAP, więc treść ładuje się natychmiast. Obrazki dociąga i cache'uje
+     * dopiero endpoint inlineImage(), asynchronicznie w miarę jak przeglądarka ładuje <img>.
+     */
+    private function inlineBody(Message $message): ?string
+    {
+        $html = (string) $message->body_html;
+        if ($html === '' || ! preg_match('/src\s*=\s*["\']?cid:/i', $html)) {
+            return $message->body_html;
+        }
+
+        $mid = $message->id;
+
+        return preg_replace_callback('/src\s*=\s*(["\']?)cid:([^"\'>\s]+)\1/i', function ($m) use ($mid) {
+            $cid = str_replace(['<', '>'], '', trim($m[2]));
+
+            return 'src="'.route('crafter.argo-mail.messages.inline', $mid).'?cid='.urlencode($cid).'"';
+        }, $html);
+    }
+
+    /**
+     * Serwuje obrazek inline (użyty w treści przez `cid:`). Najpierw z lokalnego cache; przy pudle
+     * dociąga wiadomość RAZ z IMAP i cache'uje wszystkie inline obrazki. Lock chroni przed nawałą
+     * równoległych żądań (gdy mail ma kilka obrazków → 1 fetch, reszta z dysku). Wołane
+     * asynchronicznie z <img> w treści — NIE blokuje ładowania samej wiadomości.
+     */
+    public function inlineImage(Message $message, Request $request): HttpResponse
+    {
+        $cid = str_replace(['<', '>'], '', trim((string) $request->query('cid')));
+        abort_if($cid === '', 404);
+
+        if ($att = $this->cachedInline($message, $cid)) {
+            return $this->serveInline($att);
+        }
+
+        // Pudło w cache — dociągnij RAZ (lock: pierwszy proces cache'uje, reszta czeka i bierze z dysku).
+        $lock = Cache::lock("mail-inline-{$message->id}", 60);
+        try {
+            $lock->block(20);
+            $att = $this->cachedInline($message, $cid);
+            if (! $att) {
+                $this->cacheInlineImages($message);
+                $att = $this->cachedInline($message, $cid);
+            }
+        } catch (\Throwable $e) {
+            report($e);
+            abort(504, 'Nie udało się pobrać obrazka.');
+        } finally {
+            optional($lock)->release();
+        }
+
+        abort_unless($att, 404, 'Nie znaleziono obrazka.');
+
+        return $this->serveInline($att);
+    }
+
+    /** Załącznik inline z lokalnego cache (content_id + istniejący plik), albo null. */
+    private function cachedInline(Message $message, string $cid): ?Attachment
+    {
+        $att = $message->attachments()->where('content_id', $cid)->whereNotNull('storage_path')->first();
+
+        return ($att && Storage::disk('local')->exists($att->storage_path)) ? $att : null;
+    }
+
+    private function serveInline(Attachment $att): HttpResponse
+    {
+        return response(Storage::disk('local')->get($att->storage_path), 200, [
+            'Content-Type'        => $att->mime ?: 'application/octet-stream',
+            'Content-Disposition' => 'inline; filename="'.addslashes($att->filename).'"',
+            'Cache-Control'       => 'private, max-age=86400',
+        ]);
+    }
+
+    /**
+     * Dociąga wiadomość z IMAP RAZ i cache'uje jej obrazki inline (image/* lub disposition=inline):
+     * uzupełnia content_id (po part_index) i zapisuje treść na dysk (storage_path).
+     */
+    private function cacheInlineImages(Message $message): void
+    {
+        $account = $message->account;
+        if (! $account) {
+            return;
+        }
+
+        @ini_set('memory_limit', '512M'); // webklex parsuje cały MIME w pamięci
+        @set_time_limit(120);
+        $previousTimeout = ini_get('default_socket_timeout');
+        ini_set('default_socket_timeout', '20'); // nie wisimy długo, gdy konto nieosiągalne
+
+        try {
+            $client = Client::make($account->imapConfig());
+            $client->connect();
+
+            $imapFolder = $client->getFolderByPath($message->folder?->path ?? 'INBOX');
+            if (! $imapFolder) {
+                return;
+            }
+            $imapMessage = $imapFolder->messages()->whereUid($message->uid)->setFetchBody(true)->get()->first();
+            if (! $imapMessage) {
+                return;
+            }
+
+            $rows = $message->attachments()->get()->keyBy('part_index');
+
+            foreach ($imapMessage->getAttachments() as $i => $att) {
+                $row = $rows->get($i) ?? $rows->values()->get($i);
+                if (! $row) {
+                    continue;
+                }
+                $cid = $att->id ? str_replace(['<', '>'], '', (string) $att->id) : null;
+                $patch = [];
+                if ($cid && $row->content_id !== $cid) {
+                    $patch['content_id'] = $cid;
+                }
+                $isInlineImg = str_starts_with((string) ($att->getMimeType() ?: $row->mime), 'image/')
+                    || (($att->disposition ?? '') === 'inline');
+                if ($cid && $isInlineImg && ! $row->storage_path) {
+                    $safe = preg_replace('/[^\w.\-]+/u', '_', (string) $row->filename) ?: ('inline-'.$i);
+                    Storage::disk('local')->put($path = "mail/inline/{$message->id}/{$i}_{$safe}", (string) $att->content);
+                    $patch['storage_path'] = $path;
+                }
+                if ($patch) {
+                    $row->forceFill($patch)->save();
+                }
+            }
+
+            $client->disconnect();
+        } finally {
+            ini_set('default_socket_timeout', (string) $previousTimeout);
+        }
+    }
+
+    /**
+     * Mapa [id pozycji kosztu => CostPlannerItem z miesiącem] dla załączników wpiętych w koszty.
+     *
+     * @param  \Illuminate\Support\Collection<int, mixed>  $ids
+     * @return \Illuminate\Support\Collection<int, \App\Models\CostPlannerItem>
+     */
+    private function costMapFor($ids)
+    {
+        $clean = collect($ids)->filter()->unique()->values();
+        if ($clean->isEmpty()) {
+            return collect();
+        }
+
+        return \App\Models\CostPlannerItem::with('month:id,label')
+            ->whereIn('id', $clean->all())
+            ->get()
+            ->keyBy('id');
+    }
+
+    /**
+     * Payload załącznika do front-endu (+ info „w kosztach" dla zielonego ptaszka).
+     *
+     * @param  \Illuminate\Support\Collection<int, \App\Models\CostPlannerItem>  $costMap
+     * @return array<string, mixed>
+     */
+    private function attachmentArr(Attachment $a, $costMap): array
+    {
+        $cost = null;
+        if ($a->cost_planner_item_id && $costMap->has($a->cost_planner_item_id)) {
+            $ci = $costMap->get($a->cost_planner_item_id);
+            $cost = [
+                'item_id'     => $ci->id,
+                'month_id'    => $ci->cost_planner_month_id,
+                'month_label' => $ci->month?->label,
+            ];
+        }
+
+        return [
+            'id'                   => $a->id,
+            'filename'             => $a->filename,
+            'mime'                 => $a->mime,
+            'size'                 => $a->size,
+            'cost_planner_item_id' => $a->cost_planner_item_id,
+            'cost'                 => $cost,
+        ];
+    }
+
+    /**
+     * Użytkownicy, którym można przypisać maila: wszyscy aktywni użytkownicy PIM.
+     * Skonfigurowane „Osoby" (mail_users) idą na górę listy i zachowują swój kolor;
+     * pozostali dostają kolor szary (jak w assignUser()).
+     *
+     * @param  \Illuminate\Support\Collection<int, string|null>  $userColors  admin_user_id => color
+     * @return \Illuminate\Support\Collection<int, array<string, mixed>>
+     */
+    private function assignableUsers($userColors)
+    {
+        return AdminUser::query()
+            ->where('active', true)
+            ->orderBy('first_name')->orderBy('last_name')
+            ->get(['id', 'first_name', 'last_name', 'email'])
+            ->map(fn (AdminUser $u) => [
+                'id'           => $u->id,
+                'name'         => $this->userName($u),
+                'color'        => $userColors[$u->id] ?? null,
+                'is_mail_user' => $userColors->has($u->id),
+            ])
+            ->sortByDesc('is_mail_user')
+            ->values();
     }
 
     private function userName(?AdminUser $user): string
@@ -1101,6 +1473,7 @@ class MailController extends Controller
                     'depth'     => $depth,
                     'unread'    => (int) ($rollUnread[$c->id] ?? 0),
                     'total'     => (int) ($rollTotal[$c->id] ?? 0),
+                    'collapsed' => (bool) $c->collapsed,
                 ];
                 $walk((int) $c->id, $depth + 1);
             }

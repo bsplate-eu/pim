@@ -61,6 +61,34 @@ class Message extends Model
     }
 
     /**
+     * Dekoduje nagłówek MIME „encoded-word" (RFC 2047), np.
+     *   =?UTF-8?Q?Przesy=C5=82ka?=  →  „Przesyłka".
+     * Webklex 6.2 dekoduje takie nagłówki tylko przez rozszerzenie PHP `imap`
+     * (imap_mime_header_decode). Nasz PHP (fcgid 8.3) NIE ma tego rozszerzenia,
+     * a wbudowany fallback webklexa zwraca surowy ciąg — dlatego temat i nazwa
+     * nadawcy trafiały do bazy zakodowane. Dekodujemy sami: iconv (scala sąsiednie
+     * encoded-words wg RFC 2047), z awaryjnym mb_decode_mimeheader.
+     */
+    public static function decodeMimeHeader(mixed $value): string
+    {
+        $value = trim((string) $value);
+        if ($value === '' || ! str_contains($value, '=?')) {
+            return $value;
+        }
+
+        if (function_exists('iconv_mime_decode')) {
+            $decoded = @iconv_mime_decode($value, ICONV_MIME_DECODE_CONTINUE_ON_ERROR, 'UTF-8');
+            if (is_string($decoded) && $decoded !== '') {
+                return $decoded;
+            }
+        }
+
+        $decoded = @mb_decode_mimeheader($value);
+
+        return $decoded !== '' ? $decoded : $value;
+    }
+
+    /**
      * Znormalizowany temat do wątkowania: zdjęte prefiksy odpowiedzi/przekazania
      * (Re/Odp/Fwd/Fw/PD/WG/Aw/Sv…), lowercase, pojedyncze spacje.
      */

@@ -68,7 +68,8 @@ Zamiast kupować Google Workspace — własny moduł w PIM (kolejny element „o
 
 ### Wysyłka / kompozytor — Nowa / Odpowiedz / Przekaż
 - Od (wybór konta), Do/DW (parsowane), Temat, **edytor HTML (TipTap) domyślnie włączony** (checkbox „Edytor HTML" → zwykły tekst).
-- **Full size** okna. Stopka konta auto-doklejana. Reply ustawia `In-Reply-To`/`References`.
+- **Autouzupełnianie adresów (Do/DW)**: wpisujesz litery → podpowiedzi z dotychczasowej korespondencji (nadawcy odebranych + odbiorcy wysłanych, ranking po częstości); ↑↓/Enter/Esc, wiele adresów po przecinku. Endpoint `argo-mail.contacts` → `MailController@contacts`, komponent `RecipientInput.vue`.
+- **Full size** okna. Stopka konta auto-doklejana **przez backend przy wysyłce** (surowy HTML — pełny design stopki nie przechodzi przez edytor TipTap). Reply ustawia `In-Reply-To`/`References`.
 - **Załączniki**: „Dodaj załącznik" (wiele plików, lista z usuwaniem); wysyłka `FormData` → `attachFromPath` (do 20 plików / 15 MB każdy).
 - Wysyłka przez **SMTP konta** (Symfony Mailer). Kopia wysłanego → katalog **SEND → [nazwa skrzynki]** (auto-tworzony).
 
@@ -140,3 +141,18 @@ Zamiast kupować Google Workspace — własny moduł w PIM (kolejny element „o
 - ✅ **Multi-folder sync (2026-06-03):** sync/import czytają wszystkie zwykłe foldery serwera (nie tylko INBOX); Wysłane/Kosz/Spam/Szkice + `[Gmail]/*` świadomie pomijane. Opcjonalnie do dorobienia: serwerowe „Wysłane"/„Spam" jako osobne źródła, filtr po folderze serwera w panelu, limit folderów per skrzynka (wydajność).
 - ✅ **Batch UI/spam (2026-06-03):** drzewo katalogów w dropdownach (wcięcia), **SPAM popup** (adres / cała domena / fragment tytułu), katalog wysłanych **„SEND"→„Wysłane"**, fix snippetów (wyciek CSS z `<style>`), **podgląd maila na pełną wysokość** (iframe auto-rozmiar, `allow-same-origin`), **wykluczenia z grupowania** (zamówienia Allegro/Amazon osobno). Deploy: jedna paczka `argo-mail-pelny.zip` (zastępuje multifolder/ui/wyslane).
 - 💡 **Pomysł: „SPAM hardcore" (omówiony 2026-06-03, NIE zbudowany).** Druga, ostrzejsza opcja spamu: oznaczasz → **cała domena** do spamu → **kasuje** istniejące maile (z bazy PIM) → **blokuje wciąganie** nowych z tej domeny (pomijane w `persistMessage()`, we wszystkich folderach). Silnik domenowy już jest (`resolveRouting()` matchuje `@domena`); brakuje: kolumny `hard_block` w `mail_spam_senders`, akcji „SPAM hardcore (cała domena)" z potwierdzeniem (kasuje N), i skipu zapisu. **⚠️ Caveat:** jesteśmy agregatorem — „kasuje" = z PIM, **nie** z serwera poczty (odwracalne przez re-import). Szczegóły: `docs/daily/03-06-2026.md`.
+- ✅ **Synchronizacja z repo źródłowym `ArgoAgencyIT/argo-pim` (2026-08-19).** Nasza kopia modułu pochodziła z paczki `argo-mail-pkg` (eksport 2026-06-08); dociągnięte zmiany z 08.06→15.07:
+  - **Dekodowanie nagłówków MIME (RFC 2047)** — `Message::decodeMimeHeader()` używane w temacie, nazwie nadawcy i nazwach załączników (nasz PHP nie ma rozszerzenia `imap`, webklex zwracał surowe `=?UTF-8?Q?…?=`). Naprawa istniejących rekordów: `php artisan mail:redecode-headers`.
+  - **Obrazki inline (`cid:`)** w treści — podmiana na URL endpointu `argo-mail.messages.inline` + leniwy cache z IMAP na dysk (`storage_path`, `content_id`); ładowanie asynchroniczne, nie blokuje otwarcia maila.
+  - **Załączniki maili wysłanych** — zapisywane lokalnie przy wysyłce (nie ma ich na IMAP) i serwowane z dysku.
+  - **Autouzupełnianie adresów Do/DW** (`RecipientInput.vue` + `argo-mail.contacts`).
+  - **„Do: <konto>"** w liście wiadomości i w nagłówku podglądu rozmowy (wspólna skrzynka wielu kont).
+  - **Wyczyść kosz / Wyczyść spam** — trwałe kasowanie z usuwaniem plików lokalnych załączników.
+  - **Domyślne zwijanie katalogów** zapisywane w bazie (`mail_catalogs.collapsed`) zamiast w localStorage — jedno źródło prawdy dla Ustawień i drzewa skrzynki.
+  - **Stopka doklejana przez backend** przy wysyłce; limit podpisu 5 000 → 50 000 znaków; edytor stopki = **Wysiwyg** (logo, linki).
+  - **Normalizacja typografii treści** maila w iframe (`MAIL_CSS`, wzorzec Roundcube).
+  - **SMTP systemowy z wybranej skrzynki Argo Mail** (`mail.account_id` + `MailConfigServiceProvider`, zarejestrowany w `config/app.php`) — działa tylko przy `override_env = true`.
+  - **Kompozytor na mobile** (`Mobile/Mail.vue`): nowa wiadomość, odpowiedz / odpowiedz wszystkim, cytat, załączniki, podpowiedzi kontaktów.
+  - Nowe komendy: `mail:redecode-headers`, `mail:fix-snippets`. Migracje: `collapsed`, `account_id`, `cost_planner_item_id`, `storage_path`, `content_id`.
+  - **Zachowane nasze poprawki**, których argo-pim nie ma: sync bez OOM (nagłówki paczką, treści pojedynczo, kolosy >25 MB bez treści) oraz przyjmowanie wklejanych adresów + blokada adresów testowych.
+  - ⛔ **Świadomie pominięte:** „Dodaj do kosztów" (FV z załącznika przez OCR/AI do Planera) — wymaga wersji Planera kosztów z argo-pim (`FixedCostVendor`, `amount_pln`/`recomputePln`, media `invoice`, `services.gemini`), której u nas nie ma; kolumna `mail_attachments.cost_planner_item_id` i infrastruktura „ptaszka w kosztach" zostały wgrane, brakuje tylko ścieżki tworzenia. Pominięty też **reskin FABLE** — moduł zostaje w naszym layoucie.

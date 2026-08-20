@@ -23,6 +23,7 @@ class MailController extends Controller
         return Inertia::render('Mail/Smtp', [
             'settings' => [
                 'override_env' => $settings->override_env,
+                'account_id' => $settings->account_id,
                 'host' => $settings->host,
                 'port' => $settings->port,
                 'username' => $settings->username,
@@ -31,6 +32,11 @@ class MailController extends Controller
                 'from_address' => $settings->from_address,
                 'from_name' => $settings->from_name,
             ],
+            // Skrzynki z Argo Mail do wyboru jako nadawca maili systemowych (bez wrazliwych pol).
+            'accounts' => \App\Models\Mail\Account::query()
+                ->where('is_active', true)
+                ->orderBy('label')
+                ->get(['id', 'label', 'email']),
             'env_fallback' => [
                 'host' => (string) env('MAIL_HOST'),
                 'port' => (int) env('MAIL_PORT', 587),
@@ -46,18 +52,23 @@ class MailController extends Controller
     {
         $this->authorize('crafter.mail.edit');
 
+        // Reczne pola SMTP wymagane tylko gdy nadpisujemy .env I nie wybrano skrzynki z listy.
+        $manualRequired = $request->boolean('override_env') && ! $request->filled('account_id');
+
         $data = $request->validate([
             'override_env' => ['required', 'boolean'],
-            'host' => ['required_if:override_env,true', 'nullable', 'string', 'max:255'],
-            'port' => ['required_if:override_env,true', 'nullable', 'integer', 'between:1,65535'],
+            'account_id' => ['nullable', 'integer', Rule::exists('mail_accounts', 'id')],
+            'host' => [Rule::requiredIf($manualRequired), 'nullable', 'string', 'max:255'],
+            'port' => [Rule::requiredIf($manualRequired), 'nullable', 'integer', 'between:1,65535'],
             'username' => ['nullable', 'string', 'max:255'],
             'password' => ['nullable', 'string', 'max:1024'],
             'encryption' => ['nullable', Rule::in(['tls', 'ssl', ''])],
-            'from_address' => ['required_if:override_env,true', 'nullable', 'email', 'max:255'],
-            'from_name' => ['required_if:override_env,true', 'nullable', 'string', 'max:255'],
+            'from_address' => [Rule::requiredIf($manualRequired), 'nullable', 'email', 'max:255'],
+            'from_name' => [Rule::requiredIf($manualRequired), 'nullable', 'string', 'max:255'],
         ]);
 
         $settings->override_env = (bool) $data['override_env'];
+        $settings->account_id = $request->filled('account_id') ? (int) $data['account_id'] : null;
         $settings->host = (string) ($data['host'] ?? '');
         $settings->port = (int) ($data['port'] ?? 587);
         $settings->username = (string) ($data['username'] ?? '');

@@ -22,6 +22,7 @@ class Catalog extends Model
     protected $casts = [
         'parent_id' => 'integer',
         'sort'      => 'integer',
+        'collapsed' => 'boolean',
     ];
 
     public function parent(): BelongsTo

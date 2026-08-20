@@ -401,6 +401,10 @@ class MailSyncService
         $from = $this->addresses($message->from);
         $first = $from[0] ?? ['email' => '', 'name' => ''];
 
+        // Temat bywa zakodowany MIME (RFC 2047) — dekodujemy raz i używamy wszędzie
+        // (routing/wątkowanie/zapis), bo bez rozszerzenia imap webklex go nie rozkodowuje.
+        $subject = Message::decodeMimeHeader($message->subject);
+
         $html = $message->getHTMLBody();
         $text = $message->getTextBody();
         $flags = $message->getFlags()->toArray();
@@ -418,7 +422,7 @@ class MailSyncService
             // brak / niewłaściwy nagłówek Date
         }
 
-        $routing = $this->resolveRouting($first['email'] ?? '', (string) ($message->subject ?? ''), $rules, $spam);
+        $routing = $this->resolveRouting($first['email'] ?? '', $subject, $rules, $spam);
 
         // Wątkowanie: „druga strona" = nadawca; dla maili z naszego własnego adresu (np. zsynchronizowany
         // folder Wysłane) bierzemy odbiorcę, żeby zgrupować je z resztą rozmowy.
@@ -428,8 +432,8 @@ class MailSyncService
 
         // Zwykle wspólny klucz (temat+rozmówca). Ale maile z reguł „bez grupowania" (np. zamówienia
         // Allegro/Amazon) dostają UNIKATOWY klucz, żeby każdy mail stał osobno (nie zwijał się w wątek).
-        $threadKey = Message::threadKeyFor($message->subject, $counterpart);
-        if ($noGroup && $this->matchesRule($first['email'] ?? '', (string) ($message->subject ?? ''), $noGroup)) {
+        $threadKey = Message::threadKeyFor($subject, $counterpart);
+        if ($noGroup && $this->matchesRule($first['email'] ?? '', $subject, $noGroup)) {
             $ngBase = $this->str($message->message_id, 512) ?: ($account->id.'|'.$folder->id.'|'.$uid);
             $threadKey = 'ng:'.sha1((string) $ngBase);
         }
@@ -442,7 +446,7 @@ class MailSyncService
             ],
             [
                 'message_id'      => $this->str($message->message_id, 512),
-                'subject'         => $this->str($message->subject),
+                'subject'         => $this->str($subject),
                 'from_email'      => mb_substr($first['email'], 0, 255),
                 'from_name'       => mb_substr($first['name'], 0, 255),
                 'to_recipients'   => $this->addresses($message->to),
@@ -482,7 +486,7 @@ class MailSyncService
             foreach ($message->getAttachments() as $att) {
                 $row->attachments()->create([
                     'part_index' => $idx,
-                    'filename'   => mb_substr((string) ($att->name ?? ('zalacznik-'.($idx + 1))), 0, 255),
+                    'filename'   => mb_substr(Message::decodeMimeHeader($att->name ?? '') ?: ('zalacznik-'.($idx + 1)), 0, 255),
                     'mime'       => $att->getMimeType(),
                     'size'       => (int) ($att->size ?? 0) ?: null,
                 ]);
@@ -655,7 +659,8 @@ class MailSyncService
                 }
 
                 if ($mail !== '' || $name !== '') {
-                    $out[] = ['email' => $mail, 'name' => $name];
+                    // Nazwa (personal) też bywa zakodowana MIME (RFC 2047) — dekodujemy.
+                    $out[] = ['email' => $mail, 'name' => Message::decodeMimeHeader($name)];
                 }
             }
         } catch (\Throwable) {

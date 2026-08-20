@@ -146,6 +146,148 @@
     <div v-if="loading" class="flex flex-1 items-center justify-center text-sm text-gray-400">Wczytywanie…</div>
     <div v-else-if="error" class="flex flex-1 items-center justify-center px-6 text-center text-sm text-red-500">{{ error }}</div>
     <iframe v-else :srcdoc="bodyDoc" class="w-full flex-1 border-0" sandbox="allow-popups allow-popups-to-escape-sandbox" referrerpolicy="no-referrer"></iframe>
+
+    <!-- Akcje na dole czytnika: odpowiedz / odpowiedz wszystkim -->
+    <footer v-if="!loading && !error" class="flex shrink-0 gap-2 border-t border-gray-200 bg-white px-3 py-2" style="padding-bottom: calc(0.5rem + env(safe-area-inset-bottom))">
+      <button type="button" class="flex flex-1 items-center justify-center gap-2 rounded-xl bg-primary-600 py-2.5 text-sm font-semibold text-white active:opacity-80" @click="openReply(false)">
+        <ArrowUturnLeftIcon class="h-5 w-5" /> Odpowiedz
+      </button>
+      <button type="button" class="flex items-center justify-center gap-1.5 rounded-xl border border-gray-300 px-3 py-2.5 text-sm text-gray-700 active:bg-gray-50" @click="openReply(true)">
+        <ArrowUturnLeftIcon class="h-5 w-5" /> Wszystkim
+      </button>
+    </footer>
+  </div>
+
+  <!-- Okno pisania: nowa wiadomość / odpowiedz / odpowiedz wszystkim -->
+  <div v-if="compose" class="fixed inset-0 z-40 flex flex-col bg-white">
+    <header class="flex h-14 shrink-0 items-center gap-2 border-b border-gray-200 px-3">
+      <button type="button" class="-ml-1 rounded-full p-2 active:bg-gray-100" @click="closeCompose">
+        <XMarkIcon class="h-6 w-6 text-gray-700" />
+      </button>
+      <div class="flex-1 truncate font-semibold text-gray-900">{{ composeTitle }}</div>
+      <button
+        type="button"
+        :disabled="sending || !canSend"
+        class="flex items-center gap-1.5 rounded-xl bg-primary-600 px-4 py-2 text-sm font-semibold text-white active:opacity-80 disabled:opacity-40"
+        @click="sendCompose"
+      >
+        <PaperAirplaneIcon v-if="!sending" class="h-4 w-4" />
+        <span>{{ sending ? 'Wysyłanie…' : 'Wyślij' }}</span>
+      </button>
+    </header>
+
+    <div class="flex-1 overflow-y-auto">
+      <!-- Z: skrzynka -->
+      <div class="flex items-center gap-2 border-b border-gray-100 px-4 py-2.5">
+        <span class="w-10 shrink-0 text-sm text-gray-400">Z:</span>
+        <select v-model="compose.account_id" class="min-w-0 flex-1 truncate border-0 bg-transparent p-0 text-sm text-gray-900 focus:ring-0">
+          <option v-for="a in accounts" :key="a.id" :value="a.id">{{ a.label || a.email }} ({{ a.email }})</option>
+        </select>
+      </div>
+
+      <!-- Do: -->
+      <div class="border-b border-gray-100 px-4 py-2.5">
+        <div class="flex items-center gap-2">
+          <span class="w-10 shrink-0 text-sm text-gray-400">Do:</span>
+          <input
+            v-model="compose.to"
+            type="text"
+            inputmode="email"
+            autocomplete="off"
+            placeholder="adres@…"
+            class="min-w-0 flex-1 border-0 bg-transparent p-0 text-sm focus:ring-0"
+            @input="onRecipientInput('to')"
+            @focus="recipientField = 'to'"
+          />
+          <button type="button" class="shrink-0 text-xs text-primary-600" @click="compose.showCc = !compose.showCc">DW</button>
+        </div>
+      </div>
+      <div v-if="compose.showCc" class="border-b border-gray-100 px-4 py-2.5">
+        <div class="flex items-center gap-2">
+          <span class="w-10 shrink-0 text-sm text-gray-400">DW:</span>
+          <input
+            v-model="compose.cc"
+            type="text"
+            inputmode="email"
+            autocomplete="off"
+            placeholder="kopia…"
+            class="min-w-0 flex-1 border-0 bg-transparent p-0 text-sm focus:ring-0"
+            @input="onRecipientInput('cc')"
+            @focus="recipientField = 'cc'"
+          />
+        </div>
+      </div>
+
+      <!-- Podpowiedzi kontaktów -->
+      <div v-if="contactSuggestions.length" class="border-b border-gray-100 bg-gray-50">
+        <button
+          v-for="c in contactSuggestions"
+          :key="c.email"
+          type="button"
+          class="flex w-full items-center gap-2 px-4 py-2 text-left active:bg-gray-100"
+          @click="pickContact(c)"
+        >
+          <span class="truncate text-sm text-gray-900">{{ c.name || c.email }}</span>
+          <span v-if="c.name" class="truncate text-xs text-gray-400">{{ c.email }}</span>
+        </button>
+      </div>
+
+      <!-- Temat -->
+      <div class="flex items-center gap-2 border-b border-gray-100 px-4 py-2.5">
+        <span class="w-10 shrink-0 text-sm text-gray-400">Temat:</span>
+        <input v-model="compose.subject" type="text" placeholder="(bez tematu)" class="min-w-0 flex-1 border-0 bg-transparent p-0 text-sm focus:ring-0" />
+      </div>
+
+      <!-- Treść -->
+      <textarea v-model="compose.body" rows="9" placeholder="Napisz wiadomość…" class="w-full resize-none border-0 px-4 py-3 text-sm focus:ring-0"></textarea>
+
+      <!-- Cytat oryginału -->
+      <div v-if="compose.quote" class="px-4 pb-3">
+        <button type="button" class="flex items-center gap-2 text-xs text-gray-500" @click="compose.includeQuote = !compose.includeQuote">
+          <span class="h-4 w-7 rounded-full p-0.5 transition-colors" :class="compose.includeQuote ? 'bg-primary-600' : 'bg-gray-300'">
+            <span class="block h-3 w-3 rounded-full bg-white transition-transform" :class="compose.includeQuote ? 'translate-x-3' : ''"></span>
+          </span>
+          Dołącz oryginalną wiadomość
+        </button>
+        <pre v-if="compose.includeQuote" class="mt-2 max-h-40 overflow-y-auto whitespace-pre-wrap rounded-lg bg-gray-50 p-2 text-xs text-gray-500">{{ compose.quote }}</pre>
+      </div>
+
+      <!-- Załączniki -->
+      <div class="px-4 pb-6">
+        <label class="inline-flex items-center gap-1.5 text-sm text-primary-600 active:opacity-70">
+          <PaperClipIcon class="h-5 w-5" /> Załącz plik
+          <input type="file" multiple class="hidden" @change="onFiles" />
+        </label>
+        <ul v-if="compose.files.length" class="mt-2 space-y-1">
+          <li v-for="(f, i) in compose.files" :key="i" class="flex items-center justify-between gap-2 rounded-lg bg-gray-50 px-3 py-1.5 text-xs">
+            <span class="min-w-0 truncate text-gray-700">{{ f.name }}</span>
+            <span class="flex shrink-0 items-center gap-2 text-gray-400">
+              {{ fmtSize(f.size) }}
+              <button type="button" class="text-red-500" @click="compose.files.splice(i, 1)">Usuń</button>
+            </span>
+          </li>
+        </ul>
+      </div>
+
+      <p v-if="sendError" class="px-4 pb-6 text-sm text-red-600">{{ sendError }}</p>
+    </div>
+  </div>
+
+  <!-- FAB: nowa wiadomość -->
+  <button
+    v-if="!selected && !compose"
+    type="button"
+    aria-label="Nowa wiadomość"
+    class="fixed right-5 z-20 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary-600 text-white shadow-lg active:scale-95"
+    style="bottom: calc(6rem + env(safe-area-inset-bottom))"
+    @click="openNew"
+  >
+    <PencilSquareIcon class="h-6 w-6" />
+  </button>
+
+  <!-- Dymek potwierdzenia -->
+  <div v-if="toast" class="fixed left-1/2 z-50 -translate-x-1/2 rounded-full bg-gray-900 px-4 py-2 text-sm text-white shadow-lg" style="bottom: calc(5rem + env(safe-area-inset-bottom))">
+    {{ toast }}
   </div>
 </template>
 
@@ -158,7 +300,7 @@ export default { layout: MobileLayout };
 import { ref, computed, watch } from "vue";
 import { Head, router } from "@inertiajs/vue3";
 import axios from "axios";
-import { EnvelopeIcon, ArrowLeftIcon, PaperClipIcon, FolderIcon, FunnelIcon, ChevronDownIcon } from "@heroicons/vue/24/outline";
+import { EnvelopeIcon, ArrowLeftIcon, PaperClipIcon, FolderIcon, FunnelIcon, ChevronDownIcon, ArrowUturnLeftIcon, XMarkIcon, PaperAirplaneIcon, PencilSquareIcon } from "@heroicons/vue/24/outline";
 
 const props = defineProps({
   messages: { type: Array, default: () => [] },
@@ -166,6 +308,7 @@ const props = defineProps({
   categories: { type: Array, default: () => [] },
   colorCounts: { type: Object, default: () => ({}) },
   filters: { type: Object, default: () => ({}) },
+  accounts: { type: Array, default: () => [] },
 });
 
 const COLOR_DOT = { red: "bg-red-500", green: "bg-green-500", blue: "bg-blue-500", orange: "bg-orange-500" };
@@ -259,5 +402,153 @@ const openMessage = async (m) => {
 const closeMessage = () => {
   selected.value = null;
   error.value = "";
+};
+
+/* ===== Kompozytor (nowa wiadomość / odpowiedz / odpowiedz wszystkim) ===== */
+const compose = ref(null);
+const sending = ref(false);
+const sendError = ref("");
+const toast = ref("");
+const recipientField = ref("to");
+const contactSuggestions = ref([]);
+
+const accountsById = computed(() =>
+  Object.fromEntries((props.accounts || []).map((a) => [a.id, a]))
+);
+const composeTitle = computed(() =>
+  ({ new: "Nowa wiadomość", reply: "Odpowiedź", replyAll: "Odpowiedz wszystkim" }[compose.value?.mode] || "Wiadomość")
+);
+const canSend = computed(() =>
+  !!compose.value && (compose.value.to || "").trim() !== "" && !!compose.value.account_id
+);
+
+const stripHtml = (html) => {
+  const tmp = document.createElement("div");
+  tmp.innerHTML = String(html || "").replace(/<(style|script)\b[^>]*>[\s\S]*?<\/\1>/gi, "");
+  return (tmp.textContent || "").trim();
+};
+const plainOf = (m) => (m.body_text && m.body_text.trim() ? m.body_text : stripHtml(m.body_html));
+
+const buildQuote = (m) => {
+  const who = m.from_name ? `${m.from_name} <${m.from_email}>` : (m.from_email || "");
+  const when = m.date ? new Date(m.date).toLocaleString("pl-PL") : "";
+  const quoted = plainOf(m).split("\n").map((l) => "> " + l).join("\n");
+  return `Dnia ${when} ${who} napisał(a):\n${quoted}`;
+};
+const ensureRe = (s) => {
+  const t = (s || "").trim();
+  return /^re:/i.test(t) ? t : "Re: " + (t || "(bez tematu)");
+};
+const emailsOf = (arr) => (arr || []).map((r) => (r.email || "").toLowerCase()).filter(Boolean);
+const uniq = (a) => Array.from(new Set(a));
+
+const openReply = (all) => {
+  const m = selected.value;
+  if (!m || !m.from_email) return;
+  const myEmail = (m.account_email || accountsById.value[m.account_id]?.email || "").toLowerCase();
+  const toList = uniq([m.from_email.toLowerCase(), ...(all ? emailsOf(m.to) : [])]).filter((e) => e && e !== myEmail);
+  const ccList = all ? uniq(emailsOf(m.cc)).filter((e) => e && e !== myEmail && !toList.includes(e)) : [];
+  compose.value = {
+    mode: all ? "replyAll" : "reply",
+    account_id: m.account_id || props.accounts[0]?.id || null,
+    to: toList.join(", "),
+    cc: ccList.join(", "),
+    subject: ensureRe(m.subject),
+    body: "",
+    in_reply_to: m.message_id || null,
+    quote: buildQuote(m),
+    includeQuote: true,
+    showCc: ccList.length > 0,
+    files: [],
+  };
+  sendError.value = "";
+  contactSuggestions.value = [];
+};
+
+const openNew = () => {
+  compose.value = {
+    mode: "new",
+    account_id: props.accounts[0]?.id || null,
+    to: "", cc: "", subject: "", body: "",
+    in_reply_to: null, quote: "", includeQuote: false, showCc: false, files: [],
+  };
+  sendError.value = "";
+  contactSuggestions.value = [];
+};
+
+const closeCompose = () => {
+  compose.value = null;
+  contactSuggestions.value = [];
+  sendError.value = "";
+};
+
+let contactTimer = null;
+const onRecipientInput = (field) => {
+  recipientField.value = field;
+  const frag = (compose.value[field] || "").split(/[,;]/).pop().trim();
+  if (contactTimer) clearTimeout(contactTimer);
+  if (frag.length < 2) { contactSuggestions.value = []; return; }
+  contactTimer = setTimeout(async () => {
+    try {
+      const { data } = await axios.get("/admin/argo-mail/contacts", { params: { q: frag } });
+      contactSuggestions.value = data.contacts || [];
+    } catch (e) {
+      contactSuggestions.value = [];
+    }
+  }, 220);
+};
+const pickContact = (c) => {
+  const field = recipientField.value;
+  const parts = (compose.value[field] || "").split(/[,;]/);
+  parts[parts.length - 1] = c.email;
+  compose.value[field] = parts.map((p) => p.trim()).filter(Boolean).join(", ") + ", ";
+  contactSuggestions.value = [];
+};
+
+const onFiles = (e) => {
+  compose.value.files.push(...Array.from(e.target.files || []));
+  e.target.value = "";
+};
+const fmtSize = (n) => {
+  if (n == null) return "";
+  if (n < 1024) return n + " B";
+  if (n < 1048576) return (n / 1024).toFixed(0) + " KB";
+  return (n / 1048576).toFixed(1) + " MB";
+};
+
+let toastTimer = null;
+const showToast = (msg) => {
+  toast.value = msg;
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { toast.value = ""; }, 2600);
+};
+
+const sendCompose = async () => {
+  if (!compose.value || sending.value || !canSend.value) return;
+  sending.value = true;
+  sendError.value = "";
+  try {
+    const c = compose.value;
+    let body = c.body || "";
+    if (c.quote && c.includeQuote) body = (body ? body + "\n\n" : "") + c.quote;
+    const fd = new FormData();
+    fd.append("account_id", c.account_id);
+    fd.append("to", c.to);
+    if (c.cc) fd.append("cc", c.cc);
+    fd.append("subject", c.subject || "");
+    fd.append("body", body);
+    fd.append("is_html", "0");
+    if (c.in_reply_to) fd.append("in_reply_to", c.in_reply_to);
+    c.files.forEach((f) => fd.append("attachments[]", f));
+    const { data } = await axios.post("/admin/argo-mail/send", fd);
+    if (data && data.ok === false) throw new Error(data.message || "Nie udało się wysłać.");
+    closeCompose();
+    selected.value = null;
+    showToast("Wysłano ✓");
+  } catch (e) {
+    sendError.value = e?.response?.data?.message || e?.message || "Nie udało się wysłać wiadomości.";
+  } finally {
+    sending.value = false;
+  }
 };
 </script>

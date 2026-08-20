@@ -168,6 +168,9 @@ return [
         App\Providers\AuthServiceProvider::class,
         // App\Providers\BroadcastServiceProvider::class,
         App\Providers\EventServiceProvider::class,
+        // [argo-mail-pkg] SMTP transakcyjny z bazy (Ustawienia → Mail SMTP) + log wysłanych maili.
+        // Bez override_env = true w ustawieniach nie zmienia niczego — poczta idzie z .env.
+        App\Providers\MailConfigServiceProvider::class,
         App\Providers\RouteServiceProvider::class,
     ])->toArray(),
 

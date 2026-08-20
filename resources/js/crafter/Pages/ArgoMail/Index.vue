@@ -111,7 +111,13 @@
                     </select>
                 </div>
                 <span v-if="filters.trash" class="text-xs font-medium text-red-600">Widok: Kosz</span>
+                <button v-if="filters.trash && trashTotal > 0" type="button" @click="emptyTrash" class="inline-flex items-center gap-1 text-xs rounded-md border border-gray-300 bg-white px-2 py-1 text-red-600 hover:bg-gray-50" title="Trwale usuń wszystkie maile z kosza">
+                    <TrashIcon class="h-3.5 w-3.5" /> Wyczyść kosz ({{ trashTotal }})
+                </button>
                 <span v-if="filters.spam" class="text-xs font-medium text-orange-600">Widok: Spam</span>
+                <button v-if="filters.spam && spamTotal > 0" type="button" @click="emptySpam" class="inline-flex items-center gap-1 text-xs rounded-md border border-gray-300 bg-white px-2 py-1 text-orange-600 hover:bg-gray-50" title="Trwale usuń wszystkie maile ze spamu">
+                    <TrashIcon class="h-3.5 w-3.5" /> Wyczyść spam ({{ spamTotal }})
+                </button>
                 <span class="ml-auto text-xs text-gray-400">{{ messages.total }} wiadomości</span>
             </div>
 
@@ -130,9 +136,9 @@
                     <option value="">Kategoria…</option>
                     <option v-for="c in categories" :key="c.id" :value="c.id">{{ c.name }}</option>
                 </select>
-                <select v-if="users.length" @change="bulkSelect('user', $event)" class="text-xs rounded-md border-gray-300 py-1">
+                <select v-if="assignableUsers.length" @change="bulkSelect('user', $event)" class="text-xs rounded-md border-gray-300 py-1">
                     <option value="">Osoba…</option>
-                    <option v-for="u in users" :key="u.id" :value="u.id">{{ u.name }}</option>
+                    <option v-for="u in assignableUsers" :key="u.id" :value="u.id">{{ u.name }}</option>
                 </select>
                 <span class="text-xs text-gray-500 ml-1">Kolor:</span>
                 <button type="button" @click="bulkColor('red')" class="h-5 w-5 rounded-full bg-red-500 ring-1 ring-gray-300" title="Czerwony (1)"></button>
@@ -230,6 +236,7 @@
                                     <PaperClipIcon v-if="m.has_attachments" :class="['h-3.5 w-3.5 shrink-0', m.color_flag ? 'opacity-70' : 'text-gray-400']" />
                                     <span :class="['ml-auto text-xs shrink-0', m.color_flag ? 'opacity-80' : 'text-gray-700']">{{ shortDate(m.date) }}</span>
                                 </div>
+                                <div v-if="!m.is_sent && accountEmailById.get(m.account_id)" :class="['truncate mt-0.5 text-[11px]', m.color_flag ? 'opacity-70' : 'text-gray-500']">Do: {{ accountEmailById.get(m.account_id) }}</div>
                                 <div :class="['truncate mt-0.5 text-sm', m.is_read ? '' : 'font-semibold', m.color_flag ? '' : 'text-gray-900']">{{ m.subject || "(bez tematu)" }}</div>
                                 <div :class="['truncate text-xs mt-0.5', m.color_flag ? 'opacity-80' : 'text-gray-700']">{{ m.snippet }}</div>
                                 <div v-if="m.category || m.catalog || m.assigned_user" class="mt-1 flex flex-wrap gap-1">
@@ -288,6 +295,7 @@
                                     </select>
                                 </div>
                             </div>
+                            <div v-if="threadInboxAccount" class="text-xs text-gray-500">Do: {{ threadInboxAccount }}</div>
                             <h2 class="text-base font-semibold text-gray-900">{{ threadSubject || "(bez tematu)" }}</h2>
                             <div class="mt-0.5 text-xs text-gray-600">{{ thread.length }} {{ thread.length === 1 ? 'wiadomość' : 'wiadomości' }} w rozmowie</div>
                             <div v-if="selected && (selected.assigned_user || selected.category || selected.catalog)" class="mt-2 flex flex-wrap gap-1">
@@ -346,11 +354,11 @@
                         Na stałe (kolejne od tego nadawcy)
                     </label>
                     <div class="max-h-36 overflow-y-auto">
-                        <button v-for="u in users" :key="u.id" type="button" :class="ctxItem" @click="assignUserCtx(u.id)">
+                        <button v-for="u in assignableUsers" :key="u.id" type="button" :class="ctxItem" @click="assignUserCtx(u.id)">
                             <span class="h-2.5 w-2.5 rounded-full" :style="{ backgroundColor: u.color || '#9ca3af' }"></span> {{ u.name }}
                         </button>
                         <button type="button" :class="[ctxItem, 'text-gray-500']" @click="assignUserCtx(null)">— bez osoby —</button>
-                        <div v-if="users.length === 0" class="px-3 py-1.5 text-xs text-gray-400">Brak osób (Ustawienia → Osoby)</div>
+                        <div v-if="assignableUsers.length === 0" class="px-3 py-1.5 text-xs text-gray-400">Brak aktywnych użytkowników</div>
                     </div>
                     <div class="border-t border-gray-100 my-1"></div>
                     <div class="px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-gray-400">Kategoria</div>
@@ -463,17 +471,18 @@
                         </div>
                         <div class="flex items-center gap-2">
                             <label class="w-14 shrink-0 text-xs text-gray-500">Do</label>
-                            <input v-model="compose.to" type="text" placeholder="adres@firma.pl, drugi@…" class="flex-1 rounded-md border-gray-300 text-sm" />
+                            <RecipientInput v-model="compose.to" placeholder="adres@firma.pl, drugi@…" />
                         </div>
                         <div class="flex items-center gap-2">
                             <label class="w-14 shrink-0 text-xs text-gray-500">DW</label>
-                            <input v-model="compose.cc" type="text" placeholder="kopia (opcjonalnie)" class="flex-1 rounded-md border-gray-300 text-sm" />
+                            <RecipientInput v-model="compose.cc" placeholder="kopia (opcjonalnie)" />
                         </div>
                         <div class="flex items-center gap-2">
                             <label class="w-14 shrink-0 text-xs text-gray-500">Temat</label>
                             <input v-model="compose.subject" type="text" class="flex-1 rounded-md border-gray-300 text-sm" />
                         </div>
-                        <div class="flex items-center justify-end">
+                        <div class="flex items-center justify-between gap-2">
+                            <span class="text-xs text-gray-400">Stopka konta dołączy się automatycznie przy wysyłce.</span>
                             <label class="flex items-center gap-1.5 text-xs text-gray-500 cursor-pointer">
                                 <input type="checkbox" v-model="compose.html" class="rounded text-primary-600 focus:ring-primary-500" /> Edytor HTML
                             </label>
@@ -531,13 +540,16 @@ import {
     PencilSquareIcon, XMarkIcon, PaperAirplaneIcon, EnvelopeOpenIcon, NoSymbolIcon, BellAlertIcon, ChevronRightIcon, ArrowsUpDownIcon, ViewColumnsIcon, ClipboardDocumentIcon, FunnelIcon,
 } from "@heroicons/vue/24/outline";
 import { FolderIcon, TrashIcon } from "@heroicons/vue/24/solid";
+import RecipientInput from "./RecipientInput.vue";
 
 const props = defineProps<{
     accounts: Array<{ id: number; label: string; email: string; color: string | null; is_active: boolean; sync_status: string; last_sync_at: string | null; unread: number; signature?: string | null }>;
     users: Array<{ id: number; name: string; color: string | null; unread: number }>;
+    /** Wszyscy aktywni użytkownicy PIM — do przypisywania maila (skonfigurowane „Osoby" na górze). */
+    assignableUsers: Array<{ id: number; name: string; color: string | null; is_mail_user: boolean }>;
     messages: any;
     categories: Array<{ id: number; name: string; color: string; unread: number }>;
-    catalogs: Array<{ id: number; name: string; color: string | null; parent_id: number | null; depth: number; unread: number; total: number }>;
+    catalogs: Array<{ id: number; name: string; color: string | null; parent_id: number | null; depth: number; unread: number; total: number; collapsed: boolean }>;
     filters: { account_id: number | null; user_id: number | null; category_id: number | null; catalog_id: number | null; unread: boolean; unfiled: boolean; trash: boolean; spam: boolean; color: string | null; q: string | null; sort: string };
     totalUnread: number;
     trashUnread: number;
@@ -550,12 +562,16 @@ const props = defineProps<{
 const toast = useToast();
 const localFilters = reactive({ q: props.filters.q ?? "", unread: props.filters.unread ?? false, unfiled: props.filters.unfiled ?? false, sort: props.filters.sort ?? "date_desc" });
 
-// Zwijanie katalogów z podkatalogami (lewa kolumna) — stan w localStorage (per przeglądarka).
-const collapsedCats = ref<Set<number>>(new Set());
-try {
-    const saved = JSON.parse(localStorage.getItem("argoMailCollapsedCats") || "[]");
-    if (Array.isArray(saved)) collapsedCats.value = new Set(saved.map(Number));
-} catch (e) { /* brak/uszkodzony zapis — ignoruj */ }
+// Zwijanie katalogów z podkatalogami (lewa kolumna). Stan domyślny = pole `collapsed` z Ustawień
+// (Argo Mail → Katalogi), zapisywane w bazie. Klik strzałki utrwala zmianę (jedno źródło prawdy).
+const collapsedCats = ref<Set<number>>(new Set(props.catalogs.filter((c) => c.collapsed).map((c) => c.id)));
+
+// Adres skrzynki (konta), na którą przyszedł mail — do etykiety „Do:" w liście (wspólna skrzynka 10 kont).
+const accountEmailById = computed(() => {
+    const m = new Map<number, string>();
+    props.accounts.forEach((a) => m.set(a.id, a.email));
+    return m;
+});
 
 const catalogParent = computed(() => {
     const m = new Map<number, number | null>();
@@ -579,9 +595,11 @@ function catalogVisible(c: { parent_id: number | null }): boolean {
 }
 function toggleCatalog(id: number) {
     const s = new Set(collapsedCats.value);
-    s.has(id) ? s.delete(id) : s.add(id);
+    const willCollapse = !s.has(id);
+    willCollapse ? s.add(id) : s.delete(id);
     collapsedCats.value = s;
-    try { localStorage.setItem("argoMailCollapsedCats", JSON.stringify([...s])); } catch (e) { /* ignoruj */ }
+    // utrwal w bazie (to samo pole co przełącznik w Ustawieniach) — optymistycznie, fire-and-forget
+    axios.post(route("crafter.argo-mail.catalogs.collapse", id), { collapsed: willCollapse }).catch(() => { /* zostaje stan lokalny */ });
 }
 
 const selected = ref<any | null>(null);
@@ -594,6 +612,13 @@ const previewCollapsed = ref(false); // „Rozszerz" — ukrywa podgląd (kol. 3
 const thread = ref<any[]>([]);                     // cała konwersacja (od najstarszego)
 const expandedIds = ref<Set<number>>(new Set());   // które maile w wątku są rozwinięte
 const threadSubject = ref<string>("");
+// Skrzynka (konto), na którą przyszła rozmowa — „Do:" w nagłówku podglądu.
+// Bierzemy z pierwszego ODEBRANEGO maila wątku (pokaż też gdy sami odpisaliśmy ostatni;
+// ukryj dla rozmów czysto wysłanych, np. w „Wysłane").
+const threadInboxAccount = computed(() => {
+    const recv = thread.value.find((m: any) => !m.is_sent);
+    return recv ? accountEmailById.value.get(recv.account_id) ?? "" : "";
+});
 const assigningCatalog = ref(false);
 const selectedAccountId = ref<number | null>(null);
 const dragMessage = ref<{ id: number; from: string } | null>(null);
@@ -866,13 +891,33 @@ function toggleExpand(id: number) {
     s.has(id) ? s.delete(id) : s.add(id);
     expandedIds.value = s;
 }
+// Normalizacja odstępów treści maila (wzorzec: zwięzłość Roundcube). Wstrzykiwana do iframe
+// PRZED treścią → własne <style>/inline newslettera nadpisują to kolejnością i specyficznością
+// (brak !important, brak `*{}`, NIE ruszamy table/td → tabelkowe szablony zostają nietknięte).
+const MAIL_CSS =
+    'html{-webkit-text-size-adjust:100%}' +
+    'body{margin:0;padding:10px 12px;font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;font-size:14px;line-height:1.4;color:#1f2937;word-wrap:break-word;overflow-wrap:break-word}' +
+    'p{margin:0 0 .5em}' +
+    'div{margin:0}' +
+    'p:empty{display:none}' +
+    'p>br:only-child{display:none}' +
+    'h1,h2,h3,h4,h5,h6{margin:.8em 0 .4em;line-height:1.25}' +
+    'ul,ol{margin:0 0 .5em;padding-left:1.5em}li{margin:0}' +
+    'blockquote{margin:.4em 0;padding:0 0 0 .9em;border-left:2px solid #c7ccd1;color:#5b6470}' +
+    'blockquote blockquote{margin:.3em 0;border-left-color:#9aa1a8}' +
+    'pre{margin:0;font-family:inherit;white-space:pre-wrap;word-wrap:break-word;overflow-wrap:break-word}' +
+    'img{max-width:100%;height:auto}' +
+    'a{color:#2563eb}';
+function mailHead(): string {
+    return '<base target="_blank"><meta name="referrer" content="no-referrer"><meta charset="utf-8"><style>' + MAIL_CSS + '</style>';
+}
 function baseDoc(html: string): string {
-    return '<base target="_blank"><meta name="referrer" content="no-referrer">' + html;
+    return mailHead() + html;
 }
 function bodyDocFor(m: any): string {
     if (m.body_html) return baseDoc(m.body_html);
     const text = m.body_text || "(brak treści)";
-    return baseDoc('<pre style="white-space:pre-wrap;word-break:break-word;font-family:ui-sans-serif,system-ui,sans-serif;font-size:14px;color:#111;padding:16px;margin:0;">' + escapeHtml(text) + "</pre>");
+    return baseDoc('<pre>' + escapeHtml(text) + '</pre>');
 }
 function resizeIframe(e: Event) {
     const f = e.target as HTMLIFrameElement;
@@ -965,10 +1010,8 @@ function afterTrashChange() {
 function defaultAccountId(): number | null {
     return selectedAccountId.value || props.accounts.find((a) => a.is_active)?.id || props.accounts[0]?.id || null;
 }
-function signatureBlock(accId: number | null): string {
-    const sig = props.accounts.find((a) => a.id === accId)?.signature;
-    return sig && String(sig).trim() !== "" ? `\n\n-- \n${sig}` : "";
-}
+// Stopka (podpis) konta jest doklejana przez BACKEND przy wysyłce (surowy HTML —
+// pełny design nie przechodzi przez edytor TipTap), więc tutaj jej NIE wstawiamy.
 function quoteOriginal(): string {
     const s = selected.value;
     if (!s) return "";
@@ -978,9 +1021,13 @@ function quoteOriginal(): string {
 function nl2brHtml(text: string): string {
     return (text || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, "<br>");
 }
-function bodyFor(acc: number | null, withQuote: boolean): string {
-    const plain = signatureBlock(acc) + (withQuote ? quoteOriginal() : "");
-    return compose.html ? nl2brHtml(plain) : plain;
+function bodyFor(_acc: number | null, withQuote: boolean): string {
+    // Stopka NIE jest tu doklejana (robi to backend przy wysyłce). Zwracamy tylko cytat oryginału.
+    const quote = withQuote ? quoteOriginal() : "";
+    if (compose.html) {
+        return quote ? nl2brHtml(quote) : "";
+    }
+    return quote;
 }
 function openCompose() {
     const acc = defaultAccountId();
@@ -1051,6 +1098,32 @@ function openContextMenu(e: MouseEvent, m: any) {
 function closeCtx() { ctx.open = false; }
 function reloadAll() {
     router.reload({ only: ["messages", "accounts", "users", "categories", "catalogs", "totalUnread", "trashUnread", "trashTotal", "spamUnread", "spamTotal", "colorCounts"] });
+}
+
+// Wyczyść kosz — TRWALE usuwa wszystkie maile z kosza (nieodwracalne).
+async function emptyTrash() {
+    if (!window.confirm(`Trwale usunąć WSZYSTKIE wiadomości z kosza (${props.trashTotal})? Tej operacji NIE da się cofnąć.`)) return;
+    try {
+        const { data } = await axios.post(route("crafter.argo-mail.messages.empty-trash"));
+        toast.success(`Kosz opróżniony — usunięto ${data.count} wiadomości.`);
+        clearThreadView();
+        reloadAll();
+    } catch (e) {
+        toast.error("Nie udało się opróżnić kosza.");
+    }
+}
+
+// Wyczyść spam — TRWALE usuwa wszystkie maile ze spamu (nadawcy pozostają zablokowani).
+async function emptySpam() {
+    if (!window.confirm(`Trwale usunąć WSZYSTKIE maile ze spamu (${props.spamTotal})? Zablokowani nadawcy zostają; tej operacji NIE da się cofnąć.`)) return;
+    try {
+        const { data } = await axios.post(route("crafter.argo-mail.messages.empty-spam"));
+        toast.success(`Spam opróżniony — usunięto ${data.count} wiadomości.`);
+        clearThreadView();
+        reloadAll();
+    } catch (e) {
+        toast.error("Nie udało się opróżnić spamu.");
+    }
 }
 async function assignUserCtx(userId: number | null) {
     const id = ctx.messageId, perm = ctx.permanent;
@@ -1189,11 +1262,7 @@ onBeforeUnmount(() => {
 
 const bodyDoc = computed(() => {
     if (!selected.value) return "";
-    // <base target="_blank"> → linki z maila otwierają się w nowej karcie
-    const base = '<base target="_blank"><meta name="referrer" content="no-referrer">';
-    if (selected.value.body_html) return base + selected.value.body_html;
-    const text = selected.value.body_text || "(brak treści)";
-    return base + '<pre style="white-space:pre-wrap;word-break:break-word;font-family:ui-sans-serif,system-ui,sans-serif;font-size:14px;color:#111;padding:16px;margin:0;">' + escapeHtml(text) + "</pre>";
+    return bodyDocFor(selected.value);
 });
 function escapeHtml(s: string): string { return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
 function recipientList(list: Array<{ email: string; name: string }> | undefined): string {

@@ -53,6 +53,17 @@
                             <FolderIcon class="h-4 w-4 text-gray-400 shrink-0" />
                             <span class="text-sm" :class="[catalogDepthClass(c.depth), c.unread > 0 ? 'font-bold' : '']">{{ c.name }}</span>
                             <span class="text-xs text-gray-400">({{ c.total }} maili<span v-if="c.unread > 0">, {{ c.unread }} nieprzecz.</span>)</span>
+                            <button
+                                v-if="hasChildren(c)"
+                                type="button"
+                                @click="toggleCollapsed(c)"
+                                class="inline-flex items-center gap-0.5 rounded px-1 py-0.5 text-xs"
+                                :class="c.collapsed ? 'text-gray-500 hover:text-gray-700' : 'text-primary-600 hover:text-primary-700'"
+                                :title="c.collapsed ? 'W skrzynce domyślnie ZWINIĘTY (podkatalogi ukryte) — kliknij, by rozwijać' : 'W skrzynce domyślnie rozwinięty — kliknij, by domyślnie zwijać'"
+                            >
+                                <component :is="c.collapsed ? ChevronRightIcon : ChevronDownIcon" class="h-3.5 w-3.5" />
+                                {{ c.collapsed ? 'zwinięty' : 'rozwinięty' }}
+                            </button>
                             <div class="ml-auto flex items-center gap-2">
                                 <select @change="moveCatalog(c, $event)" class="text-xs rounded-md border-gray-300 py-1 max-w-[150px]" title="Przenieś katalog do innego folderu">
                                     <option value="">Przenieś do…</option>
@@ -250,12 +261,12 @@ import { reactive, ref, nextTick, watch } from "vue";
 import { Link, router } from "@inertiajs/vue3";
 import { useToast } from "@brackets/vue-toastification";
 import { PageHeader, PageContent, Button } from "crafter/Components";
-import { PlusIcon, PencilSquareIcon, NoSymbolIcon, Bars3Icon } from "@heroicons/vue/24/outline";
+import { PlusIcon, PencilSquareIcon, NoSymbolIcon, Bars3Icon, ChevronRightIcon, ChevronDownIcon } from "@heroicons/vue/24/outline";
 import { TrashIcon, FolderIcon } from "@heroicons/vue/24/solid";
 import draggable from "vuedraggable";
 
 const props = defineProps<{
-    catalogs: Array<{ id: number; name: string; color: string | null; parent_id: number | null; depth: number; unread: number; total: number }>;
+    catalogs: Array<{ id: number; name: string; color: string | null; parent_id: number | null; depth: number; unread: number; total: number; collapsed: boolean }>;
     categories: Array<{ id: number; name: string; color: string; is_system: boolean; messages_count: number }>;
     users: Array<{ id: number; admin_user_id: number; name: string; email: string | null; color: string | null }>;
     availableUsers: Array<{ id: number; name: string; email: string | null }>;
@@ -278,6 +289,23 @@ const newRule = reactive<{ from_email: string; subject_contains: string; catalog
 // Lista katalogów dla drag&drop (lokalna kopia; resetowana po przeładowaniu propsów z serwera).
 const catalogList = ref([...props.catalogs]);
 watch(() => props.catalogs, (v) => { catalogList.value = [...v]; });
+
+// Czy katalog ma podkatalogi (tylko takie da się zwinąć) — przełącznik pokazujemy tylko dla nich.
+function hasChildren(c: { id: number }): boolean {
+    return props.catalogs.some((x) => x.parent_id === c.id);
+}
+
+// Domyślny stan katalogu w skrzynce: zwinięty/rozwinięty (zapis w bazie; to samo pole, co strzałka w drzewie skrzynki).
+function toggleCollapsed(c: { id: number; name: string; collapsed: boolean }) {
+    router.post(
+        route("crafter.argo-mail.catalogs.collapse", c.id),
+        { collapsed: !c.collapsed },
+        {
+            preserveScroll: true,
+            onSuccess: () => toast.success(c.collapsed ? `„${c.name}" — domyślnie rozwinięty.` : `„${c.name}" — domyślnie zwinięty.`),
+        }
+    );
+}
 
 // Zapis nowej kolejności (sort) po przeciągnięciu — backend sortuje w obrębie rodzeństwa.
 function saveOrder() {

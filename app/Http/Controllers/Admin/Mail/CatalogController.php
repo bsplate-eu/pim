@@ -121,6 +121,21 @@ class CatalogController extends Controller
         return back()->with('success', 'Kolejność katalogów zapisana.');
     }
 
+    /**
+     * Domyślny stan katalogu w drzewie skrzynki (zwinięty/rozwinięty) — przełącznik w Ustawieniach.
+     * Stosowany przy wejściu do skrzynki; klik strzałki w drzewie też tu zapisuje (jedno źródło prawdy).
+     */
+    public function collapse(Request $request, Catalog $catalog): RedirectResponse
+    {
+        $data = $request->validate([
+            'collapsed' => ['required', 'boolean'],
+        ]);
+
+        $catalog->update(['collapsed' => $data['collapsed']]);
+
+        return back()->with('success', 'Zapisano widok katalogu.');
+    }
+
     public function destroy(Catalog $catalog): RedirectResponse
     {
         // podkatalogi usuwają się kaskadowo; maile w nich tracą przypisanie (catalog_id → NULL)

@@ -88,7 +88,7 @@
 - **Nowa wiadomość** — przycisk u góry panelu.
 - **Odpowiedz / Przekaż** — z otwartego maila (z cytatem oryginału).
 - **Od** — wybór skrzynki nadawcy.
-- **Do / DW / Temat.**
+- **Do / DW** — z **autouzupełnianiem**: wpisz litery, a lista podpowie adresy z dotychczasowej korespondencji (nadawcy odebranych + odbiorcy wysłanych, najczęstsze na górze); ↑↓ wybiera, Enter/klik wstawia, wiele adresów oddziel przecinkiem. **Temat.**
 - **Edytor HTML** (pogrubienia, linki itd.) — domyślnie włączony; przełącznik na zwykły tekst.
 - **Dodaj załącznik** — wiele plików, każdy z możliwością usunięcia.
 - **Full size** — większe okno pisania.

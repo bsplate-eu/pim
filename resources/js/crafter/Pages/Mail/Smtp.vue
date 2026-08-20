@@ -20,6 +20,25 @@
                     />
 
                     <div :class="{ 'opacity-50 pointer-events-none': !form.override_env }">
+                        <div v-if="accounts.length" class="mb-4">
+                            <SelectInput
+                                v-model="form.account_id"
+                                name="account_id"
+                                label="Skrzynka nadawcza (z Argo Mail)"
+                                :options="accountOptions"
+                            />
+                            <p class="mt-1 text-xs text-slate-500">
+                                Wybierz skonfigurowaną skrzynkę — maile systemowe (np. zaproszenia) pójdą z niej.
+                                „Ręczna konfiguracja" = wpisz dane SMTP poniżej.
+                            </p>
+                        </div>
+
+                        <div v-if="form.account_id" class="rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-700">
+                            ✓ Maile systemowe będą wysyłane przez wybraną skrzynkę i jej ustawienia SMTP.
+                            Pola ręczne poniżej są wtedy nieużywane.
+                        </div>
+
+                        <template v-if="!form.account_id">
                         <div class="grid grid-cols-2 gap-4">
                             <TextInput
                                 v-model="form.host"
@@ -81,6 +100,7 @@
                                 placeholder="PIM"
                             />
                         </div>
+                        </template>
                     </div>
                 </div>
             </Card>
@@ -115,19 +135,27 @@
 </template>
 
 <script setup>
-import { ref } from "vue";
+import { ref, computed } from "vue";
 import { PaperAirplaneIcon, CheckIcon } from "@heroicons/vue/24/outline";
 import { Card, TextInput, SelectInput, Toggle, Button, PageHeader, PageContent, Modal } from "crafter/Components";
 import { useForm } from "crafter/hooks/useForm";
 
 const props = defineProps({
     settings: { type: Object, required: true },
+    accounts: { type: Array, default: () => [] },
     env_fallback: { type: Object, required: true },
 });
+
+// "" = ręczna konfiguracja (pola SMTP poniżej); liczba = ID skrzynki z Argo Mail.
+const accountOptions = computed(() => [
+    { label: "— Ręczna konfiguracja SMTP (pola poniżej) —", value: "" },
+    ...props.accounts.map((a) => ({ label: `${a.label} — ${a.email}`, value: a.id })),
+]);
 
 const { form, submit } = useForm(
     {
         override_env: props.settings.override_env,
+        account_id: props.settings.account_id ?? "",
         host: props.settings.host,
         port: props.settings.port,
         username: props.settings.username,

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\QueryException;
 
 class MailTemplate extends Model
 {
@@ -46,6 +47,13 @@ class MailTemplate extends Model
 
     public static function findByKey(string $key): ?self
     {
-        return static::query()->where('key', $key)->where('is_active', true)->first();
+        // Tabela mail_templates moze nie istniec na srodowisku, gdzie migracje
+        // modulu Mail nie zostaly puszczone (np. prod ze starego zrzutu).
+        // W takim wypadku zwracamy null -> nadawca maila uzywa fallbacku blade.
+        try {
+            return static::query()->where('key', $key)->where('is_active', true)->first();
+        } catch (QueryException $e) {
+            return null;
+        }
     }
 }

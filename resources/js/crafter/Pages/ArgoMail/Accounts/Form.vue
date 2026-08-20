@@ -136,10 +136,15 @@
             <Card>
                 <CardHeader>
                     <h2 class="text-lg font-semibold">Stopka (podpis)</h2>
-                    <p class="text-sm text-gray-500">Dodawana automatycznie przy pisaniu/odpowiadaniu z tej skrzynki.</p>
+                    <p class="text-sm text-gray-500">Edytor HTML — logo, linki, formatowanie. Dokleja się automatycznie przy pisaniu/odpowiadaniu.</p>
                 </CardHeader>
                 <CardContent>
-                    <textarea v-model="form.signature" rows="4" :class="inputClass" placeholder="np.&#10;--&#10;Jan Kowalski · Argo Agency&#10;tel. 123 456 789"></textarea>
+                    <Wysiwyg v-model="form.signature" name="signature" label="" />
+                    <p class="mt-2 text-xs text-gray-500">
+                        <strong>Logo:</strong> kliknij ikonę obrazka na pasku → wgraj plik logo.
+                        <strong>Podlinkowanie:</strong> zaznacz logo lub tekst, kliknij ikonę łańcucha i wklej adres strony (np. <code>https://argotech.com.pl</code>).
+                        Stopka dokleja się automatycznie tylko w trybie „Edytor HTML" w oknie wiadomości.
+                    </p>
                 </CardContent>
             </Card>
 
@@ -194,6 +199,7 @@ import {
     CardContent,
     CardFooter,
     Toggle,
+    Wysiwyg,
 } from "crafter/Components";
 
 interface AccountData {
