@@ -772,6 +772,14 @@ Route::middleware(['crafter.base', 'auth', 'crafter.verified'])->prefix('admin')
 
     Route::get('connect/marketplace/ebay/templates', [App\Http\Controllers\Admin\Connect\Marketplace\EbayTemplateController::class, 'index'])
         ->name('connect.marketplace.ebay.templates.index');
+    Route::post('connect/marketplace/ebay/templates', [App\Http\Controllers\Admin\Connect\Marketplace\EbayTemplateController::class, 'store'])
+        ->name('connect.marketplace.ebay.templates.store');
+    Route::put('connect/marketplace/ebay/templates/{template}', [App\Http\Controllers\Admin\Connect\Marketplace\EbayTemplateController::class, 'update'])
+        ->name('connect.marketplace.ebay.templates.update');
+    Route::post('connect/marketplace/ebay/templates/{template}/duplicate', [App\Http\Controllers\Admin\Connect\Marketplace\EbayTemplateController::class, 'duplicate'])
+        ->name('connect.marketplace.ebay.templates.duplicate');
+    Route::delete('connect/marketplace/ebay/templates/{template}', [App\Http\Controllers\Admin\Connect\Marketplace\EbayTemplateController::class, 'destroy'])
+        ->name('connect.marketplace.ebay.templates.destroy');
     Route::post('connect/marketplace/ebay/templates/preview', [App\Http\Controllers\Admin\Connect\Marketplace\EbayTemplateController::class, 'preview'])
         ->name('connect.marketplace.ebay.templates.preview');
     Route::post('connect/marketplace/ebay/templates/audit', [App\Http\Controllers\Admin\Connect\Marketplace\EbayTemplateController::class, 'audit'])

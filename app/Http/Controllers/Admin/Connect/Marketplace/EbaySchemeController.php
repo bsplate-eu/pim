@@ -6,8 +6,8 @@ use App\Http\Controllers\Admin\Controller;
 use App\Models\Ebay\EbayCategory;
 use App\Models\Ebay\EbayScheme;
 use App\Models\Pricelist;
+use App\Models\Ebay\EbayTemplate;
 use App\Models\Scrap\EbaySettings;
-use App\Models\Template;
 use App\Services\Ebay\EbayInventoryClient;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -37,7 +37,7 @@ class EbaySchemeController extends Controller
                     ? "{$s->category->category_name} (#{$s->category->category_id})"
                     : null,
                 'template_id' => $s->template_id,
-                'template_label' => $s->template ? "{$s->template->slug} · {$s->template->locale}" : null,
+                'template_label' => $s->template ? "{$s->template->name} ({$s->template->marketplace})" : null,
                 'pricelist_id' => $s->pricelist_id,
                 'price_multiplier' => $s->price_multiplier,
                 'tax_percent' => $s->tax_percent,
@@ -69,8 +69,14 @@ class EbaySchemeController extends Controller
                     'label' => "{$c->category_name} (#{$c->category_id})",
                     'ready' => $c->isReadyForListing(),
                 ]),
-            'templates' => Template::orderBy('slug')->get(['id', 'slug', 'locale'])
-                ->map(fn (Template $t) => ['id' => $t->id, 'label' => "{$t->slug} · {$t->locale}", 'locale' => $t->locale]),
+            // Szablon eBay należy do jednego rynku — formularz odsiewa po nim, bo szablon
+            // spoza rynku dałby schemat, którym nie da się wystawić.
+            'templates' => EbayTemplate::orderBy('marketplace')->orderBy('name')->get(['id', 'name', 'marketplace', 'enabled'])
+                ->map(fn (EbayTemplate $t) => [
+                    'id' => $t->id,
+                    'label' => $t->name.($t->enabled ? '' : ' (wyłączony)'),
+                    'marketplace' => $t->marketplace,
+                ]),
             'pricelists' => Pricelist::orderBy('name')->get(['id', 'name', 'currency']),
             'marketplaces' => array_keys(EbayScheme::MARKETPLACE_LOCALE),
             'marketplaceLocales' => EbayScheme::MARKETPLACE_LOCALE,
@@ -135,7 +141,7 @@ class EbaySchemeController extends Controller
             'name' => ['required', 'string', 'max:120'],
             'marketplace' => ['required', 'string', 'max:16'],
             'ebay_category_id' => ['nullable', 'integer', 'exists:ebay_categories,id'],
-            'template_id' => ['nullable', 'integer', 'exists:templates,id'],
+            'template_id' => ['nullable', 'integer', 'exists:ebay_templates,id'],
             'pricelist_id' => ['nullable', 'integer', 'exists:pricelists,id'],
             'price_multiplier' => ['required', 'numeric', 'min:0.0001', 'max:1000'],
             'tax_percent' => ['required', 'numeric', 'min:0', 'max:100'],

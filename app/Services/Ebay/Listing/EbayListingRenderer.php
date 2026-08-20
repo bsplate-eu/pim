@@ -2,29 +2,23 @@
 
 namespace App\Services\Ebay\Listing;
 
+use App\Models\Ebay\EbayTemplate;
 use App\Models\Product;
-use App\Models\Template;
 
 /**
  * Renderer treści oferty eBay: tytuł + opis + zdjęcia dla konkretnego produktu i rynku.
  *
- * ODSTĘPSTWO OD WZORCA (świadome). W OMS ARGO Allegro dostał własny byt `AllegroListingTemplate`
- * — sekcje z tagami [nazwa]/[opis]/[cena] i osobny edytor. U nas budowanie takiego drugiego
- * silnika byłoby błędem: mamy już `App\Models\Template` (tabela `templates`, jeden wiersz na
- * locale), renderowany Bladem przez `Product::getVariables($locale)`, który zasila Selly,
- * PrestaShop i OpenCart. Te same szablony dają gotowe opisy DE/FR/ES/CS/SK/EN/LV/ET.
+ * Źródłem treści jest `EbayTemplate` (tabela `ebay_templates`) — WŁASNY byt integracji eBay,
+ * jeden szablon na rynek. Nie sięgamy do `templates` (szablony sklepowe zasilające Selly,
+ * PrestaShop i OpenCart), bo tuning pod aukcje jest inny niż pod sklep: krótszy tytuł, węższy
+ * HTML, treść zależna od rynku — a każda taka zmiana we wspólnej tabeli przestawiałaby sklepy.
  *
- * Powody, dla których reużywamy zamiast kopiować:
- *  • `products.info_1` (opis) jest u nas praktycznie PUSTE — 7 wpisów PL na 1494 produkty.
- *    Tagi [opis]/[opis_dodatkowy*] z wzorca Allegro nie miałyby z czego czerpać. Realnym
- *    źródłem opisu są ATRYBUTY (marka, model, roczniki, materiał) złożone szablonem Blade.
- *  • jedno źródło opisu = aukcja eBay mówi to samo co sklep; dwa silniki rozjechałyby się
- *    przy pierwszej zmianie treści.
- *  • `Template.locale` rozwiązuje wielojęzyczność za darmo — a to była największa różnica
- *    między nami a wzorcem (Allegro jest jednojęzyczne).
+ * Względem wzorca z OMS ARGO (`AllegroListingTemplate`: sekcje w 5 układach, tagi, edytor
+ * na 26 KB Vue) upraszczamy strukturę, bo opis eBaya to jeden blok HTML, a nie
+ * `description.sections[]` jak w Allegro — nie ma czego składać z klocków.
  *
  * Schemat wystawiania (etap C) wskazuje `template_id`; tu tylko renderujemy i dociosujemy
- * wynik do wymagań eBaya (limit tytułu, dozwolony HTML).
+ * wynik do wymagań eBaya (limit tytułu 80 znaków, biała lista HTML).
  */
 class EbayListingRenderer
 {
@@ -46,7 +40,7 @@ class EbayListingRenderer
      *
      * @return array{title:string, truncated:bool, original_length:int}
      */
-    public function title(Template $template, Product $product): array
+    public function title(EbayTemplate $template, Product $product): array
     {
         $raw = $this->flatten($template->getRenderedTitle($product));
 
@@ -58,7 +52,7 @@ class EbayListingRenderer
     }
 
     /** Opis aukcji: wyrenderowany szablonem, obcięty do dozwolonego HTML. */
-    public function description(Template $template, Product $product): string
+    public function description(EbayTemplate $template, Product $product): string
     {
         return trim(strip_tags($template->getRenderedDescription($product), self::ALLOWED_TAGS));
     }
@@ -87,7 +81,7 @@ class EbayListingRenderer
      *
      * @return list<string>
      */
-    public function problems(Template $template, Product $product): array
+    public function problems(EbayTemplate $template, Product $product): array
     {
         $problems = [];
 

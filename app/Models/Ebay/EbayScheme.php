@@ -3,7 +3,6 @@
 namespace App\Models\Ebay;
 
 use App\Models\Pricelist;
-use App\Models\Template;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -50,7 +49,7 @@ class EbayScheme extends Model
 
     public function template(): BelongsTo
     {
-        return $this->belongsTo(Template::class, 'template_id');
+        return $this->belongsTo(EbayTemplate::class, 'template_id');
     }
 
     public function pricelist(): BelongsTo
@@ -95,8 +94,12 @@ class EbayScheme extends Model
 
         if (! $this->template) {
             $problems[] = 'brak szablonu treści';
-        } elseif ($this->template->locale !== $this->locale()) {
-            $problems[] = "szablon jest w locale „{$this->template->locale}”, a rynek {$this->marketplace} oczekuje „{$this->locale()}”";
+        } elseif ($this->template->marketplace !== $this->marketplace) {
+            // Szablon eBay należy do jednego rynku. Wzięcie cudzego dałoby aukcję w złym języku
+            // (albo z zapisami prawnymi innego kraju), a eBay tego nie wyłapie za nas.
+            $problems[] = "szablon „{$this->template->name}” należy do rynku {$this->template->marketplace}, a schemat jest z {$this->marketplace}";
+        } elseif (! $this->template->enabled) {
+            $problems[] = "szablon „{$this->template->name}” jest wyłączony";
         }
 
         if (! $this->pricelist_id) {
