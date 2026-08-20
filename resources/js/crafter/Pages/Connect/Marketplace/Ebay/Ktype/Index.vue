@@ -109,6 +109,9 @@
                                 <Button variant="outline" color="gray" size="sm" :loading="previewId === o.id" :disabled="!meta.oauth_connected" @click="showFitment(o)">
                                     Podgląd
                                 </Button>
+                                <Button variant="outline" color="primary" size="sm" class="ml-1" :loading="manualLoadingId === o.id" :disabled="!meta.oauth_connected" @click="openManual(o)">
+                                    Dopasuj ręcznie
+                                </Button>
                             </td>
                         </tr>
                     </tbody>
@@ -148,6 +151,95 @@
                 </table>
 
                 <div class="mt-5"><Button color="primary" @click="fitmentData = null">Zamknij</Button></div>
+            </div>
+        </div>
+
+        <!-- MODAL: RĘCZNE DOPASOWANIE -->
+        <div v-if="manual" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" @click.self="manual = null">
+            <div class="max-h-[88vh] w-full max-w-4xl overflow-y-auto rounded-xl bg-white p-6 shadow-xl">
+                <h2 class="text-lg font-semibold">Ręczne dopasowanie pojazdów</h2>
+                <p class="mt-1 text-sm text-gray-600">{{ manual.offer.title }}</p>
+                <p class="font-mono text-xs text-gray-400">{{ manual.offer.item_id }}</p>
+
+                <div class="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                    Zapis <span class="font-semibold">zastępuje</span> całą dotychczasową listę kompatybilności
+                    (tak działa eBay — nie dokłada, tylko podmienia).
+                    <template v-if="manual.offer.compat_count">
+                        Ta aukcja ma teraz <span class="font-semibold">{{ manual.offer.compat_count }}</span> wpisów —
+                        jeśli chcesz je zachować, dodaj je poniżej razem z nowymi.
+                    </template>
+                </div>
+
+                <!-- WYBÓR POJAZDU -->
+                <div class="mt-4 grid grid-cols-1 gap-3 md:grid-cols-4">
+                    <div>
+                        <label class="mb-1 block text-xs font-medium text-gray-600">Marka</label>
+                        <select v-model="v.make" class="w-full rounded-md border-gray-300 text-sm" :disabled="loadingProp === 'make'" @change="onMakeChange">
+                            <option :value="null">{{ loadingProp === 'make' ? 'ładuję…' : '— wybierz —' }}</option>
+                            <option v-for="m in opts.make" :key="m" :value="m">{{ m }}</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="mb-1 block text-xs font-medium text-gray-600">Model</label>
+                        <select v-model="v.model" class="w-full rounded-md border-gray-300 text-sm" :disabled="!v.make || loadingProp === 'model'" @change="onModelChange">
+                            <option :value="null">{{ loadingProp === 'model' ? 'ładuję…' : '— wybierz —' }}</option>
+                            <option v-for="m in opts.model" :key="m" :value="m">{{ m }}</option>
+                        </select>
+                    </div>
+                    <div v-if="manual.properties.platform">
+                        <label class="mb-1 block text-xs font-medium text-gray-600">Platforma <span class="text-gray-400">(opcjonalnie)</span></label>
+                        <select v-model="v.platform" class="w-full rounded-md border-gray-300 text-sm" :disabled="!v.model || loadingProp === 'platform'" @change="loadYears">
+                            <option :value="null">{{ loadingProp === 'platform' ? 'ładuję…' : '— dowolna —' }}</option>
+                            <option v-for="p in opts.platform" :key="p" :value="p">{{ p }}</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="mb-1 block text-xs font-medium text-gray-600">Roczniki</label>
+                        <div class="flex items-center gap-1">
+                            <select v-model="v.yearFrom" class="w-full rounded-md border-gray-300 text-sm" :disabled="!opts.year.length">
+                                <option :value="null">od</option>
+                                <option v-for="y in opts.year" :key="y" :value="y">{{ y }}</option>
+                            </select>
+                            <span class="text-gray-400">–</span>
+                            <select v-model="v.yearTo" class="w-full rounded-md border-gray-300 text-sm" :disabled="!opts.year.length">
+                                <option :value="null">do</option>
+                                <option v-for="y in opts.year" :key="y" :value="y">{{ y }}</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-3 flex items-center gap-3">
+                    <Button size="sm" color="primary" :disabled="!canAdd" @click="addVehicle">Dodaj do listy</Button>
+                    <span class="text-xs text-gray-500">
+                        Bliźniaki badge'owe (np. Citroen Dispatch = Peugeot Expert = Toyota Proace) dodaj jako osobne pozycje.
+                    </span>
+                </div>
+
+                <p v-if="manualError" class="mt-2 text-sm text-red-600">{{ manualError }}</p>
+
+                <!-- LISTA DO ZAPISU -->
+                <div v-if="vehicles.length" class="mt-5">
+                    <h3 class="text-sm font-semibold text-gray-900">Do zapisania ({{ entryCount }} wpisów)</h3>
+                    <table class="mt-2 min-w-full text-sm">
+                        <tbody class="divide-y divide-gray-100">
+                            <tr v-for="(g, i) in vehicles" :key="i">
+                                <td class="py-1.5">{{ g.make }} · {{ g.model }}<span v-if="g.platform" class="text-gray-500"> · {{ g.platform }}</span></td>
+                                <td class="py-1.5 text-gray-600">{{ g.years[0] }}–{{ g.years[g.years.length - 1] }} ({{ g.years.length }} roczników)</td>
+                                <td class="py-1.5 text-right">
+                                    <button type="button" class="text-xs text-red-600 hover:underline" @click="vehicles.splice(i, 1)">usuń</button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="mt-5 flex items-center gap-3">
+                    <Button color="primary" :loading="savingManual" :disabled="!vehicles.length" @click="saveManual">
+                        Zapisz na eBay ({{ entryCount }})
+                    </Button>
+                    <Button variant="outline" color="gray" @click="manual = null">Anuluj</Button>
+                </div>
             </div>
         </div>
 
@@ -280,5 +372,128 @@ function finish() {
     const applied = runData.value?.applied;
     runData.value = null;
     if (applied) { selected.clear(); router.reload(); }
+}
+
+// --- Ręczne dopasowanie ---------------------------------------------------
+// Kaskada marka → model → platforma → rocznik, każdy krok pytany o eBaya, bo tylko jego
+// baza pojazdów decyduje, jakie kombinacje w ogóle istnieją. Nazwy właściwości różnią się
+// per rynek, więc trzymamy je w `manual.properties` i wysyłamy dokładnie takie, jakie przyszły.
+
+const manual = ref<any>(null);
+const manualLoadingId = ref<number | null>(null);
+const manualError = ref<string | null>(null);
+const savingManual = ref(false);
+const loadingProp = ref<string | null>(null);
+
+const v = reactive<{ make: string | null; model: string | null; platform: string | null; yearFrom: string | null; yearTo: string | null }>(
+    { make: null, model: null, platform: null, yearFrom: null, yearTo: null },
+);
+const opts = reactive<Record<string, string[]>>({ make: [], model: [], platform: [], year: [] });
+const vehicles = ref<Array<{ make: string; model: string; platform: string | null; years: string[] }>>([]);
+
+const entryCount = computed(() => vehicles.value.reduce((n, g) => n + g.years.length, 0));
+const canAdd = computed(() => !!v.make && !!v.model && !!v.yearFrom && !!v.yearTo);
+
+function resetVehicleForm() {
+    v.make = v.model = v.platform = v.yearFrom = v.yearTo = null;
+    opts.model = []; opts.platform = []; opts.year = [];
+}
+
+function askOptions(property: string, filters: Record<string, string>, into: string) {
+    loadingProp.value = into;
+    manualError.value = null;
+    return axios
+        .post(route("crafter.connect.marketplace.ebay.ktype.vehicle-options", manual.value.offer.id), { property, filters })
+        .then((r) => { opts[into] = r.data.values ?? []; })
+        .catch((e) => { manualError.value = e.response?.data?.error ?? "Nie udało się pobrać listy z eBaya"; })
+        .finally(() => { loadingProp.value = null; });
+}
+
+function openManual(o: Row) {
+    manualLoadingId.value = o.id;
+    manualError.value = null;
+    axios
+        .post(route("crafter.connect.marketplace.ebay.ktype.vehicle-options", o.id), {})
+        .then((r) => {
+            manual.value = { offer: o, properties: r.data.properties };
+            vehicles.value = [];
+            resetVehicleForm();
+            return askOptions(r.data.properties.make, {}, "make");
+        })
+        .catch((e) => toast.error(e.response?.data?.error ?? "Nie udało się otworzyć dopasowania"))
+        .finally(() => { manualLoadingId.value = null; });
+}
+
+function onMakeChange() {
+    v.model = v.platform = v.yearFrom = v.yearTo = null;
+    opts.model = []; opts.platform = []; opts.year = [];
+    if (!v.make) return;
+    const p = manual.value.properties;
+    askOptions(p.model, { [p.make]: v.make }, "model");
+}
+
+function onModelChange() {
+    v.platform = v.yearFrom = v.yearTo = null;
+    opts.platform = []; opts.year = [];
+    if (!v.model) return;
+    const p = manual.value.properties;
+    const filters = { [p.make]: v.make!, [p.model]: v.model! };
+    if (p.platform) askOptions(p.platform, filters, "platform");
+    loadYears();
+}
+
+function loadYears() {
+    v.yearFrom = v.yearTo = null;
+    const p = manual.value.properties;
+    const filters: Record<string, string> = { [p.make]: v.make!, [p.model]: v.model! };
+    if (p.platform && v.platform) filters[p.platform] = v.platform;
+    askOptions(p.year, filters, "year").then(() => {
+        // eBay zwraca roczniki nieuporządkowane — bez sortowania zakres „od–do" nie miałby sensu.
+        opts.year = [...opts.year].sort();
+        if (opts.year.length) { v.yearFrom = opts.year[0]; v.yearTo = opts.year[opts.year.length - 1]; }
+    });
+}
+
+function addVehicle() {
+    const from = opts.year.indexOf(v.yearFrom!);
+    const to = opts.year.indexOf(v.yearTo!);
+    if (from < 0 || to < 0 || from > to) {
+        manualError.value = "Zakres roczników jest odwrotny — rocznik „od” musi być wcześniejszy niż „do”.";
+        return;
+    }
+    vehicles.value.push({
+        make: v.make!, model: v.model!, platform: v.platform,
+        years: opts.year.slice(from, to + 1),
+    });
+    resetVehicleForm();
+    askOptions(manual.value.properties.make, {}, "make");
+}
+
+function saveManual() {
+    const p = manual.value.properties;
+    // Jeden wpis na rocznik — eBay sam rozwija go na wersje silnikowe.
+    const entries = vehicles.value.flatMap((g) =>
+        g.years.map((year) => {
+            const e: Record<string, string> = { [p.make]: g.make, [p.model]: g.model, [p.year]: year };
+            if (p.platform && g.platform) e[p.platform] = g.platform;
+            return e;
+        }),
+    );
+
+    savingManual.value = true;
+    axios
+        .post(route("crafter.connect.marketplace.ebay.ktype.manual", manual.value.offer.id), { entries })
+        .then((r) => {
+            const lost = r.data.sent - r.data.count;
+            toast.success(
+                `Zapisano: eBay przyjął ${r.data.count} z ${r.data.sent} wpisów` +
+                (lost > 0 ? ` (${lost} pominął jako nieznane kombinacje)` : ""),
+            );
+            if (r.data.warnings?.length) toast.error(r.data.warnings[0]);
+            manual.value = null;
+            router.reload({ only: ["offers", "totals"] });
+        })
+        .catch((e) => { manualError.value = e.response?.data?.error ?? "Zapis nie powiódł się"; })
+        .finally(() => { savingManual.value = false; });
 }
 </script>

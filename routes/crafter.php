@@ -774,6 +774,10 @@ Route::middleware(['crafter.base', 'auth', 'crafter.verified'])->prefix('admin')
         ->name('connect.marketplace.ebay.ktype.index');
     Route::get('connect/marketplace/ebay/ktype/{offer}/fitment', [App\Http\Controllers\Admin\Connect\Marketplace\EbayKtypeController::class, 'fitment'])
         ->name('connect.marketplace.ebay.ktype.fitment');
+    Route::post('connect/marketplace/ebay/ktype/{offer}/vehicle-options', [App\Http\Controllers\Admin\Connect\Marketplace\EbayKtypeController::class, 'vehicleOptions'])
+        ->name('connect.marketplace.ebay.ktype.vehicle-options');
+    Route::post('connect/marketplace/ebay/ktype/{offer}/manual', [App\Http\Controllers\Admin\Connect\Marketplace\EbayKtypeController::class, 'applyManual'])
+        ->name('connect.marketplace.ebay.ktype.manual');
     Route::post('connect/marketplace/ebay/ktype/refresh', [App\Http\Controllers\Admin\Connect\Marketplace\EbayKtypeController::class, 'refresh'])
         ->name('connect.marketplace.ebay.ktype.refresh');
     Route::post('connect/marketplace/ebay/ktype/run', [App\Http\Controllers\Admin\Connect\Marketplace\EbayKtypeController::class, 'run'])

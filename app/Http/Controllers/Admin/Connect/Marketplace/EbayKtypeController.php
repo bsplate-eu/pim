@@ -110,6 +110,70 @@ class EbayKtypeController extends Controller
         ]);
     }
 
+    /**
+     * Ręczne dopasowanie — krok 1: jakie właściwości pojazdu ma kategoria tej aukcji
+     * i jakie są dostępne wartości (kaskada marka → model → platforma → rok).
+     *
+     * Bez `property` zwraca same nazwy właściwości; z `property` — listę wartości
+     * zawężoną tym, co użytkownik już wybrał.
+     */
+    public function vehicleOptions(Request $request, EbayOffer $offer, EbayKtypeService $ktype): JsonResponse
+    {
+        $data = $request->validate([
+            'property' => ['nullable', 'string', 'max:60'],
+            'filters' => ['nullable', 'array'],
+        ]);
+
+        try {
+            $props = $ktype->vehicleProperties($offer);
+
+            if (empty($data['property'])) {
+                return response()->json(['properties' => $props]);
+            }
+
+            return response()->json([
+                'properties' => $props,
+                'property' => $data['property'],
+                'values' => $ktype->vehicleValues($offer, $data['property'], $data['filters'] ?? []),
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json(['error' => $e->getMessage()], 422);
+        }
+    }
+
+    /**
+     * Ręczne dopasowanie — krok 2: zapisz złożoną listę pojazdów na aukcję.
+     * ZASTĘPUJE dotychczasowy fitment (tak działa ReviseFixedPriceItem) — UI o tym uprzedza.
+     */
+    public function applyManual(Request $request, EbayOffer $offer, EbayKtypeService $ktype): JsonResponse
+    {
+        $data = $request->validate([
+            'entries' => ['required', 'array', 'min:1', 'max:1000'],
+            'entries.*' => ['array'],
+        ]);
+
+        // Do eBaya lecą wyłącznie pary nazwa→wartość, obie niepuste. Pusty wpis wywróciłby
+        // całe żądanie, a wtedy aukcja zostaje bez fitmentu, który przed chwilą miała.
+        $entries = [];
+        foreach ($data['entries'] as $entry) {
+            $clean = [];
+            foreach ($entry as $name => $value) {
+                if (is_string($name) && is_scalar($value) && trim((string) $value) !== '') {
+                    $clean[$name] = trim((string) $value);
+                }
+            }
+            if ($clean !== []) {
+                $entries[] = $clean;
+            }
+        }
+
+        try {
+            return response()->json($ktype->applyManual($offer, $entries));
+        } catch (\Throwable $e) {
+            return response()->json(['error' => $e->getMessage()], 422);
+        }
+    }
+
     /** Odśwież liczniki fitmentu dla zaznaczonych aukcji (bez listy pojazdów). */
     public function refresh(Request $request, EbayKtypeService $ktype): JsonResponse
     {
