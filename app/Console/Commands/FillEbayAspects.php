@@ -8,14 +8,15 @@ use Illuminate\Console\Command;
 
 /**
  * Uzupełnia brakujące Herstellernummer/EAN ofert eBay — te, które przy pełnym
- * pomiarze dostały pusto przez rate-limit. Wolniejsze tempo + retry w kliencie.
- * Uruchom po scope:sync-ebay:  php artisan scope:fill-ebay-aspects
+ * pomiarze dostały pusto przez rate-limit ALBO mają atrybut nazwany po lokalnemu
+ * (eBay.fr „Numéro de pièce fabricant", eBay.es tylko w opisie „Nº de artículo").
+ * Uruchom po scope:sync-ebay:  php artisan scope:fill-ebay-aspects ebay_fr
  */
 class FillEbayAspects extends Command
 {
-    protected $signature = 'scope:fill-ebay-aspects';
+    protected $signature = 'scope:fill-ebay-aspects {source=ebay : rynek eBay (ebay|ebay_fr|ebay_es|ebay_it|ebay_gb|ebay_ch)}';
 
-    protected $description = 'Uzupełnia brakujące HN/EAN ofert eBay (rate-limited przy pełnym pomiarze)';
+    protected $description = 'Uzupełnia brakujące HN/EAN ofert eBay danego rynku (rate-limited przy pełnym pomiarze)';
 
     public function handle(): int
     {
@@ -25,8 +26,14 @@ class FillEbayAspects extends Command
             return self::FAILURE;
         }
 
-        $this->info('Uzupełnianie brakujących HN/EAN…');
-        $r = EbayScrapService::fromSettings($settings)->fillMissingAspects();
+        $source = (string) $this->argument('source');
+        if (! EbayScrapService::isMarket($source)) {
+            $this->error("Nieznany rynek: {$source}. Dostępne: " . implode(', ', EbayScrapService::marketKeys()));
+            return self::FAILURE;
+        }
+
+        $this->info("Uzupełnianie brakujących HN/EAN ({$source})…");
+        $r = EbayScrapService::forMarket($settings, $source)->fillMissingAspects();
         $this->info("Sprawdzono {$r['checked']} ofert bez HN, uzupełniono {$r['filled']}.");
 
         return self::SUCCESS;

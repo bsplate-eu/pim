@@ -4,6 +4,7 @@ namespace App\Services\Ebay;
 
 use GuzzleHttp\Client;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Str;
 
 /**
  * Klient oficjalnego eBay Browse API (OAuth client_credentials).
@@ -12,6 +13,46 @@ use Illuminate\Support\Facades\Cache;
  */
 class EbayBrowseClient
 {
+    /**
+     * Nazwy atrybutu „numer części producenta" w językach rynków eBay — znormalizowane
+     * (bez akcentów, małe litery, znaki nie-alfanumeryczne → spacja). Konkurent NIE wypełnia
+     * strukturalnego `mpn`, więc bez tej listy rynki inne niż DE wracają z pustym HN
+     * i nie da się ich zmapować na nasze produkty.
+     */
+    private const MPN_ASPECTS = [
+        'herstellernummer', 'hersteller teilenummer',                                 // DE
+        'numero de piece fabricant', 'numero de piece du fabricant',                  // FR
+        'reference fabricant', 'reference du fabricant',                              // FR
+        'numero de pieza del fabricante', 'numero de pieza fabricante',               // ES
+        'referencia del fabricante',                                                  // ES
+        'numero di parte produttore', 'numero parte produttore',                      // IT
+        'codice ricambio originale',                                                  // IT
+        'manufacturer part number', 'mpn',                                            // GB/US
+    ];
+
+    /** Nazwy atrybutu EAN/GTIN w językach rynków (znormalizowane jak wyżej). */
+    private const EAN_ASPECTS = [
+        'ean', 'gtin', 'ean gtin',
+        'codigo de barras',   // ES
+        'codice a barre',     // IT
+        'code barres',        // FR
+    ];
+
+    /**
+     * Etykiety numeru artykułu w OPISIE oferty (fallback, gdy brak atrybutu strukturalnego).
+     * Na eBay.es konkurent nie podaje ani numeru części, ani EAN — jedyne źródło to opis
+     * („Nº de artículo:  29.212").
+     */
+    private const ARTICLE_NR_LABELS = [
+        'Artikel[\s\-]*Nr',                        // DE  „ArtikelNr.: 20.009"
+        'N[o°º]?\.?\s*de\s+art[ií]culo',           // ES  „Nº de artículo: 29.212"
+        'Num[eé]ro\s+d[\'’]article',               // FR
+        'R[eé]f[eé]rence(?:\s+fabricant)?',        // FR
+        'Numero\s+articolo',                       // IT
+        'Codice\s+(?:articolo|ricambio)',          // IT
+        '(?:Item|Article|Part)\s+number',          // GB/US
+    ];
+
     private Client $http;
     private string $api = 'https://api.ebay.com';
 
@@ -138,11 +179,11 @@ class EbayBrowseClient
                 $hn = null;
                 $ean = null;
                 foreach (($item['localizedAspects'] ?? []) as $a) {
-                    $name = strtolower($a['name'] ?? '');
-                    if ($name === 'herstellernummer' || $name === 'hersteller-teilenummer') {
+                    $name = self::normalizeAspectName((string) ($a['name'] ?? ''));
+                    if ($hn === null && in_array($name, self::MPN_ASPECTS, true)) {
                         $hn = $a['value'] ?? null;
                     }
-                    if (str_contains($name, 'ean')) {
+                    if ($ean === null && (in_array($name, self::EAN_ASPECTS, true) || str_contains($name, 'ean'))) {
                         $ean = $a['value'] ?? null;
                     }
                 }
@@ -173,10 +214,18 @@ class EbayBrowseClient
         return [null, null];
     }
 
+    /** Nazwa atrybutu → porównywalna postać: bez akcentów, małe litery, separatory jako spacje. */
+    private static function normalizeAspectName(string $name): string
+    {
+        $ascii = Str::ascii($name);                                   // „Numéro" → „Numero", „Nº" → „No"
+
+        return trim(strtolower((string) preg_replace('/[^a-z0-9]+/i', ' ', $ascii)));
+    }
+
     /**
      * Wyłuskuje numer artykułu z opisu oferty (gdy brak strukturalnego herstellernummer).
-     * Scut wpisuje w opisie linię „ArtikelNr.: 20.009" (też „Artikel-Nr:", „Artikel Nr.:").
-     * Zwraca np. „20.009", „06.048ALU", „00.502-1ALU" albo null.
+     * Scut wpisuje go w opisie w języku rynku — „ArtikelNr.: 20.009" (DE),
+     * „Nº de artículo:  29.212" (ES) itd. Zwraca np. „20.009", „06.048ALU" albo null.
      */
     private function articleNrFromDescription(string $html): ?string
     {
@@ -189,9 +238,15 @@ class EbayBrowseClient
         $html = preg_replace('/<\/(p|div|li|tr|h[1-6]|span)>/i', "\n", $html);
         $text = html_entity_decode(strip_tags((string) $html), ENT_QUOTES | ENT_HTML5);
 
-        if (preg_match('/Artikel[\s\-]*Nr\.?\s*:?\s*([^\r\n<]+)/iu', $text, $m)
-            && preg_match('/[0-9]{1,4}[.\-][0-9]{1,5}[A-Za-z0-9.\-]*/', $m[1], $mm)) {
-            return trim($mm[0]);
+        // Etykieta bywa w opisie kilka razy (i w kilku wariantach) — bierzemy pierwszą,
+        // po której naprawdę stoi numer w formacie „12.345" / „06.048ALU".
+        $pattern = '/(?:' . implode('|', self::ARTICLE_NR_LABELS) . ')\.?\s*:?\s*([^\r\n<]+)/iu';
+        if (preg_match_all($pattern, $text, $all)) {
+            foreach ($all[1] as $tail) {
+                if (preg_match('/[0-9]{1,4}[.\-][0-9]{1,5}[A-Za-z0-9.\-]*/', $tail, $mm)) {
+                    return trim($mm[0]);
+                }
+            }
         }
 
         return null;
