@@ -49,6 +49,7 @@ class MailController extends Controller
             'unfiled'     => $request->boolean('unfiled'),
             'trash'       => $request->boolean('trash'),
             'spam'        => $request->boolean('spam'),
+            'sent'        => $request->boolean('sent'),
             'color'       => in_array($request->get('color'), ['red', 'green', 'blue', 'orange'], true) ? $request->get('color') : null,
             'q'           => trim((string) $request->get('q')) ?: null,
             'sort'        => in_array($request->get('sort'), ['date_desc', 'date_asc', 'subject', 'sender'], true) ? $request->get('sort') : 'date_desc',
@@ -69,6 +70,10 @@ class MailController extends Controller
         } elseif ($filters['trash']) {
             // Widok „Kosz" — wszystko, co wyrzucone, także spam (musi być gdzie odzyskać albo dobić).
             $query->where('is_trashed', true);
+        } elseif ($filters['sent']) {
+            // Widok „Wysłane" — cała poczta wychodząca: to, co poszło z PIM (__SENT_LOCAL),
+            // i to, co zsynchronizowane z serwerowego folderu Wysłane danej skrzynki.
+            $query->where('is_sent', true)->where('is_trashed', false)->where('is_spam', false);
         } else {
             // Wszystkie pozostałe widoki ukrywają spam.
             $query->where('is_spam', false)->where('is_trashed', $filters['trash']);
@@ -243,6 +248,8 @@ class MailController extends Controller
             // Spam liczymy bez tego, co już wyrzucone do kosza — licznik ma się zgadzać z listą.
             'spamUnread'  => (int) Message::where('is_spam', true)->where('is_trashed', false)->where('is_read', false)->count(),
             'spamTotal'   => (int) Message::where('is_spam', true)->where('is_trashed', false)->count(),
+            'sentTotal'   => (int) Message::whereIn('account_id', $accountIds)->where('is_sent', true)
+                ->where('is_trashed', false)->where('is_spam', false)->count(),
         ]);
     }
 

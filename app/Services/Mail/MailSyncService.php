@@ -43,7 +43,7 @@ class MailSyncService
             $client = Client::make($account->imapConfig());
             $client->connect();
 
-            $imapFolders = $this->syncableFolders($client);
+            $imapFolders = $this->syncableFolders($client, $account);
             if (empty($imapFolders)) {
                 throw new \RuntimeException('Nie znaleziono żadnego folderu do synchronizacji.');
             }
@@ -137,7 +137,7 @@ class MailSyncService
                         $row->wasRecentlyCreated ? $new++ : $updated++;
 
                         // Zbierz nowe maile do push (poza pierwszą synchronizacją folderu, bez spamu, świeże).
-                        if ($row->wasRecentlyCreated && ! $isFirstSync && ! $row->is_spam
+                        if ($row->wasRecentlyCreated && ! $isFirstSync && ! $row->is_spam && ! $row->is_sent
                             && ($row->date === null || $row->date->gte(now()->subDay()))) {
                             $recipientIds = $row->assigned_admin_user_id
                                 ? [(int) $row->assigned_admin_user_id]
@@ -226,7 +226,7 @@ class MailSyncService
                 }
                 $imapFolders = [$one];
             } else {
-                $imapFolders = $this->syncableFolders($client);
+                $imapFolders = $this->syncableFolders($client, $account);
             }
 
             if (empty($imapFolders)) {
@@ -321,7 +321,7 @@ class MailSyncService
      * @param  \Webklex\PHPIMAP\Client  $client
      * @return array<int, \Webklex\PHPIMAP\Folder>
      */
-    private function syncableFolders($client): array
+    private function syncableFolders($client, ?Account $account = null): array
     {
         try {
             $folders = $client->getFolders(false); // płaska lista wszystkich folderów serwera
@@ -338,7 +338,12 @@ class MailSyncService
                 continue; // kontener bez maili (np. „[Gmail]")
             }
             if ($this->isSpecialFolder((string) $folder->path, (string) $folder->name)) {
-                continue;
+                // Jedyny wyjątek: folder „Wysłane" tej skrzynki, gdy skrzynka ma to włączone.
+                // Bez niego w PIM widać wyłącznie pocztę wysłaną Z PIM — nie tę z Gmaila czy telefonu.
+                $wantSent = $account === null || $account->sync_sent === null || (bool) $account->sync_sent;
+                if (! ($wantSent && $this->isSentFolder((string) $folder->path, (string) $folder->name, $folder))) {
+                    continue;
+                }
             }
             $out[] = $folder;
         }
@@ -384,6 +389,57 @@ class MailSyncService
     }
 
     /**
+     * Czy folder to „Wysłane" tej skrzynki. Rozpoznajemy po trzech rzeczach, bo serwery
+     * nazywają go różnie:
+     *   1. flaga SPECIAL-USE `\Sent` (RFC 6154) — najpewniejsze, gdy serwer ją podaje,
+     *   2. nazwa-liść po dekodowaniu (Gmail/dovecot trzymają nazwy w modified UTF-7,
+     *      więc „Wysłane" bywa zapisane jako `Wys&AUI-ane`),
+     *   3. końcówka ścieżki — łapie `[Gmail]/Wysłane` i `INBOX.Sent`.
+     */
+    private function isSentFolder(string $path, string $name, mixed $folder = null): bool
+    {
+        $names = ['sent', 'sent items', 'sent mail', 'sent messages', 'wysłane', 'wyslane', 'elementy wysłane', 'elementy wyslane'];
+
+        // 1. Flaga serwera (webklex wystawia ją jako tablicę atrybutów folderu).
+        foreach ((array) ($folder->flags ?? []) as $flag) {
+            if (mb_strtolower(ltrim((string) $flag, '\\')) === 'sent') {
+                return true;
+            }
+        }
+
+        // 2. Sama nazwa folderu (po dekodowaniu UTF-7).
+        if (in_array(mb_strtolower(trim($this->decodeFolderName($name))), $names, true)) {
+            return true;
+        }
+
+        // 3. Końcówka ścieżki po separatorze („/" u Gmaila, „." u dovecota).
+        $p = mb_strtolower(trim($this->decodeFolderName($path)));
+        foreach ($names as $n) {
+            if ($p === $n || str_ends_with($p, '/'.$n) || str_ends_with($p, '.'.$n)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /** Nazwa folderu IMAP bywa w modified UTF-7 (`Zam&APM-wienia`) — próbujemy zdekodować. */
+    private function decodeFolderName(string $value): string
+    {
+        if ($value === '' || ! str_contains($value, '&')) {
+            return $value;
+        }
+
+        try {
+            $decoded = @mb_convert_encoding($value, 'UTF-8', 'UTF7-IMAP');
+
+            return is_string($decoded) && $decoded !== '' ? $decoded : $value;
+        } catch (\Throwable) {
+            return $value;
+        }
+    }
+
+    /**
      * Zapisuje/aktualizuje pojedynczą wiadomość IMAP (upsert po UID + auto-filing wg reguł
      * + załączniki). Wspólne dla sync() (przyrostowo) i import() (wsadowo).
      * Zwraca model wiadomości (z flagą wasRecentlyCreated) albo null gdy pominięto.
@@ -422,7 +478,13 @@ class MailSyncService
             // brak / niewłaściwy nagłówek Date
         }
 
-        $routing = $this->resolveRouting($first['email'] ?? '', $subject, $rules, $spam);
+        // Poczta z serwerowego folderu „Wysłane" to nasze własne maile: nie ma sensu sprawdzać ich
+        // regułami nadawcy ani listą spamu (nadawcą jesteśmy my).
+        $fromSentFolder = $this->isSentFolder((string) $folder->path, (string) $folder->name);
+
+        $routing = $fromSentFolder
+            ? ['is_spam' => false, 'assigned_admin_user_id' => null, 'catalog_id' => null]
+            : $this->resolveRouting($first['email'] ?? '', $subject, $rules, $spam);
 
         // Wątkowanie: „druga strona" = nadawca; dla maili z naszego własnego adresu (np. zsynchronizowany
         // folder Wysłane) bierzemy odbiorcę, żeby zgrupować je z resztą rozmowy.
@@ -461,6 +523,7 @@ class MailSyncService
                 'in_reply_to'     => $this->str($message->in_reply_to, 512),
                 'thread_key'      => $threadKey,
                 'is_spam'         => $routing['is_spam'],
+                'is_sent'         => $fromSentFolder,
             ]
         );
 
@@ -468,7 +531,9 @@ class MailSyncService
         // sync NIE rusza is_read — lokalne „przeczytane" jest źródłem prawdy (bez tego sync co minutę
         // cofałby odczyty, bo flagi nie wypychamy na serwer IMAP). + auto-filing wg reguł (resolveRouting).
         if ($row->wasRecentlyCreated) {
-            $patch = ['is_read' => $this->hasFlag($flags, 'Seen')];
+            // Własne wysłane oznaczamy jako przeczytane — inaczej licznik nieprzeczytanych puchnie
+            // o pocztę, której nikt nie musi czytać.
+            $patch = ['is_read' => $fromSentFolder ? true : $this->hasFlag($flags, 'Seen')];
             if ($routing['assigned_admin_user_id']) {
                 $patch['assigned_admin_user_id'] = $routing['assigned_admin_user_id'];
             }

@@ -172,6 +172,15 @@
                             Starsze maile pobierzemy na żądanie — oszczędza miejsce na serwerze.
                         </p>
                     </div>
+                    <div class="mt-4 flex items-center justify-between">
+                        <div>
+                            <div class="text-sm font-medium text-gray-900">Pobieraj też folder „Wysłane"</div>
+                            <div class="text-xs text-gray-500">
+                                Wtedy w zakładce „Wysłane" widać także pocztę wysłaną poza PIM — z Gmaila, Thunderbirda czy telefonu.
+                            </div>
+                        </div>
+                        <Toggle v-model="form.sync_sent" />
+                    </div>
                 </CardContent>
                 <CardFooter>
                     <div class="flex justify-end">
@@ -216,6 +225,7 @@ interface AccountData {
     username: string | null;
     has_password: boolean;
     sync_window_months: number;
+    sync_sent: boolean;
     is_active: boolean;
     signature: string | null;
 }
@@ -251,6 +261,7 @@ const form = reactive({
     username: props.account?.username ?? "",
     password: "",
     sync_window_months: props.account?.sync_window_months ?? 6,
+    sync_sent: props.account?.sync_sent ?? true,
     is_active: props.account?.is_active ?? true,
     signature: props.account?.signature ?? "",
 });

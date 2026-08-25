@@ -82,6 +82,7 @@ class AccountController extends Controller
                 'username'           => $account->username,
                 'has_password'       => filled($account->password),
                 'sync_window_months' => $account->sync_window_months,
+                'sync_sent'          => (bool) $account->sync_sent,
                 'signature'          => $account->signature,
                 'is_active'          => $account->is_active,
             ],
@@ -259,6 +260,7 @@ class AccountController extends Controller
         $account->username           = $data['username'] ?: $data['email'];
         $account->auth_type          = Account::AUTH_PASSWORD;
         $account->sync_window_months = (int) ($data['sync_window_months'] ?? 6);
+        $account->sync_sent          = (bool) ($data['sync_sent'] ?? true);
         $account->signature          = $data['signature'] ?? null;
         $account->is_active          = (bool) ($data['is_active'] ?? true);
     }
@@ -281,6 +283,7 @@ class AccountController extends Controller
             'username'           => ['nullable', 'string', 'max:190'],
             'password'           => [$ignoreId ? 'nullable' : 'required', 'string', 'max:255'],
             'sync_window_months' => ['required', 'integer', 'between:1,24'],
+            'sync_sent'          => ['nullable', 'boolean'],
             'signature'          => ['nullable', 'string', 'max:50000'],
             'is_active'          => ['nullable', 'boolean'],
         ]);

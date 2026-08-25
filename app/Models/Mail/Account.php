@@ -44,6 +44,7 @@ class Account extends Model
         'imap_port'          => 'integer',
         'smtp_port'          => 'integer',
         'sync_window_months' => 'integer',
+        'sync_sent'          => 'boolean',
         'is_active'          => 'boolean',
         'last_sync_at'       => 'datetime',
     ];

@@ -110,6 +110,7 @@
                         <option value="sender">Nadawca (A–Z)</option>
                     </select>
                 </div>
+                <span v-if="filters.sent" class="text-xs font-medium text-primary-600">Widok: Wysłane</span>
                 <span v-if="filters.trash" class="text-xs font-medium text-red-600">Widok: Kosz</span>
                 <button v-if="filters.trash && trashTotal > 0" type="button" @click="emptyTrash" class="inline-flex items-center gap-1 text-xs rounded-md border border-gray-300 bg-white px-2 py-1 text-red-600 hover:bg-gray-50" title="Trwale usuń wszystkie maile z kosza">
                     <TrashIcon class="h-3.5 w-3.5" /> Wyczyść kosz ({{ trashTotal }})
@@ -186,7 +187,12 @@
                         <div v-if="catalogs.length === 0" class="px-3 py-4 text-xs text-gray-400">
                             Brak katalogów. <Link :href="route('crafter.argo-mail.settings')" class="text-primary-600 underline">Dodaj</Link>
                         </div>
-                        <button type="button" @click="selectTrash()" :class="catalogNodeClass('trash')" class="border-t border-gray-100 mt-1" style="padding-left: 12px">
+                        <button type="button" @click="selectSent()" :class="catalogNodeClass('sent')" class="border-t border-gray-100 mt-1" style="padding-left: 12px">
+                            <PaperAirplaneIcon class="h-4 w-4 text-gray-400 shrink-0" />
+                            <span class="truncate text-gray-900">Wysłane</span>
+                            <span v-if="sentTotal > 0" class="ml-auto pl-2 rounded-full bg-gray-100 text-[10px] font-semibold px-1.5 shrink-0 tabular-nums text-gray-800">{{ sentTotal }}</span>
+                        </button>
+                        <button type="button" @click="selectTrash()" :class="catalogNodeClass('trash')" style="padding-left: 12px">
                             <TrashIcon class="h-4 w-4 text-gray-400 shrink-0" />
                             <span class="truncate" :class="trashUnread > 0 ? 'font-bold text-gray-900' : 'text-gray-900'">Kosz</span>
                             <span v-if="trashTotal > 0" class="ml-auto pl-2 rounded-full bg-gray-100 text-[10px] font-semibold px-1.5 shrink-0 tabular-nums text-gray-800">{{ trashTotal }}<span v-if="trashUnread > 0" class="text-blue-600"> / {{ trashUnread }}</span></span>
@@ -556,12 +562,13 @@ const props = defineProps<{
     messages: any;
     categories: Array<{ id: number; name: string; color: string; unread: number }>;
     catalogs: Array<{ id: number; name: string; color: string | null; parent_id: number | null; depth: number; unread: number; total: number; collapsed: boolean }>;
-    filters: { account_id: number | null; user_id: number | null; category_id: number | null; catalog_id: number | null; unread: boolean; unfiled: boolean; trash: boolean; spam: boolean; color: string | null; q: string | null; sort: string };
+    filters: { account_id: number | null; user_id: number | null; category_id: number | null; catalog_id: number | null; unread: boolean; unfiled: boolean; trash: boolean; spam: boolean; sent: boolean; color: string | null; q: string | null; sort: string };
     totalUnread: number;
     trashUnread: number;
     trashTotal: number;
     spamUnread: number;
     spamTotal: number;
+    sentTotal: number;
     colorCounts: Record<string, number>;
 }>();
 
@@ -659,6 +666,7 @@ function navigate(overrides: Record<string, any>) {
         catalog_id: pick("catalog_id", overrides),
         trash: pick("trash", overrides),
         spam: pick("spam", overrides),
+        sent: pick("sent", overrides),
         color: pick("color", overrides),
         unread: localFilters.unread || undefined,
         unfiled: localFilters.unfiled || undefined,
@@ -669,21 +677,22 @@ function navigate(overrides: Record<string, any>) {
 function applyFilters() { navigate({}); }
 function clearSearch() { localFilters.q = ""; applyFilters(); } // „X" w wyszukiwarce
 const debouncedApply = debounce(applyFilters, 400);
-function selectAccount(id: number | null) { navigate({ account_id: id, trash: false, spam: false }); }
-function selectUser(id: number | null) { navigate({ user_id: id, trash: false, spam: false }); }
-function selectCategory(id: number | null) { navigate({ category_id: id, trash: false, spam: false }); }
+function selectAccount(id: number | null) { navigate({ account_id: id, trash: false, spam: false, sent: false }); }
+function selectUser(id: number | null) { navigate({ user_id: id, trash: false, spam: false, sent: false }); }
+function selectCategory(id: number | null) { navigate({ category_id: id, trash: false, spam: false, sent: false }); }
 function selectCatalog(id: number | null) {
     // Wejście w konkretny folder wyłącza „Ukryj maile w folderach" (inaczej: folder + tylko-bez-folderu = pusto).
     if (id !== null) localFilters.unfiled = false;
-    navigate({ catalog_id: id, trash: false, spam: false });
+    navigate({ catalog_id: id, trash: false, spam: false, sent: false });
 }
 // Symetria: włączenie „Ukryj maile w folderach" wychodzi z folderu do „Wszystkie".
 function onUnfiledToggle() {
-    if (localFilters.unfiled) navigate({ catalog_id: null, trash: false, spam: false });
+    if (localFilters.unfiled) navigate({ catalog_id: null, trash: false, spam: false, sent: false });
     else applyFilters();
 }
-function selectTrash() { navigate({ trash: true, spam: false, catalog_id: null }); }
-function selectSpam() { navigate({ spam: true, trash: false, catalog_id: null }); }
+function selectTrash() { navigate({ trash: true, spam: false, sent: false, catalog_id: null }); }
+function selectSent() { navigate({ sent: true, trash: false, spam: false, catalog_id: null }); }
+function selectSpam() { navigate({ spam: true, trash: false, sent: false, catalog_id: null }); }
 function selectColor(color: string) {
     const next = props.filters.color === color ? null : color;
     if (next) localFilters.unread = false; // kolor pokazuje wszystkie (też przeczytane) — zdejmij „tylko nieprzeczytane"
@@ -1122,7 +1131,7 @@ function openContextMenu(e: MouseEvent, m: any) {
 }
 function closeCtx() { ctx.open = false; }
 function reloadAll() {
-    router.reload({ only: ["messages", "accounts", "users", "categories", "catalogs", "totalUnread", "trashUnread", "trashTotal", "spamUnread", "spamTotal", "colorCounts"] });
+    router.reload({ only: ["messages", "accounts", "users", "categories", "catalogs", "totalUnread", "trashUnread", "trashTotal", "spamUnread", "spamTotal", "sentTotal", "colorCounts"] });
 }
 
 // Wyczyść kosz — TRWALE usuwa wszystkie maile z kosza (nieodwracalne).
@@ -1273,7 +1282,7 @@ onMounted(() => {
     // Auto-odświeżanie co 60 s — pokazuje maile dociągnięte w tle (mail-sync-loop.bat / cron) + odświeża licznik przypomnienia.
     syncTimer = window.setInterval(() => {
         router.reload({
-            only: ["messages", "accounts", "users", "categories", "catalogs", "totalUnread", "trashUnread", "trashTotal", "spamUnread", "spamTotal", "colorCounts"],
+            only: ["messages", "accounts", "users", "categories", "catalogs", "totalUnread", "trashUnread", "trashTotal", "spamUnread", "spamTotal", "sentTotal", "colorCounts"],
             preserveScroll: true,
             preserveState: true,
         });
@@ -1383,7 +1392,8 @@ function catalogNodeClass(id: number | null | string) {
     let active: boolean;
     if (id === "trash") active = !!props.filters.trash;
     else if (id === "spam") active = !!props.filters.spam;
-    else active = !props.filters.trash && !props.filters.spam && (props.filters.catalog_id ?? null) === id;
+    else if (id === "sent") active = !!props.filters.sent;
+    else active = !props.filters.trash && !props.filters.spam && !props.filters.sent && (props.filters.catalog_id ?? null) === id;
     return [
         "w-full flex items-center gap-2 pr-2 py-1.5 text-sm text-left hover:bg-gray-50 transition-colors",
         active ? "bg-primary-50 text-primary-700" : "text-gray-600",
