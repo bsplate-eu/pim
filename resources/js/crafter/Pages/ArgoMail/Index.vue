@@ -187,12 +187,7 @@
                         <div v-if="catalogs.length === 0" class="px-3 py-4 text-xs text-gray-400">
                             Brak katalogów. <Link :href="route('crafter.argo-mail.settings')" class="text-primary-600 underline">Dodaj</Link>
                         </div>
-                        <button type="button" @click="selectSent()" :class="catalogNodeClass('sent')" class="border-t border-gray-100 mt-1" style="padding-left: 12px">
-                            <PaperAirplaneIcon class="h-4 w-4 text-gray-400 shrink-0" />
-                            <span class="truncate text-gray-900">Wysłane</span>
-                            <span v-if="sentTotal > 0" class="ml-auto pl-2 rounded-full bg-gray-100 text-[10px] font-semibold px-1.5 shrink-0 tabular-nums text-gray-800">{{ sentTotal }}</span>
-                        </button>
-                        <button type="button" @click="selectTrash()" :class="catalogNodeClass('trash')" style="padding-left: 12px">
+                        <button type="button" @click="selectTrash()" :class="catalogNodeClass('trash')" class="border-t border-gray-100 mt-1" style="padding-left: 12px">
                             <TrashIcon class="h-4 w-4 text-gray-400 shrink-0" />
                             <span class="truncate" :class="trashUnread > 0 ? 'font-bold text-gray-900' : 'text-gray-900'">Kosz</span>
                             <span v-if="trashTotal > 0" class="ml-auto pl-2 rounded-full bg-gray-100 text-[10px] font-semibold px-1.5 shrink-0 tabular-nums text-gray-800">{{ trashTotal }}<span v-if="trashUnread > 0" class="text-blue-600"> / {{ trashUnread }}</span></span>
@@ -201,6 +196,11 @@
                             <NoSymbolIcon class="h-4 w-4 text-gray-400 shrink-0" />
                             <span class="truncate" :class="spamUnread > 0 ? 'font-bold text-gray-900' : 'text-gray-900'">Spam</span>
                             <span v-if="spamTotal > 0" class="ml-auto pl-2 rounded-full bg-gray-100 text-[10px] font-semibold px-1.5 shrink-0 tabular-nums text-gray-800">{{ spamTotal }}<span v-if="spamUnread > 0" class="text-blue-600"> / {{ spamUnread }}</span></span>
+                        </button>
+                        <button type="button" @click="selectSent()" :class="catalogNodeClass('sent')" style="padding-left: 12px">
+                            <PaperAirplaneIcon class="h-4 w-4 text-gray-400 shrink-0" />
+                            <span class="truncate text-gray-900">Wysłane</span>
+                            <span v-if="sentTotal > 0" class="ml-auto pl-2 rounded-full bg-gray-100 text-[10px] font-semibold px-1.5 shrink-0 tabular-nums text-gray-800">{{ sentTotal }}</span>
                         </button>
                     </div>
                 </div>

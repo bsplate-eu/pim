@@ -1462,8 +1462,18 @@ class MailController extends Controller
         $totalDirect = Message::query()->whereNotNull('catalog_id')->where('is_trashed', false)->where('is_spam', false)
             ->selectRaw('catalog_id, COUNT(*) as c')->groupBy('catalog_id')->pluck('c', 'catalog_id');
 
+        // Katalog „Wysłane" (z podkatalogami per skrzynka) tworzy się sam przy wysyłce z PIM.
+        // W drzewie go nie pokazujemy — zastępuje go przypięta zakładka „Wysłane", która pokazuje
+        // CAŁĄ pocztę wychodzącą (także zsynchronizowaną z serwera, bez katalogu). Dwa wpisy o tej
+        // samej nazwie i różnej zawartości tylko myliły.
+        $sentRootId = (int) Catalog::query()->whereNull('parent_id')
+            ->whereIn('name', ['Wysłane', 'SEND'])->value('id');
+
         $byParent = [];
         foreach ($all as $c) {
+            if ($sentRootId && (int) $c->id === $sentRootId) {
+                continue;
+            }
             $byParent[(int) ($c->parent_id ?? 0)][] = $c;
         }
 
