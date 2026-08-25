@@ -124,7 +124,9 @@
             <!-- Pasek akcji masowych (multi-select: Ctrl/Shift + klik) -->
             <div v-if="selectedIds.length > 0 && !listCollapsed" class="mb-3 flex flex-wrap items-center gap-2 rounded-md bg-primary-50 border border-primary-200 px-3 py-2">
                 <span class="text-sm font-medium text-primary-700">Zaznaczono {{ selectedIds.length }}</span>
-                <button type="button" @click="bulk('trash')" class="text-xs rounded-md border border-gray-300 bg-white px-2 py-1 text-red-600 hover:bg-gray-50">Do kosza</button>
+                <button v-if="!filters.trash && !filters.spam" type="button" @click="bulk('trash')" class="text-xs rounded-md border border-gray-300 bg-white px-2 py-1 text-red-600 hover:bg-gray-50">Do kosza</button>
+                <button v-if="filters.trash" type="button" @click="bulk('restore')" class="text-xs rounded-md border border-gray-300 bg-white px-2 py-1 hover:bg-gray-50">Przywróć</button>
+                <button type="button" @click="bulkDelete" class="inline-flex items-center gap-1 text-xs rounded-md border border-red-300 bg-white px-2 py-1 font-medium text-red-700 hover:bg-red-50" title="Kasuje zaznaczone maile z bazy — nie da się cofnąć"><TrashIcon class="h-3.5 w-3.5" /> Usuń trwale</button>
                 <button type="button" @click="bulk('read')" class="text-xs rounded-md border border-gray-300 bg-white px-2 py-1 hover:bg-gray-50">Przeczytane</button>
                 <button type="button" @click="bulk('unread')" class="text-xs rounded-md border border-gray-300 bg-white px-2 py-1 hover:bg-gray-50">Nieprzeczytane</button>
                 <button type="button" @click="bulkSpam" class="inline-flex items-center gap-1 text-xs rounded-md border border-gray-300 bg-white px-2 py-1 text-orange-600 hover:bg-gray-50" title="Przenieś nadawców zaznaczonych maili do spamu"><NoSymbolIcon class="h-3.5 w-3.5" /> Spam</button>
@@ -777,6 +779,21 @@ async function bulk(action: string, value: number | null = null) {
         reloadAll();
     } catch (e) {
         toast.error("Operacja masowa nie powiodła się.");
+    }
+}
+// Trwałe usunięcie zaznaczonych — jedyna droga, żeby skasować kilka maili, a nie cały kosz/spam naraz.
+async function bulkDelete() {
+    const n = selectedIds.value.length;
+    if (n === 0) return;
+    if (!window.confirm(`Trwale usunąć ${n} ${n === 1 ? 'wiadomość' : 'wiadomości'}? Tej operacji NIE da się cofnąć.`)) return;
+    try {
+        const { data } = await axios.post(route("crafter.argo-mail.messages.bulk"), { ids: selectedIds.value, action: "delete" });
+        toast.success(`Usunięto trwale: ${data.count}.`);
+        clearThreadView();
+        clearSelection();
+        reloadAll();
+    } catch (e) {
+        toast.error("Nie udało się usunąć wiadomości.");
     }
 }
 async function bulkSpam() {

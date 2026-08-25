@@ -63,8 +63,12 @@ class MailController extends Controller
             ->with(['category:id,name,color', 'catalog:id,name,color', 'assignedUser:id,first_name,last_name,email']);
 
         if ($filters['spam']) {
-            // Widok „Spam" — tylko maile od zablokowanych nadawców.
-            $query->where('is_spam', true);
+            // Widok „Spam" — maile od zablokowanych nadawców, ale BEZ tych wyrzuconych do kosza
+            // (inaczej „Do kosza" na zaznaczonych wyglądało jakby nic nie robiło — mail zostawał na liście).
+            $query->where('is_spam', true)->where('is_trashed', false);
+        } elseif ($filters['trash']) {
+            // Widok „Kosz" — wszystko, co wyrzucone, także spam (musi być gdzie odzyskać albo dobić).
+            $query->where('is_trashed', true);
         } else {
             // Wszystkie pozostałe widoki ukrywają spam.
             $query->where('is_spam', false)->where('is_trashed', $filters['trash']);
@@ -236,8 +240,9 @@ class MailController extends Controller
             'totalUnread' => (int) $accUnread->sum(),
             'trashUnread' => (int) Message::where('is_trashed', true)->where('is_read', false)->count(),
             'trashTotal'  => (int) Message::where('is_trashed', true)->count(),
-            'spamUnread'  => (int) Message::where('is_spam', true)->where('is_read', false)->count(),
-            'spamTotal'   => (int) Message::where('is_spam', true)->count(),
+            // Spam liczymy bez tego, co już wyrzucone do kosza — licznik ma się zgadzać z listą.
+            'spamUnread'  => (int) Message::where('is_spam', true)->where('is_trashed', false)->where('is_read', false)->count(),
+            'spamTotal'   => (int) Message::where('is_spam', true)->where('is_trashed', false)->count(),
         ]);
     }
 
@@ -760,6 +765,19 @@ class MailController extends Controller
             }
 
             return response()->json(['ok' => true, 'count' => $count, 'senders' => $emails->count()]);
+        }
+
+        // TRWAŁE usunięcie zaznaczonych (nie „do kosza"). Ograniczone do skrzynek widocznych dla
+        // użytkownika i poprzedzone skasowaniem plików lokalnych załączników — kaskada w bazie
+        // czyści tylko wiersze. Operacja NIEODWRACALNA (potwierdzenie jest po stronie front-endu).
+        if ($data['action'] === 'delete') {
+            $visible = Account::query()->visibleTo(auth()->user())->pluck('id');
+            $scoped = Message::query()->whereIn('id', $data['ids'])->whereIn('account_id', $visible);
+
+            $this->purgeLocalAttachmentFiles($scoped->clone());
+            $count = $scoped->delete();
+
+            return response()->json(['ok' => true, 'count' => $count]);
         }
 
         switch ($data['action']) {
