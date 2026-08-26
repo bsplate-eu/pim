@@ -33,14 +33,14 @@ class ScopeRumuniController extends Controller
     /** Źródła (kanały) konkurenta — kolejne dokładamy tutaj. eBay: 6 rynków (każdy osobny katalog). */
     private const SOURCES = [
         'ebay', 'ebay_fr', 'ebay_it', 'ebay_es', 'ebay_gb', 'ebay_ch',
-        'stahl', 'wegry', 'rumunia', 'francja', 'czechy', 'hiszpania',
+        'stahl', 'niemcy2', 'wegry', 'rumunia', 'francja', 'czechy', 'hiszpania',
     ];
 
     /** Krótkie etykiety tabów (długie nazwy sklepów są w ShopScrapService::SHOPS). */
     private const TAB_LABELS = [
         'ebay' => 'eBay.de', 'ebay_fr' => 'eBay.fr', 'ebay_it' => 'eBay.it',
         'ebay_es' => 'eBay.es', 'ebay_gb' => 'eBay.co.uk', 'ebay_ch' => 'eBay.ch',
-        'stahl' => 'Niemcy', 'wegry' => 'Węgry', 'rumunia' => 'Rumunia',
+        'stahl' => 'Niemcy', 'niemcy2' => 'Niemcy 2', 'wegry' => 'Węgry', 'rumunia' => 'Rumunia',
         'francja' => 'Francja', 'czechy' => 'Czechy', 'hiszpania' => 'Hiszpania',
     ];
 

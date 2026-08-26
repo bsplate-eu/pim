@@ -6,17 +6,19 @@ use App\Services\Scrap\ShopScrapService;
 use Illuminate\Console\Command;
 
 /**
- * Pomiar sklepu konkurenta (Rumuni → Niemcy / Węgry / Rumunia): katalog + kod/EAN + diff.
- * Ręcznie:  php artisan scope:sync-shop stahl   (test: --limit=20)
- *           php artisan scope:sync-shop wegry
+ * Pomiar sklepu konkurenta (Rumuni → Niemcy / Niemcy 2 / Węgry / Rumunia / Francja / Czechy / Hiszpania):
+ * katalog + kod/EAN + diff.
+ * Ręcznie:  php artisan scope:sync-shop stahl     (test: --limit=20)
+ *           php artisan scope:sync-shop niemcy2
  *           php artisan scope:sync-shop rumunia
  * Z crona:  zaplanowane w App\Console\Kernel — „stały scrap".
+ * Lista dostępnych kluczy: ShopScrapService::SHOPS.
  */
 class SyncShopScope extends Command
 {
-    protected $signature = 'scope:sync-shop {source : stahl|wegry|rumunia} {--limit= : Ogranicz liczbę produktów (test)} {--delay=200 : Opóźnienie między żądaniami [ms]}';
+    protected $signature = 'scope:sync-shop {source : klucz sklepu z ShopScrapService::SHOPS, np. stahl|niemcy2|wegry|rumunia} {--limit= : Ogranicz liczbę produktów (test)} {--delay=200 : Opóźnienie między żądaniami [ms]}';
 
-    protected $description = 'Pomiar sklepu konkurenta (Niemcy/Węgry/Rumunia): katalog + kod/EAN + diff (nowe/wycofane/ceny)';
+    protected $description = 'Pomiar sklepu konkurenta (Niemcy/Węgry/Rumunia/…): katalog + kod/EAN + diff (nowe/wycofane/ceny)';
 
     public function handle(): int
     {

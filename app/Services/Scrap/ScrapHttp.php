@@ -28,8 +28,10 @@ trait ScrapHttp
         ]);
     }
 
-    /** GET z retry (429/5xx + błędy sieci). Zwraca body lub null. */
-    private function get(string $url, int $attempts = 3): ?string
+    /** GET z retry (429/5xx + błędy sieci). Zwraca body lub null.
+     *  $acceptNotFound: przyjmij też treść spod 404 — sklepy na „tshop" (Cloudflare) serwują poprawną
+     *  sitemapę pod statusem 404; walidacja zawartości należy do wołającego. */
+    private function get(string $url, int $attempts = 3, bool $acceptNotFound = false): ?string
     {
         for ($i = 1; $i <= $attempts; $i++) {
             try {
@@ -39,7 +41,7 @@ trait ScrapHttp
                     return (string) $res->getBody();
                 }
                 if ($code === 404 || $code === 410) {
-                    return null;
+                    return $acceptNotFound && $code === 404 ? (string) $res->getBody() : null;
                 }
             } catch (\Throwable) {
                 // błąd sieci — ponów

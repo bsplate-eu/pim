@@ -112,14 +112,15 @@ class Kernel extends ConsoleKernel
         $schedule->command('scope:sync-ebay ebay_gb')->dailyAt('03:50')->when(fn () => now()->dayOfYear % 3 === 1)->withoutOverlapping()->name('scope_sync_ebay_gb');
         $schedule->command('scope:sync-ebay ebay_ch')->dailyAt('03:20')->when(fn () => now()->dayOfYear % 3 === 2)->withoutOverlapping()->name('scope_sync_ebay_ch');
 
-        // Sklepy WWW: każdy 1× na 3 dni (rotacja dayOfYear % 3), rozłożone — max 2 dziennie o różnych
-        // godzinach (04:00 i 05:30), nigdy wszystkie naraz. Każdy sklep wraca co 3 dni.
+        // Sklepy WWW: każdy 1× na 3 dni (rotacja dayOfYear % 3), rozłożone — max 3 dziennie o różnych
+        // godzinach (04:00, 05:30, 07:00), nigdy wszystkie naraz. Każdy sklep wraca co 3 dni.
         $schedule->command('scope:sync-shop stahl')->dailyAt('04:00')->when(fn () => now()->dayOfYear % 3 === 0)->withoutOverlapping()->name('scope_sync_stahl');
         $schedule->command('scope:sync-shop rumunia')->dailyAt('04:00')->when(fn () => now()->dayOfYear % 3 === 1)->withoutOverlapping()->name('scope_sync_rumunia');
         $schedule->command('scope:sync-shop wegry')->dailyAt('04:00')->when(fn () => now()->dayOfYear % 3 === 2)->withoutOverlapping()->name('scope_sync_wegry');
         $schedule->command('scope:sync-shop francja')->dailyAt('05:30')->when(fn () => now()->dayOfYear % 3 === 0)->withoutOverlapping()->name('scope_sync_francja');
         $schedule->command('scope:sync-shop czechy')->dailyAt('05:30')->when(fn () => now()->dayOfYear % 3 === 1)->withoutOverlapping()->name('scope_sync_czechy');
         $schedule->command('scope:sync-shop hiszpania')->dailyAt('05:30')->when(fn () => now()->dayOfYear % 3 === 2)->withoutOverlapping()->name('scope_sync_hiszpania');
+        $schedule->command('scope:sync-shop niemcy2')->dailyAt('07:00')->when(fn () => now()->dayOfYear % 3 === 0)->withoutOverlapping()->name('scope_sync_niemcy2');
 
         // Marketplace → eBay (NASZE aukcje). Co godzinę: odśwież stany z eBay, a zaraz po tym uzupełnij
         // te, które spadły do progu (auto_restock_when, domyślnie <=1) → auto_restock_to (5).

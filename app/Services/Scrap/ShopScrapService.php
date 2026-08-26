@@ -8,7 +8,7 @@ use App\Models\Scrap\ScrapSource;
 
 /**
  * Wspólny silnik „mózg" monitoringu sklepów konkurenta (Argo Scope → Rumuni).
- * Driver per źródło (LokopiClient / RomaniaClient), reszta wspólna: upsert + diff + cennik-staty.
+ * Driver per platformę (LokopiClient / RomaniaClient / TshopClient), reszta wspólna: upsert + diff + cennik-staty.
  * Klucz spinający z eBay i PIM: herstellernummer (ArtikelNr/SKU) + EAN — ten sam producent (Scut Protection).
  */
 class ShopScrapService
@@ -18,6 +18,7 @@ class ShopScrapService
         'stahl' => ['label' => 'Niemcy (stahl-unterfahrschutz.eu)', 'seller' => 'stahl-unterfahrschutz.eu', 'currency' => 'EUR'],
         'wegry' => ['label' => 'Węgry (motorvedolemezek.com)', 'seller' => 'motorvedolemezek.com', 'currency' => 'HUF'],
         'rumunia' => ['label' => 'Rumunia (scut-motor.ro)', 'seller' => 'scut-motor.ro', 'currency' => 'RON'],
+        'niemcy2' => ['label' => 'Niemcy 2 (scutprotection.de)', 'seller' => 'scutprotection.de', 'currency' => 'EUR'],
         'francja' => ['label' => 'Francja (protectionsousmoteur.eu)', 'seller' => 'protectionsousmoteur.eu', 'currency' => 'EUR'],
         'czechy' => ['label' => 'Czechy (krytpodmotor.com)', 'seller' => 'krytpodmotor.com', 'currency' => 'EUR'],
         'hiszpania' => ['label' => 'Hiszpania (cubrecarterprotect.es)', 'seller' => 'cubrecarterprotect.es', 'currency' => 'EUR'],
@@ -48,7 +49,8 @@ class ShopScrapService
             'rumunia' => new RomaniaClient('https://www.scut-motor.ro'),
             'francja' => new LokopiClient('https://www.protectionsousmoteur.eu/plan-du-site', 'EUR'),
             'czechy' => new LokopiClient('https://www.krytpodmotor.com/sitemap-kryt-pod-motor', 'EUR'),
-            'hiszpania' => new SpainClient(),
+            'hiszpania' => new TshopClient('https://cubrecarterprotect.es/sitemap.xml', '/a', 'EUR'),
+            'niemcy2' => new TshopClient('https://scutprotection.de/sitemap.xml', '/p', 'EUR'),
         };
     }
 
