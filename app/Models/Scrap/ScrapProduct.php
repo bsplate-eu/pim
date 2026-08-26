@@ -21,6 +21,7 @@ class ScrapProduct extends Model
         'title',
         'price',
         'individual_price',
+        'aligned',
         'excluded',
         'currency',
         'herstellernummer',
@@ -40,6 +41,7 @@ class ScrapProduct extends Model
     protected $casts = [
         'price' => 'decimal:2',
         'individual_price' => 'decimal:2',
+        'aligned' => 'boolean',
         'excluded' => 'boolean',
         'is_active' => 'boolean',
         'first_seen' => 'datetime',

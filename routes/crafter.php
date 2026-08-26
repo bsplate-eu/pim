@@ -834,4 +834,8 @@ Route::middleware(['crafter.base', 'auth', 'crafter.verified'])->prefix('admin')
         ->name('scope.rumuni.update-all');
     Route::post('scope/rumuni/match', [App\Http\Controllers\Admin\Scope\ScopeRumuniController::class, 'matchProducts'])
         ->name('scope.rumuni.match');
+    Route::post('scope/rumuni/align', [App\Http\Controllers\Admin\Scope\ScopeRumuniController::class, 'align'])
+        ->name('scope.rumuni.align');
+    Route::post('scope/rumuni/align-reset', [App\Http\Controllers\Admin\Scope\ScopeRumuniController::class, 'alignReset'])
+        ->name('scope.rumuni.align-reset');
 });

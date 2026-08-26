@@ -107,6 +107,35 @@
                 <Button type="button" variant="outline" color="gray" @click="updateAll" :disabled="!targetPricelistId">
                     Aktualizuj cennik
                 </Button>
+                <Dropdown placement="bottom-end" no-content-padding content-class="w-96">
+                    <template #button>
+                        <Button type="button" variant="outline" color="gray" :loading="aligning">Opcje ▾</Button>
+                    </template>
+                    <template #content>
+                        <div class="px-4 py-2 text-xs text-gray-500 border-b border-gray-100">
+                            {{ currentLabel }} — wyrównane: <span class="font-semibold text-gray-700">{{ currentAlign.aligned }}</span>
+                        </div>
+                        <div class="py-1">
+                        <DropdownItem @click="alignPrices">
+                            <div>
+                                <div class="font-medium text-gray-900">Wyrównaj cenę</div>
+                                <div class="text-xs text-gray-500">
+                                    Nasza cena = cena konkurenta 1:1, dla całej zakładki ({{ currentAlign.eligible }} poz.).
+                                    Trafi do cennika nawet gdy nasza jest niższa.
+                                </div>
+                            </div>
+                        </DropdownItem>
+                        <DropdownItem v-if="currentAlign.aligned > 0" @click="alignReset">
+                            <div>
+                                <div class="font-medium text-gray-900">Cofnij wyrównanie</div>
+                                <div class="text-xs text-gray-500">
+                                    Czyści wyrównane ceny ({{ currentAlign.aligned }} poz.). Cennik zostaje bez zmian.
+                                </div>
+                            </div>
+                        </DropdownItem>
+                        </div>
+                    </template>
+                </Dropdown>
             </div>
 
             <Card>
@@ -253,6 +282,9 @@
                                         {{ priceDiff(p) }}
                                     </td>
                                     <td class="px-4 py-3 text-right whitespace-nowrap">
+                                        <div class="flex items-center justify-end gap-1">
+                                        <span v-if="p.aligned" class="text-xs font-bold text-primary-600"
+                                            title="Cena wyrównana do konkurenta — trafia do cennika także wtedy, gdy nasza jest niższa">=</span>
                                         <input type="number" min="0" step="0.01" inputmode="decimal"
                                             :value="p.individual_price ?? ''"
                                             @change="saveIndividual(p, ($event.target as HTMLInputElement).value)"
@@ -261,6 +293,7 @@
                                                 'w-24 text-right rounded-md border-gray-300 text-sm focus:border-primary-500 focus:ring-primary-500',
                                                 Number(p.individual_price) > 0 ? 'border-primary-400 bg-primary-50 font-medium text-primary-700' : '',
                                             ]" />
+                                        </div>
                                     </td>
                                     <td class="px-4 py-3 text-right whitespace-nowrap font-medium" :class="diffPctClass(p)">
                                         {{ priceDiffPct(p) }}
@@ -300,7 +333,7 @@ import { Link, router } from "@inertiajs/vue3";
 import axios from "axios";
 import { ArrowPathIcon } from "@heroicons/vue/24/outline";
 import { useToast } from "@brackets/vue-toastification";
-import { PageHeader, PageContent, Button, Card, CardHeader, CardContent } from "crafter/Components";
+import { PageHeader, PageContent, Button, Card, CardHeader, CardContent, Dropdown, DropdownItem } from "crafter/Components";
 
 interface OurProduct {
     id: number;
@@ -319,6 +352,7 @@ interface ProductRow {
     product: OurProduct | null;
     compare_price: string | null;
     individual_price: string | null;
+    aligned: boolean;
     excluded: boolean;
 }
 interface Paginated<T> {
@@ -348,6 +382,7 @@ interface Props {
     pricelists: Array<{ id: number; name: string; currency: string }>;
     configs: Record<string, { pricelist_id: number | null; vat: string | null; target_pricelist_id: number | null }>;
     unmapped: Record<string, number>;
+    align: Record<string, { aligned: number; manual: number; eligible: number }>;
     per_page: number;
 }
 
@@ -381,6 +416,7 @@ const isEbay = computed(() => activeTab.value === "ebay" || activeTab.value.star
 
 /** Liczba ofert bez przypisanego naszego produktu w bieżącym kanale (do przycisku „Pokaż nieprzypisane"). */
 const currentUnmapped = computed(() => props.unmapped?.[activeTab.value] ?? 0);
+const currentAlign = computed(() => props.align?.[activeTab.value] ?? { aligned: 0, manual: 0, eligible: 0 });
 
 const currentLabel = computed(() => props.labels[activeTab.value] ?? "eBay");
 
@@ -728,7 +764,10 @@ async function updateAll() {
         toast.error("Najpierw wybierz cennik docelowy.");
         return;
     }
-    if (!window.confirm(`Wgrać ceny zmapowanych ofert (${currentLabel.value}) do cennika — POMIJAJĄC wykluczone? Idzie niższa z (eBay netto, nasza). Nadpisze istniejące pozycje.`)) {
+    const alignedNote = currentAlign.value.aligned > 0
+        ? ` Wyrównanych (${currentAlign.value.aligned}) to nie dotyczy — tam idzie cena konkurenta 1:1, także w górę.`
+        : "";
+    if (!window.confirm(`Wgrać ceny zmapowanych ofert (${currentLabel.value}) do cennika — POMIJAJĄC wykluczone? Idzie niższa z (eBay netto, nasza).${alignedNote} Nadpisze istniejące pozycje.`)) {
         return;
     }
     try {
@@ -739,6 +778,67 @@ async function updateAll() {
         if (data.ok) toast.success(`Zaktualizowano ${data.count} pozycji w cenniku.`);
     } catch (e: any) {
         toast.error(e?.response?.data?.message ?? "Błąd aktualizacji cennika.");
+    }
+}
+
+/** „Opcje → Wyrównaj cenę" — nasza cena = cena konkurenta 1:1 dla całej zakładki.
+ *  Wpisuje cenę oferty w kolumnę „Indywidualna" i oznacza pozycję jako wyrównaną: przy zapisie do cennika
+ *  taka cena omija regułę „niższa z dwóch", więc potrafi też PODNIEŚĆ naszą cenę do poziomu konkurenta.
+ *  Cennika nie rusza — zapisuje dopiero „Aktualizuj cennik". */
+const aligning = ref(false);
+async function alignPrices() {
+    const a = currentAlign.value;
+    if (a.eligible === 0) {
+        toast.error("Brak pozycji do wyrównania — potrzebne są oferty przypisane do SKU, z ceną i bez „Wyklucz”.");
+        return;
+    }
+    const manualNote = a.manual > 0 ? `\n• NADPISZE ręczne ceny indywidualne: ${a.manual}` : "";
+    if (
+        !window.confirm(
+            `Wyrównać ceny w zakładce ${currentLabel.value} do cen konkurenta (1:1)?\n` +
+                `\n• obejmie: ${a.eligible} poz. (przypisane do SKU, z ceną, bez „Wyklucz”)${manualNote}` +
+                `\n• wyrównana cena trafi do cennika także wtedy, gdy nasza obecna jest NIŻSZA — czyli może ją podnieść` +
+                `\n\nCennik NIE zmieni się teraz. Zapisuje dopiero „Aktualizuj cennik”.`,
+        )
+    ) {
+        return;
+    }
+    aligning.value = true;
+    try {
+        const { data } = await axios.post(route("crafter.scope.rumuni.align"), { source: activeTab.value });
+        if (data.ok) {
+            toast.success(data.message);
+            router.reload({ only: ["channels", "align"] });
+        } else {
+            toast.error(data.message);
+        }
+    } catch (e: any) {
+        toast.error(e?.response?.data?.message ?? "Błąd wyrównywania cen.");
+    } finally {
+        aligning.value = false;
+    }
+}
+
+/** „Opcje → Cofnij wyrównanie" — czyści wyrównane ceny w kanale. Cennik zostaje bez zmian. */
+async function alignReset() {
+    if (
+        !window.confirm(
+            `Cofnąć wyrównanie w zakładce ${currentLabel.value} (${currentAlign.value.aligned} poz.)?\n` +
+                `\nWyczyści ceny indywidualne ustawione wyrównaniem. Ceny zapisane wcześniej w cenniku zostaną bez zmian.`,
+        )
+    ) {
+        return;
+    }
+    try {
+        const { data } = await axios.post(route("crafter.scope.rumuni.align-reset"), { source: activeTab.value });
+        if (data.ok) {
+            toast.success(data.message);
+            router.reload({ only: ["channels", "align"] });
+        } else {
+            toast.error(data.message);
+        }
+    } catch (e: any) {
+        toast.error(e?.response?.data?.message ?? "Błąd cofania wyrównania.");
     }
 }
 </script>

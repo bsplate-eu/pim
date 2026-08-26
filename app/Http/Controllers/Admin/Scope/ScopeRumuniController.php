@@ -16,6 +16,7 @@ use App\Services\Ebay\EbayScrapService;
 use App\Services\Scrap\ProductMatcher;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 use Spatie\QueryBuilder\AllowedFilter;
@@ -53,6 +54,8 @@ class ScopeRumuniController extends Controller
         $configs = [];
         $meta = [];
         $unmapped = [];
+        $align = [];
+        $alignStats = $this->alignStats();
         foreach (self::SOURCES as $src) {
             $cfg = $this->channelConfig($src);
             $configs[$src] = [
@@ -63,6 +66,7 @@ class ScopeRumuniController extends Controller
             $channels[$src] = $this->channelProducts($src, $request, $this->comparePrices($cfg), $cfg->compare_pricelist_id, $cfg->compare_vat, $perPage);
             $meta[$src] = $this->channelMeta($src, $settings);
             $unmapped[$src] = ScrapProduct::where('source', $src)->whereNull('product_id')->count();
+            $align[$src] = $alignStats[$src] ?? ['aligned' => 0, 'manual' => 0, 'eligible' => 0];
         }
 
         return Inertia::render('Scope/Scrapy/Rumuni/Index', [
@@ -70,6 +74,7 @@ class ScopeRumuniController extends Controller
             'meta' => $meta,
             'configs' => $configs,
             'unmapped' => $unmapped,
+            'align' => $align,
             'order' => self::SOURCES,
             'labels' => self::TAB_LABELS,
             'sort' => $request->input('sort', 'title'),
@@ -361,10 +366,15 @@ class ScopeRumuniController extends Controller
     }
 
     /** Cena netto do cennika docelowego = NIŻSZA z: (cena ze scrapa/indywidualna → netto)
-     *  i (cena z cennika porównawczego → netto). Gdy brak/0 ceny porównawczej → tylko ze scrapa. */
+     *  i (cena z cennika porównawczego → netto). Gdy brak/0 ceny porównawczej → tylko ze scrapa.
+     *  WYJĄTEK — oferta WYRÓWNANA („Opcje → Wyrównaj cenę"): zawsze cena ze scrapa, także gdy nasza jest
+     *  niższa. Wyrównanie ma prawo PODNIEŚĆ cenę do poziomu konkurenta — po to się je klika. */
     private function targetNetPrice(ScrapProduct $s, float $vat, array $compareNet, CurrencyConverter $fx): float
     {
         $scrapNet = $this->toNet($this->effectivePriceEur($s, $fx), $vat);
+        if ($s->aligned) {
+            return $scrapNet;
+        }
         $cmp = (float) ($compareNet[$s->product_id] ?? 0);
 
         return ($cmp > 0 && $cmp < $scrapNet) ? $cmp : $scrapNet;
@@ -565,7 +575,7 @@ class ScopeRumuniController extends Controller
 
         $scraps = ScrapProduct::whereIn('id', $data['scrap_ids'])
             ->whereNotNull('product_id')
-            ->get(['id', 'product_id', 'price', 'individual_price', 'currency']);
+            ->get(['id', 'product_id', 'price', 'individual_price', 'aligned', 'currency']);
 
         // Do cennika idzie NIŻSZA z (oferta/indywidualna ↔ cennik porównawczy), NETTO, w WALUCIE cennika docelowego.
         $rows = $scraps->map(fn (ScrapProduct $s) => [
@@ -603,7 +613,7 @@ class ScopeRumuniController extends Controller
         $rows = ScrapProduct::where('source', $data['source'])
             ->whereNotNull('product_id')
             ->where('excluded', false)
-            ->get(['product_id', 'price', 'individual_price', 'currency'])
+            ->get(['product_id', 'price', 'individual_price', 'aligned', 'currency'])
             ->map(fn (ScrapProduct $s) => [
                 'product_id' => $s->product_id,
                 'price' => $this->toTargetCurrency($this->targetNetPrice($s, $vat, $compareNet, $fx), $targetRate),
@@ -625,5 +635,79 @@ class ScopeRumuniController extends Controller
         $cfg->update(['target_pricelist_id' => $data['target_pricelist_id']]);
 
         return response()->json(['ok' => true, 'count' => count($rows)]);
+    }
+
+    /** Statystyki „Wyrównaj cenę" per kanał — jednym zapytaniem (strona ładuje wszystkie kanały naraz).
+     *  Przez DB::table, nie przez model — alias `aligned` kolidowałby z castem boolean i SUM wróciłby jako true.
+     *  aligned = już wyrównane, manual = ręczna cena indywidualna (wyrównanie ją NADPISZE), eligible = ile obejmie. */
+    private function alignStats(): array
+    {
+        return DB::table('scrap_products')
+            ->selectRaw('source')
+            ->selectRaw('SUM(aligned = 1) as aligned_cnt')
+            ->selectRaw('SUM(aligned = 0 AND individual_price IS NOT NULL) as manual_cnt')
+            ->selectRaw('SUM(product_id IS NOT NULL AND excluded = 0 AND price > 0) as eligible_cnt')
+            ->groupBy('source')
+            ->get()
+            ->mapWithKeys(fn ($r) => [$r->source => [
+                'aligned' => (int) $r->aligned_cnt,
+                'manual' => (int) $r->manual_cnt,
+                'eligible' => (int) $r->eligible_cnt,
+            ]])
+            ->toArray();
+    }
+
+    /** „Opcje → Wyrównaj cenę" — nasza cena = cena konkurenta 1:1, dla CAŁEGO kanału (zakładki).
+     *  Cena oferty ląduje w kolumnie „Indywidualna" (widać ją od razu w tabeli i dalej da się poprawić ręcznie),
+     *  a flaga `aligned` sprawia, że przy zapisie do cennika NIE obowiązuje reguła „niższa z dwóch" —
+     *  czyli wyrównanie może też PODNIEŚĆ naszą cenę do poziomu konkurenta.
+     *  Pomija: nieprzypisane do SKU (nie ma czego zapisać w cenniku), wykluczone i bez ceny.
+     *  Sam cennik NIE jest ruszany — zapisuje dopiero „Aktualizuj cennik". */
+    public function align(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'source' => ['required', 'string'],
+        ]);
+        if (! in_array($data['source'], self::SOURCES, true)) {
+            return response()->json(['ok' => false, 'message' => "Nieznany kanał: {$data['source']}."], 404);
+        }
+
+        $count = ScrapProduct::where('source', $data['source'])
+            ->whereNotNull('product_id')
+            ->where('excluded', false)
+            ->whereNotNull('price')
+            ->where('price', '>', 0)
+            ->update([
+                'individual_price' => DB::raw('price'),
+                'aligned' => true,
+            ]);
+
+        return response()->json([
+            'ok' => true,
+            'count' => $count,
+            'message' => "Wyrównano {$count} pozycji do cen konkurenta. Kliknij „Aktualizuj cennik”, żeby zapisać je w cenniku docelowym.",
+        ]);
+    }
+
+    /** „Opcje → Cofnij wyrównanie" — kasuje wyrównanie w całym kanale (cena indywidualna + flaga).
+     *  Działa na przyszłe zapisy: ceny już wpisane do cennika zostają bez zmian. */
+    public function alignReset(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'source' => ['required', 'string'],
+        ]);
+        if (! in_array($data['source'], self::SOURCES, true)) {
+            return response()->json(['ok' => false, 'message' => "Nieznany kanał: {$data['source']}."], 404);
+        }
+
+        $count = ScrapProduct::where('source', $data['source'])
+            ->where('aligned', true)
+            ->update(['individual_price' => null, 'aligned' => false]);
+
+        return response()->json([
+            'ok' => true,
+            'count' => $count,
+            'message' => "Cofnięto wyrównanie dla {$count} pozycji. Ceny zapisane wcześniej w cenniku zostają bez zmian.",
+        ]);
     }
 }
