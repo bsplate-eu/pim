@@ -725,6 +725,10 @@ Route::middleware(['crafter.base', 'auth', 'crafter.verified'])->prefix('admin')
         ->name('connect.integrations.ebay.offers.auto-actions.run');
     Route::post('connect/integrations/ebay/offers/auto-assign/run', [App\Http\Controllers\Admin\Connect\EbayOffersController::class, 'runAutoAssign'])
         ->name('connect.integrations.ebay.offers.auto-assign.run');
+    Route::post('connect/integrations/ebay/offers/end-preview', [App\Http\Controllers\Admin\Connect\EbayOffersController::class, 'endPreview'])
+        ->name('connect.integrations.ebay.offers.end-preview');
+    Route::post('connect/integrations/ebay/offers/end-apply', [App\Http\Controllers\Admin\Connect\EbayOffersController::class, 'endApply'])
+        ->name('connect.integrations.ebay.offers.end-apply');
     Route::get('connect/integrations/ebay/offers/logs', [App\Http\Controllers\Admin\Connect\EbayOffersController::class, 'logs'])
         ->name('connect.integrations.ebay.offers.logs');
     Route::post('connect/integrations/ebay/offers/qty-preview', [App\Http\Controllers\Admin\Connect\EbayOffersController::class, 'quantityUpdatePreview'])

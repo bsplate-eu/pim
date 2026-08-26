@@ -1,5 +1,5 @@
 <template>
-    <PageHeader title="Marketplace — eBay (nasze aukcje)">
+    <PageHeader title="Marketplace — eBay">
         <div class="flex items-center gap-2">
             <Link :href="route('crafter.connect.integrations.ebay.index')">
                 <Button variant="outline" color="gray">← Ustawienia</Button>
@@ -11,16 +11,11 @@
     </PageHeader>
 
     <PageContent fluid>
-        <div class="mb-4 text-sm text-gray-500">Argo Connect → Marketplace → <span class="font-medium text-gray-700">Ebay</span></div>
-
-        <!-- Górne taby: Oferty / Automatyczne akcje / Logi -->
-        <div class="mb-5 border-b border-gray-200">
-            <nav class="-mb-px flex gap-6">
-                <button type="button" @click="viewMode = 'offers'" :class="tabClass(viewMode === 'offers')">Oferty</button>
-                <button type="button" @click="viewMode = 'auto'" :class="tabClass(viewMode === 'auto')">Automatyczne akcje</button>
-                <button type="button" @click="openLogs" :class="tabClass(viewMode === 'logs')">Logi</button>
-            </nav>
+        <div class="mb-4 text-sm text-gray-500">
+            Argo Connect → Marketplace → eBay → <span class="font-medium text-gray-700">{{ crumb }}</span>
         </div>
+
+        <EbayTabs :active="viewMode" @select="onTab" />
 
         <!-- TAB: Automatyczne akcje -->
         <Card v-if="viewMode === 'auto'">
@@ -83,6 +78,7 @@
                         <span class="ml-2 text-xs text-gray-400">Przeszuka nieprzypisane oferty i zmapuje pasujące po SKU.</span>
                     </div>
                 </div>
+
             </CardContent>
         </Card>
 
@@ -225,6 +221,7 @@
                 <select v-model="opType" class="rounded-md border-gray-300 text-sm focus:border-primary-500 focus:ring-primary-500">
                     <option value="price">Zmień cenę (z cennika)</option>
                     <option value="qty">Zmień ilość</option>
+                    <option value="off">Zakończ aukcje (koniec sprzedaży)</option>
                 </select>
                 <template v-if="opType === 'price'">
                     <select v-model.number="opForm.pricelist_id"
@@ -237,7 +234,7 @@
                         class="w-16 rounded-md border-gray-300 text-sm focus:border-primary-500 focus:ring-primary-500" />
                     <span class="text-gray-500">%</span>
                 </template>
-                <template v-else>
+                <template v-else-if="opType === 'qty'">
                     <select v-model="qtyForm.mode" class="rounded-md border-gray-300 text-sm focus:border-primary-500 focus:ring-primary-500">
                         <option value="increase">Zwiększ o</option>
                         <option value="decrease">Zmniejsz o</option>
@@ -247,9 +244,15 @@
                         class="w-20 rounded-md border-gray-300 text-sm focus:border-primary-500 focus:ring-primary-500" />
                     <span class="text-gray-500">szt.</span>
                 </template>
+                <template v-else>
+                    <span class="rounded-md border border-red-300 bg-red-50 px-2 py-1 text-xs font-semibold text-red-700">
+                        NIEODWRACALNE — aukcje zostaną zakończone na eBay (EndFixedPriceItem). Powrót tylko przez wystawienie na nowo (nowy ItemID).
+                    </span>
+                </template>
                 <Button type="button" color="primary" @click="doPreview" :loading="previewing">
                     Podgląd zmian
                 </Button>
+                <span v-if="unmappedWarning" class="text-xs font-medium text-amber-700">{{ unmappedWarning }}</span>
             </div>
         </div>
 
@@ -310,7 +313,7 @@
                                     <input type="checkbox" :checked="pageAllSelected" :indeterminate.prop="pageSomeSelected && !pageAllSelected"
                                         @change="toggleSelectPage" :disabled="eligibleIds.length === 0"
                                         class="rounded text-primary-600 focus:ring-primary-500 disabled:opacity-30"
-                                        title="Zaznacz zmapowane na tej stronie" />
+                                        title="Zaznacz wszystkie na tej stronie" />
                                 </th>
                                 <th @click="toggleSort('title')" class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer select-none hover:text-gray-700">
                                     Tytuł <span class="text-gray-400">{{ sortIcon('title') }}</span>
@@ -338,9 +341,8 @@
                             <tr v-for="o in offers.data" :key="o.id" class="hover:bg-gray-50">
                                 <td class="px-4 py-3">
                                     <input type="checkbox" :checked="selectAllMatching || selected.has(o.id)" @change="toggleSel(o.id)"
-                                        :disabled="!o.product"
-                                        :title="!o.product ? 'Tylko zmapowane można zaznaczyć' : ''"
-                                        class="rounded text-primary-600 focus:ring-primary-500 disabled:opacity-30" />
+                                        :title="!o.product ? 'Bez produktu z PIM — działa operacja na ilości (w tym wyłączenie)' : ''"
+                                        class="rounded text-primary-600 focus:ring-primary-500" />
                                 </td>
                                 <td class="px-4 py-3 max-w-md truncate" :title="o.title">{{ o.title }}</td>
                                 <td class="px-4 py-3 font-mono text-xs">{{ o.sku || '—' }}</td>
@@ -401,12 +403,14 @@
         <div v-if="showPreview" class="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4" @click.self="showPreview = false">
             <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[85vh] flex flex-col">
                 <div class="px-5 py-4 border-b">
-                    <h3 class="text-lg font-semibold">Podgląd zmian — {{ opType === 'price' ? 'cena' : 'ilość' }}</h3>
+                    <h3 class="text-lg font-semibold">Podgląd zmian — {{ opType === 'price' ? 'cena' : opType === 'qty' ? 'ilość' : 'zakończenie aukcji' }}</h3>
                     <p v-if="opType === 'price'" class="text-sm text-gray-500">Cennik: <span class="font-medium">{{ preview?.pricelist ?? '—' }}</span> · VAT {{ opForm.vat }}%</p>
-                    <p v-else class="text-sm text-gray-500">{{ qtyForm.mode === 'set' ? 'Ustaw na' : qtyForm.mode === 'increase' ? 'Zwiększ o' : 'Zmniejsz o' }} <span class="font-medium">{{ qtyForm.amount }} szt.</span></p>
+                    <p v-else-if="opType === 'qty'" class="text-sm text-gray-500">{{ qtyForm.mode === 'set' ? 'Ustaw na' : qtyForm.mode === 'increase' ? 'Zwiększ o' : 'Zmniejsz o' }} <span class="font-medium">{{ qtyForm.amount }} szt.</span></p>
+                    <p v-else class="text-sm font-semibold text-red-700">EndFixedPriceItem — aukcje przestaną istnieć. Operacji NIE DA SIĘ cofnąć.</p>
                 </div>
                 <div class="px-5 py-3 text-sm">
-                    <span class="font-semibold text-green-700">{{ preview?.count ?? 0 }}</span> ofert do zmiany<template v-if="opType === 'price'">,
+                    <span class="font-semibold" :class="opType === 'off' ? 'text-red-700' : 'text-green-700'">{{ preview?.count ?? 0 }}</span>
+                    {{ opType === 'off' ? 'aukcji do zakończenia' : 'ofert do zmiany' }}<template v-if="opType === 'price'">,
                     <span class="text-gray-500">{{ preview?.skipped ?? 0 }} pominiętych (brak ceny w cenniku)</span></template>.
                 </div>
                 <div class="px-5 overflow-auto flex-1">
@@ -430,11 +434,12 @@
                     </p>
                 </div>
                 <div class="px-5 py-4 border-t flex items-center justify-between gap-3 flex-wrap">
-                    <p class="text-xs text-amber-600">⚠️ „Zastosuj" zmienia REALNE dane na eBay. Najpierw testuj na Sandboxie.</p>
+                    <p v-if="opType === 'off'" class="text-xs font-semibold text-red-700">⚠️ Zakończonych aukcji NIE DA SIĘ przywrócić — trzeba je wystawić od nowa.</p>
+                    <p v-else class="text-xs text-amber-600">⚠️ „Zastosuj" zmienia REALNE dane na eBay. Najpierw testuj na Sandboxie.</p>
                     <div class="flex gap-2">
                         <Button type="button" variant="outline" color="gray" @click="showPreview = false">Anuluj</Button>
-                        <Button type="button" color="primary" @click="doApply" :loading="applying" :disabled="(preview?.count ?? 0) === 0">
-                            Zastosuj na eBay ({{ preview?.count ?? 0 }})
+                        <Button type="button" :color="opType === 'off' ? 'danger' : 'primary'" @click="doApply" :loading="applying" :disabled="(preview?.count ?? 0) === 0">
+                            {{ opType === 'off' ? 'Zakończ na eBay' : 'Zastosuj na eBay' }} ({{ preview?.count ?? 0 }})
                         </Button>
                     </div>
                 </div>
@@ -445,12 +450,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref } from "vue";
+import { computed, onMounted, reactive, ref } from "vue";
 import { Link, router } from "@inertiajs/vue3";
 import axios from "axios";
 import { ArrowPathIcon } from "@heroicons/vue/24/outline";
 import { useToast } from "@brackets/vue-toastification";
 import { PageHeader, PageContent, Button, Card, CardHeader, CardContent } from "crafter/Components";
+import EbayTabs, { type EbayTab } from "../../Marketplace/Ebay/EbayTabs.vue";
 
 interface OurProduct { id: number; name: string; product_code: string }
 interface OfferRow {
@@ -483,6 +489,7 @@ interface Props {
     filters: { search: string | null; mapped: string | null; marketplace: string | null };
     meta: { oauth_connected: boolean; has_credentials: boolean };
     auto: { enabled: boolean; to: number; assign_enabled: boolean };
+    view: string;
 }
 
 const props = defineProps<Props>();
@@ -625,7 +632,9 @@ async function saveQuantity(o: OfferRow, value: string) {
 const selected = ref<Set<number>>(new Set());
 const selectAllMatching = ref(false); // true = WSZYSTKIE zmapowane pasujące filtrowi (nie tylko zaznaczone strony)
 
-const eligibleIds = computed(() => props.offers.data.filter((o) => o.product).map((o) => o.id));
+// Zaznaczyć można KAŻDĄ ofertę: operacja na ilości (w tym „wyłącz" = 0 szt.) nie potrzebuje produktu z PIM.
+// Cena wymaga mapowania — nieprzypisane odsiewa backend, a pasek operacji o tym uprzedza.
+const eligibleIds = computed(() => props.offers.data.map((o) => o.id));
 const pageAllSelected = computed(() => eligibleIds.value.length > 0 && eligibleIds.value.every((id) => selected.value.has(id)));
 const pageSomeSelected = computed(() => eligibleIds.value.some((id) => selected.value.has(id)));
 const selectionActive = computed(() => selectAllMatching.value || selected.value.size > 0);
@@ -651,7 +660,20 @@ function clearSelection() {
 }
 
 // --- Operacje: zmień cenę (z cennika) LUB zmień ilość ---
-const opType = ref<"price" | "qty">("price");
+const opType = ref<"price" | "qty" | "off">("price");
+/** „Wyłącz aukcje" to ta sama operacja co ilość, na sztywno ustawiona na 0 szt. */
+function qtyPayload() {
+    return opType.value === "off" ? { mode: "set", amount: 0 } : { mode: qtyForm.mode, amount: qtyForm.amount };
+}
+/** Ostrzeżenie: cena wymaga produktu z PIM, więc nieprzypisane oferty zostaną pominięte. */
+const unmappedWarning = computed(() => {
+    if (opType.value !== "price") return "";
+    if (selectAllMatching.value) {
+        return filters.mapped === "0" ? "Zaznaczone są nieprzypisane — zmiana ceny je pominie." : "";
+    }
+    const n = props.offers.data.filter((o) => !o.product && selected.value.has(o.id)).length;
+    return n > 0 ? `${n} zaznaczonych bez produktu — zmiana ceny je pominie.` : "";
+});
 const opForm = reactive({ pricelist_id: null as number | null, vat: 0 });
 const qtyForm = reactive({ mode: "increase" as "increase" | "decrease" | "set", amount: 0 });
 const preview = ref<{ count: number; skipped: number; pricelist?: string | null; unit: string; sample: any[] } | null>(null);
@@ -662,7 +684,13 @@ const showPreview = ref(false);
 /** Część payloadu wskazująca zbiór ofert (zaznaczone ids lub wszystkie pasujące filtrowi). */
 function selectionPayload(): Record<string, any> {
     return selectAllMatching.value
-        ? { all: true, marketplace: activeMarketplace.value || undefined, search: search.value || undefined }
+        ? {
+            all: true,
+            marketplace: activeMarketplace.value || undefined,
+            search: search.value || undefined,
+            // BEZ tego backend wziąłby WSZYSTKIE oferty, a nie te widoczne pod filtrem Przypisane/Nieprzypisane.
+            mapped: filters.mapped ?? undefined,
+        }
         : { ids: [...selected.value] };
 }
 
@@ -675,9 +703,12 @@ async function doPreview() {
             const { data } = await axios.post(route("crafter.connect.integrations.ebay.offers.price-preview"),
                 { pricelist_id: opForm.pricelist_id, vat: opForm.vat, ...selectionPayload() });
             preview.value = { ...data, unit: "EUR" };
-        } else {
+        } else if (opType.value === "qty") {
             const { data } = await axios.post(route("crafter.connect.integrations.ebay.offers.qty-preview"),
-                { mode: qtyForm.mode, amount: qtyForm.amount, ...selectionPayload() });
+                { ...qtyPayload(), ...selectionPayload() });
+            preview.value = { ...data, unit: "szt." };
+        } else {
+            const { data } = await axios.post(route("crafter.connect.integrations.ebay.offers.end-preview"), selectionPayload());
             preview.value = { ...data, unit: "szt." };
         }
         showPreview.value = true;
@@ -689,21 +720,35 @@ async function doPreview() {
 }
 
 async function doApply() {
-    const what = opType.value === "price" ? "ceny" : "ilość";
-    if (!window.confirm(`Zmienić ${what} ${preview.value?.count ?? ""} ofert NA ŻYWO na eBay? To realne aukcje.`)) return;
+    const count = preview.value?.count ?? 0;
+    if (opType.value === "off") {
+        // Operacja nieodwracalna i masowa — sam confirm to za mało, wymagamy przepisania słowa.
+        if (!window.confirm(`ZAKOŃCZYĆ ${count} aukcji NA ŻYWO na eBay? Tego NIE DA SIĘ cofnąć — powrót tylko przez wystawienie od nowa (nowy ItemID).`)) return;
+        if (window.prompt(`Potwierdź: wpisz ZAKONCZ, żeby zakończyć ${count} aukcji.`) !== "ZAKONCZ") {
+            toast.error("Anulowane — nie wpisano ZAKONCZ.");
+            return;
+        }
+    } else if (!window.confirm(`Zmienić ${opType.value === "price" ? "ceny" : "ilość"} ${count} ofert NA ŻYWO na eBay? To realne aukcje.`)) {
+        return;
+    }
     applying.value = true;
     try {
         const url = opType.value === "price"
             ? route("crafter.connect.integrations.ebay.offers.price-apply")
-            : route("crafter.connect.integrations.ebay.offers.qty-apply");
+            : opType.value === "qty"
+                ? route("crafter.connect.integrations.ebay.offers.qty-apply")
+                : route("crafter.connect.integrations.ebay.offers.end-apply");
         const payload = opType.value === "price"
             ? { pricelist_id: opForm.pricelist_id, vat: opForm.vat, ...selectionPayload() }
-            : { mode: qtyForm.mode, amount: qtyForm.amount, ...selectionPayload() };
+            : opType.value === "qty"
+                ? { ...qtyPayload(), ...selectionPayload() }
+                : selectionPayload();
         const { data } = await axios.post(url, payload);
         if (data.ok) {
             toast.success(data.message);
             showPreview.value = false;
             clearSelection();
+            if (opType.value === "off") setTimeout(() => go(), 1500); // statusy zmienia job w tle
         } else {
             toast.error(data.message);
         }
@@ -715,7 +760,20 @@ async function doApply() {
 }
 
 // --- Górny tryb: Oferty / Automatyczne akcje / Logi ---
-const viewMode = ref<"offers" | "auto" | "logs">("offers");
+// Zakładka przychodzi z URL-a (?view=…), żeby wejście z ekranu Produktów trafiało od razu we właściwą.
+const viewMode = ref<Exclude<EbayTab, "products">>(
+    (["offers", "auto", "logs"] as const).includes(props.view as any) ? (props.view as any) : "offers",
+);
+const crumb = computed(() => ({ offers: "Aukcje", auto: "Automatyczne akcje", logs: "Logi" })[viewMode.value]);
+
+/** „Produkty" to osobna strona Inertii — reszta zakładek przełącza się lokalnie. */
+function onTab(tab: EbayTab) {
+    if (tab === "products") {
+        router.get(route("crafter.connect.marketplace.ebay.listing.index"));
+        return;
+    }
+    tab === "logs" ? openLogs() : (viewMode.value = tab);
+}
 const autoForm = reactive({
     enabled: props.auto?.enabled ?? true,
     to: props.auto?.to ?? 5,
@@ -795,6 +853,11 @@ function openLogs() {
     viewMode.value = "logs";
     if (!logs.value) loadLogs(1);
 }
+
+// Wejście prosto z ?view=logs (z zakładki na ekranie Produktów) — dziennik trzeba dociągnąć sam.
+onMounted(() => {
+    if (viewMode.value === "logs" && !logs.value) loadLogs(1);
+});
 async function loadLogs(page = 1) {
     logsLoading.value = true;
     try {

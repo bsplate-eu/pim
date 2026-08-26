@@ -1,0 +1,1 @@
+import{d as e,y as o,h as t}from"./vendor-46a0eb74.js";const d=e({__name:"TabGroup",props:{variant:{default:"enclosed"}},setup(r){return o("tabGroupVariant",r.variant),(a,s)=>t(a.$slots,"default")}});export{d as _};

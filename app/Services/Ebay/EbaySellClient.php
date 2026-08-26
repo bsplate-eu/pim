@@ -181,6 +181,19 @@ class EbaySellClient
         $this->call('ReviseInventoryStatus', $body, $marketplace);
     }
 
+    /** ZAKOŃCZ aukcję (EndFixedPriceItem). NIEODWRACALNE — powrót do sprzedaży tylko przez
+     *  wystawienie na nowo (nowy ItemID). $reason: NotAvailable | Incorrect | LostOrBroken | OtherListingError | SellToHighBidder. */
+    public function endListing(string $itemId, string $marketplace, string $reason = 'NotAvailable'): void
+    {
+        $body = '<?xml version="1.0" encoding="utf-8"?>'
+            . '<EndFixedPriceItemRequest xmlns="urn:ebay:apis:eBLBaseComponents">'
+            . "<ItemID>{$itemId}</ItemID>"
+            . "<EndingReason>{$reason}</EndingReason>"
+            . '</EndFixedPriceItemRequest>';
+
+        $this->call('EndFixedPriceItem', $body, $marketplace);
+    }
+
     /** Kategoria aukcji — GetItem, zwraca ['id'=>string, 'name'=>string] (PrimaryCategory). */
     public function itemCategory(string $itemId, string $marketplace): array
     {

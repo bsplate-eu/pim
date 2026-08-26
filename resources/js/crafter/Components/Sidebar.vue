@@ -183,9 +183,7 @@
                      dokładamy obok „Ebay", bez przebudowy menu. -->
                 <SidebarSubGroup title="Marketplace" v-can="'crafter.module.marketplace'">
                     <SidebarSubGroup title="Ebay">
-                        <SidebarItem :href="route('crafter.connect.integrations.ebay.offers.index')">
-                            Aukcje
-                        </SidebarItem>
+                        <!-- Jeden wpis: Wystawianie i Aukcje to teraz zakładki tego samego ekranu. -->
                         <SidebarItem :href="route('crafter.connect.marketplace.ebay.listing.index')">
                             Wystawianie
                         </SidebarItem>

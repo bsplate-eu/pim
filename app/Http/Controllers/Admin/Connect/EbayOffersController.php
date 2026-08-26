@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin\Connect;
 
 use App\Http\Controllers\Admin\Controller;
+use App\Jobs\RunEbayEndListings;
 use App\Jobs\RunEbayOffersSync;
 use App\Jobs\RunEbayPriceUpdate;
 use App\Jobs\RunEbayQuantityUpdate;
@@ -79,6 +80,7 @@ class EbayOffersController extends Controller
                 'oauth_connected' => $settings && $settings->isOauthConnected(),
                 'has_credentials' => $settings && $settings->hasCredentials(),
             ],
+            'view' => (string) $request->input('view', 'offers'),
             'auto' => [
                 'enabled' => (bool) ($settings?->auto_restock_enabled ?? true),
                 'to' => (int) ($settings?->auto_restock_to ?? 5),
@@ -163,6 +165,13 @@ class EbayOffersController extends Controller
             if (! empty($data['marketplace'])) {
                 $q->where('marketplace', $data['marketplace']);
             }
+            // Filtr „Mapowanie" z listy (Przypisane / Nieprzypisane). Bez tego „wszystkie pasujące"
+            // wzięłoby CAŁY katalog ofert zamiast tego, co użytkownik ma na ekranie.
+            if (isset($data['mapped']) && in_array((string) $data['mapped'], ['0', '1'], true)) {
+                (string) $data['mapped'] === '1'
+                    ? $q->whereNotNull('product_id')
+                    : $q->whereNull('product_id');
+            }
             if (! empty($data['search'])) {
                 $s = $data['search'];
                 $q->where(fn ($w) => $w->where('title', 'like', "%{$s}%")
@@ -187,6 +196,7 @@ class EbayOffersController extends Controller
             'ids.*' => ['integer'],
             'marketplace' => ['nullable', 'string'],
             'search' => ['nullable', 'string'],
+            'mapped' => ['nullable', 'in:0,1'],
         ]);
     }
 
@@ -248,6 +258,7 @@ class EbayOffersController extends Controller
             'ids.*' => ['integer'],
             'marketplace' => ['nullable', 'string'],
             'search' => ['nullable', 'string'],
+            'mapped' => ['nullable', 'in:0,1'],
         ]);
     }
 
@@ -330,6 +341,70 @@ class EbayOffersController extends Controller
         $pp = $request->integer('per_page', 50);
 
         return in_array($pp, [50, 100, 250, 500], true) ? $pp : 50;
+    }
+
+    /** Walidacja wspólna dla preview/apply zakończenia aukcji. */
+    private function endOpData(Request $request): array
+    {
+        return $request->validate([
+            'all' => ['nullable', 'boolean'],
+            'ids' => ['nullable', 'array'],
+            'ids.*' => ['integer'],
+            'marketplace' => ['nullable', 'string'],
+            'search' => ['nullable', 'string'],
+            'mapped' => ['nullable', 'in:0,1'],
+        ]);
+    }
+
+    /** Oferty do zakończenia: mapowanie nieistotne, ale tylko AKTYWNE — „Completed"/„Ended"
+     *  eBay i tak by odrzucił, a w logach zostałyby same błędy. */
+    private function endableOffers(array $data)
+    {
+        return $this->operationOffers($data, false)
+            ->where(fn ($w) => $w->whereNull('listing_status')->orWhere('listing_status', 'Active'));
+    }
+
+    /** PODGLĄD zakończenia aukcji. NIE dotyka eBay. */
+    public function endPreview(Request $request): JsonResponse
+    {
+        $data = $this->endOpData($request);
+        $offers = $this->endableOffers($data)->get(['id', 'sku', 'title', 'quantity']);
+
+        $rows = $offers->map(fn (EbayOffer $o) => [
+            'title' => $o->title,
+            'sku' => $o->sku,
+            'old' => (int) $o->quantity,
+            'new' => 0,
+        ])->values();
+
+        return response()->json([
+            'count' => $rows->count(),
+            'skipped' => 0,
+            'sample' => $rows->take(15),
+        ]);
+    }
+
+    /** WYKONAJ zakończenie aukcji na eBay (w tle, EndFixedPriceItem). NIEODWRACALNE. */
+    public function endApply(Request $request): JsonResponse
+    {
+        $data = $this->endOpData($request);
+
+        $settings = EbaySettings::first();
+        if (! $settings || ! $settings->isOauthConnected()) {
+            return response()->json(['ok' => false, 'message' => 'Konto eBay nie jest połączone — nie mogę kończyć aukcji.'], 422);
+        }
+
+        $ids = $this->endableOffers($data)->pluck('id')->all();
+        if (empty($ids)) {
+            return response()->json(['ok' => false, 'message' => 'Brak aktywnych aukcji do zakończenia.'], 422);
+        }
+
+        RunEbayEndListings::dispatch($ids, EbayActionLog::CONTEXT_MANUAL);
+
+        return response()->json([
+            'ok' => true,
+            'message' => 'Kończenie ' . count($ids) . ' aukcji uruchomione w tle (eBay EndFixedPriceItem). Postęp w zakładce „Logi".',
+        ]);
     }
 
     /** Zapis reguł automatycznych: auto-restock (włącz + wartość docelowa) i auto-przypisanie (włącz). */

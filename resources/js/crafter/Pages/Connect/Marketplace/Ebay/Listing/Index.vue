@@ -4,12 +4,14 @@
   multi-select, „Wystaw wg schematu" → PODGLĄD → dopiero potem wysyłka.
 -->
 <template>
-    <PageHeader title="Marketplace — eBay · Wystawianie" />
+    <PageHeader title="Marketplace — eBay" />
 
     <PageContent fluid>
         <div class="mb-4 text-sm text-gray-500">
             Argo Connect → Marketplace → eBay → <span class="font-medium text-gray-700">Wystawianie</span>
         </div>
+
+        <EbayTabs active="products" @select="onTab" />
 
         <div v-if="!meta.oauth_connected" class="mb-5 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
             Konto eBay nie jest połączone — podgląd zadziała, ale wystawianie nie.
@@ -206,6 +208,7 @@ import { Link, router } from "@inertiajs/vue3";
 import axios from "axios";
 import { useToast } from "@brackets/vue-toastification";
 import { PageHeader, PageContent, Button, Card, CardContent } from "crafter/Components";
+import EbayTabs, { type EbayTab } from "../EbayTabs.vue";
 
 interface Listing { status: string | null; url: string | null }
 interface Row { id: number; product_code: string; name: string; thumbnail: string | null; is_listed: boolean; price: number | null; edit_url: string; listings: Listing[] }
@@ -224,6 +227,13 @@ interface Props {
 
 const props = defineProps<Props>();
 const toast = useToast();
+
+/** Aukcje/Automatyczne akcje/Logi żyją na drugiej stronie — zakładkę niesiemy w ?view. */
+function onTab(tab: EbayTab) {
+    if (tab !== "products") {
+        router.get(route("crafter.connect.integrations.ebay.offers.index"), { view: tab });
+    }
+}
 
 const schemeId = ref<number | null>(props.selectedSchemeId);
 const f = reactive({

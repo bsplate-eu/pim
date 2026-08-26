@@ -16,6 +16,7 @@ class EbayActionLog extends Model
 {
     public const ACTION_AUTO_RESTOCK = 'auto_restock'; // stan 0 → docelowy (ReviseInventoryStatus)
     public const ACTION_AUTO_ASSIGN  = 'auto_assign';  // mapowanie oferty → produkt po SKU
+    public const ACTION_END_LISTING  = 'end_listing';  // zakończenie aukcji (EndFixedPriceItem)
 
     public const STATUS_OK    = 'ok';    // akcja wykonana
     public const STATUS_ERROR = 'error'; // wyjątek podczas wykonania
