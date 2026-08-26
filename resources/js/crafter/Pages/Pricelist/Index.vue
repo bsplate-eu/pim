@@ -73,6 +73,9 @@
 <!--        <ListingHeaderCell sortBy="id">-->
 <!--            {{ $t("crafter", "Id") }}-->
 <!--        </ListingHeaderCell> -->
+        <ListingHeaderCell sortBy="position">
+            Kolejność
+        </ListingHeaderCell>
         <ListingHeaderCell sortBy="name">
             {{ $t("crafter", "Name") }}
         </ListingHeaderCell>
@@ -88,6 +91,21 @@
 <!--        <ListingDataCell>-->
 <!--             {{ item.id }}-->
 <!--        </ListingDataCell> -->
+        <ListingDataCell class="w-24">
+          <SelectInput
+            :name="`position-${item.id}`"
+            size="sm"
+            :options="positionOptions"
+            :modelValue="item.position"
+            @update:modelValue="
+              (position: number) => moveTo(item, position, action)
+            "
+            v-can="'crafter.pricelist.edit'"
+          />
+          <span v-can:not="'crafter.pricelist.edit'" class="text-gray-500">
+            {{ item.position }}
+          </span>
+        </ListingDataCell>
         <ListingDataCell>
              {{ item.name }}
         </ListingDataCell>
@@ -199,6 +217,7 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from "vue";
 import { Link, usePage } from "@inertiajs/vue3";
 import {
     PlusIcon,
@@ -220,6 +239,7 @@ import {
     IconButton,
     FiltersDropdown,
     Publish,
+    SelectInput,
 } from "crafter/Components";
 import { PaginatedCollection } from "crafter/types/pagination";
 import type { Pricelist } from "./types";
@@ -230,7 +250,24 @@ import dayjs from "dayjs";
 
 interface Props {
   pricelists: PaginatedCollection<Pricelist>;
+  positionsCount: number;
 }
-defineProps<Props>();
+const props = defineProps<Props>();
+
+// Dropdown "Kolejność" ma tyle pozycji, ile jest cenników łącznie (nie tylko na tej stronie).
+const positionOptions = computed(() =>
+  Array.from({ length: props.positionsCount }, (_, index) => index + 1)
+);
+
+/** Przestawia cennik na wybraną pozycję; reszta listy przesuwa się sama. */
+const moveTo = (item: Pricelist, position: number, action: Function) => {
+  if (Number(position) === Number(item.position)) {
+    return;
+  }
+
+  action("post", route("crafter.pricelists.reorder", item), {
+    position: Number(position),
+  });
+};
 
 </script>

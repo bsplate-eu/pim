@@ -10,6 +10,7 @@ use App\Http\Requests\Admin\Pricelist\EditPricelistRequest;
 use App\Http\Requests\Admin\Pricelist\UpdatePricelistRequest;
 use App\Http\Requests\Admin\Pricelist\DestroyPricelistRequest;
 use App\Http\Requests\Admin\Pricelist\BulkDestroyPricelistRequest;
+use App\Http\Requests\Admin\Pricelist\ReorderPricelistRequest;
 use App\Models\Pricelist;
 use App\Models\PricelistProduct;
 use App\Models\Product;
@@ -44,21 +45,23 @@ class PricelistController extends Controller
                     'id', 'name', 'currency'
                 )),
             ])
-            ->defaultSort('id')
-            ->allowedSorts('id', 'name', 'currency');
+            ->defaultSort('position', 'id')
+            ->allowedSorts('id', 'name', 'currency', 'position');
 
         if ($request->wantsJson() && $request->get('bulk_select_all')) {
             return response()->json($pricelistsQuery->select(['id'])->pluck('id'));
         }
 
         $pricelists = $pricelistsQuery
-            ->select('id', 'name', 'currency')
+            ->select('id', 'name', 'currency', 'position')
             ->paginate($request->get('per_page'))->withQueryString();
 
         Session::put('pricelists_url', $request->fullUrl());
 
         return Inertia::render('Pricelist/Index', [
             'pricelists' => $pricelists,
+            // Dropdown "Kolejnosc" ma zawsze wszystkie pozycje (1..N), nie tylko te z biezacej strony.
+            'positionsCount' => Pricelist::count(),
         ]);
     }
 
@@ -174,6 +177,28 @@ class PricelistController extends Controller
         });
 
         return redirect()->back()->with(['message' => ___('crafter', 'Operation successful')]);
+    }
+
+    /**
+     * Reczna kolejnosc cennika na liscie (dropdown "Kolejnosc").
+     * Cennik laduje na wskazanej pozycji, reszta sie przesuwa, calosc jest przenumerowana 1..N.
+     */
+    public function reorder(ReorderPricelistRequest $request, Pricelist $pricelist): RedirectResponse
+    {
+        $ids = Pricelist::orderBy('position')->orderBy('id')->pluck('id')->all();
+
+        $target = max(1, min((int) $request->validated()['position'], count($ids)));
+
+        $ids = array_values(array_filter($ids, fn ($id) => (int) $id !== (int) $pricelist->id));
+        array_splice($ids, $target - 1, 0, [$pricelist->id]);
+
+        DB::transaction(function () use ($ids) {
+            foreach ($ids as $index => $id) {
+                Pricelist::whereKey($id)->update(['position' => $index + 1]);
+            }
+        });
+
+        return back()->with(['message' => "Cennik \"{$pricelist->name}\" jest teraz na pozycji {$target}"]);
     }
 
     /**

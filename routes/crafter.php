@@ -175,6 +175,7 @@ Route::name('crafter.')->middleware('crafter.base')->prefix('admin')->group(func
             Route::post('pricelists', [App\Http\Controllers\Admin\PricelistController::class, 'store'])->name('pricelists.store');
             Route::get('pricelists/edit/{pricelist}', [App\Http\Controllers\Admin\PricelistController::class, 'edit'])->name('pricelists.edit');
             Route::post('pricelists/{pricelist}/clone', [App\Http\Controllers\Admin\PricelistController::class, 'clone'])->name('pricelists.clone');
+            Route::post('pricelists/{pricelist}/reorder', [App\Http\Controllers\Admin\PricelistController::class, 'reorder'])->name('pricelists.reorder');
             Route::get('pricelists/{pricelist}/export-csv', [App\Http\Controllers\Admin\PricelistController::class, 'exportCsv'])->name('pricelists.export-csv');
             Route::post('pricelists/{pricelist}/import-csv', [App\Http\Controllers\Admin\PricelistController::class, 'importCsv'])->name('pricelists.import-csv');
             Route::match(['put', 'patch'], 'pricelists/{pricelist}', [App\Http\Controllers\Admin\PricelistController::class, 'update'])->name('pricelists.update');

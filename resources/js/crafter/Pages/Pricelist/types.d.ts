@@ -3,6 +3,7 @@
 export type Pricelist = {
     id: string | number;
 slug: string;
+position: number;
 name: string;
 currency: string;
 price_formula?: string | null;
