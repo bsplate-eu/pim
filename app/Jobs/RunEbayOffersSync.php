@@ -9,6 +9,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Pobranie własnych ofert eBay w tle (Sell/Trading API). Wymaga połączonego konta (OAuth user-token).
@@ -25,7 +26,9 @@ class RunEbayOffersSync implements ShouldQueue
     {
         $settings = EbaySettings::first();
         if ($settings && $settings->isOauthConnected()) {
-            EbayOfferService::fromSettings($settings)->syncActiveListings($this->marketplace);
+            $res = EbayOfferService::fromSettings($settings)->syncActiveListings($this->marketplace);
+
+            Log::info('eBay sync ofert', $res);
         }
     }
 }

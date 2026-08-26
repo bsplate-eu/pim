@@ -36,6 +36,10 @@ class SyncEbayOffers extends Command
 
         $this->info("Rynek {$r['marketplace']}: pobrano {$r['fetched']} ofert (nowych {$r['new']}, stron {$r['pages']}, zmapowano po SKU {$r['matched']}).");
 
+        if (($r['ended'] ?? 0) > 0) {
+            $this->warn("Oznaczono {$r['ended']} aukcji jako zakończone — eBay ich już nie pokazuje.");
+        }
+
         $restocked = EbayOfferService::fromSettings($settings)->applyAutoRestock(EbayActionLog::CONTEXT_SYNC);
         if ($restocked > 0) {
             $when = (int) ($settings->auto_restock_when ?? 1);

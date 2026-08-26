@@ -51,6 +51,14 @@ class RunEbayPriceUpdate implements ShouldQueue
                     }
                     $gross = round($net * (1 + $this->vat / 100), 2);
 
+                    // Cena już taka sama — nie ma po co wołać eBay. Bez tego przebieg DE zjadał
+                    // 1196 wywołań, żeby zmienić 121 cen, a FR 944, żeby zmienić 8.
+                    // Porównujemy z NASZĄ ceną; rozjazd z realną prostuje „Pobierz oferty",
+                    // które nadpisuje price prosto z API.
+                    if (abs($gross - (float) $o->price) < 0.005) {
+                        continue;
+                    }
+
                     try {
                         $client->revisePrice($o->item_id, (string) $o->sku, $gross, $o->marketplace);
                         $o->forceFill(['price' => $gross])->save();   // odśwież lokalnie

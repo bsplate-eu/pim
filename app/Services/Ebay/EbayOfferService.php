@@ -26,6 +26,9 @@ class EbayOfferService
         $marketplace = strtoupper($marketplace ?: ($this->settings->marketplace ?: 'EBAY_DE'));
         $client = new EbaySellClient($this->settings, new EbayOAuthService($this->settings));
 
+        // Znacznik startu — po przebiegu wszystko starsze = eBay tego już nie pokazuje.
+        $startedAt = now();
+
         $page = 1;
         $totalPages = 1;
         $fetched = 0;
@@ -54,12 +57,32 @@ class EbayOfferService
             $page++;
         } while ($page <= $totalPages);
 
+        // Aukcje, których ten przebieg NIE zobaczył, na eBay już nie istnieją. Bez tego PIM trzyma
+        // je jako „Active" w nieskończoność: eBay odrzuca na nich każdą operację („Bereits beendete
+        // Angebote…"), ich ceny wiszą jako wiecznie rozjechane, a na ekranie Wystawianie produkt
+        // wygląda na wystawiony, więc nie da się go wystawić ponownie.
+        // Guard $fetched > 0: pusty wynik oznacza problem z API, nie pusty katalog — inaczej jeden
+        // nieudany przebieg oznaczyłby cały rynek jako zakończony.
+        $ended = 0;
+        if ($fetched > 0) {
+            $ended = EbayOffer::query()
+                ->where('marketplace', $marketplace)
+                ->where('last_seen', '<', $startedAt)
+                ->where(fn ($w) => $w->whereNull('listing_status')->orWhere('listing_status', '!=', 'Ended'))
+                ->update(['listing_status' => 'Ended']);
+
+            if ($ended > 0) {
+                \Illuminate\Support\Facades\Log::info("eBay sync {$marketplace}: oznaczono {$ended} aukcji jako zakończone (nie wróciły z API).");
+            }
+        }
+
         $matched = $this->matchBySku($marketplace);
 
         return [
             'marketplace' => $marketplace,
             'fetched' => $fetched,
             'new' => $new,
+            'ended' => $ended,
             'pages' => $totalPages,
             'matched' => $matched,
         ];
