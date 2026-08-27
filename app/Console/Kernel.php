@@ -4,6 +4,8 @@ namespace App\Console;
 
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class Kernel extends ConsoleKernel
 {
@@ -93,11 +95,30 @@ class Kernel extends ConsoleKernel
             ->withoutOverlapping()
             ->name('connect_sales_report_retry');
 
-        // [argo-mail-pkg] Argo Mail — synchronizacja skrzynek IMAP (co minutę)
-        $schedule->command('mail:sync')
-            ->everyMinute()
-            ->withoutOverlapping()
-            ->name('argo_mail_sync');
+        // [argo-mail-pkg] Argo Mail — synchronizacja skrzynek IMAP, OSOBNE zadanie na skrzynkę.
+        // Wcześniej jedno `mail:sync` brało wszystkie po kolei pod jedną blokadą, więc jedna wolna
+        // skrzynka (gmail potrafi mielić >12 min) wstrzymywała pozostałe — deklarowana kadencja
+        // „co minutę" schodziła realnie do kilkunastu minut. Teraz każda ma własny zamek i leci
+        // niezależnie; szybkie kończą w sekundach, więc równolegle chodzą tylko te faktycznie wolne.
+        // Wygaśnięcie blokady 30 min: zawieszony przebieg odblokuje się sam, zamiast blokować dobę
+        // (domyślne `withoutOverlapping()` trzyma zamek 24 h).
+        $mailAccountIds = $this->mailAccountIds();
+
+        if (empty($mailAccountIds)) {
+            // Baza niedostępna albo brak tabeli (świeża instalacja) — wracamy do wariantu zbiorczego,
+            // żeby poczta nie przestała się synchronizować w ogóle.
+            $schedule->command('mail:sync')
+                ->everyMinute()
+                ->withoutOverlapping(30)
+                ->name('argo_mail_sync');
+        } else {
+            foreach ($mailAccountIds as $mailAccountId) {
+                $schedule->command('mail:sync --account='.$mailAccountId)
+                    ->everyMinute()
+                    ->withoutOverlapping(30)
+                    ->name('argo_mail_sync_'.$mailAccountId);
+            }
+        }
 
         // [argo-mail-pkg] SMTP transakcyjny — czyszczenie starych logów wysyłki
         $schedule->command('mail:prune-logs')->dailyAt('02:30');
@@ -133,6 +154,34 @@ class Kernel extends ConsoleKernel
     /**
      * Register the commands for the application.
      */
+    /**
+     * ID aktywnych skrzynek na potrzeby harmonogramu.
+     *
+     * Pytamy bazę przy budowaniu harmonogramu, więc musi to być odporne: scheduler bywa
+     * uruchamiany, zanim tabela powstanie (świeża instalacja przed migracją) albo gdy baza
+     * chwilowo nie odpowiada. W takim wypadku zwracamy pustą listę, a `schedule()` wraca
+     * do zbiorczego `mail:sync`.
+     *
+     * @return array<int, int>
+     */
+    private function mailAccountIds(): array
+    {
+        try {
+            if (! Schema::hasTable('mail_accounts')) {
+                return [];
+            }
+
+            return DB::table('mail_accounts')
+                ->where('is_active', true)
+                ->orderBy('id')
+                ->pluck('id')
+                ->map(fn ($id) => (int) $id)
+                ->all();
+        } catch (\Throwable) {
+            return [];
+        }
+    }
+
     protected function commands(): void
     {
         $this->load(__DIR__.'/Commands');
