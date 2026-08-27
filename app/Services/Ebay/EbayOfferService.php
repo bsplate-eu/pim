@@ -4,8 +4,8 @@ namespace App\Services\Ebay;
 
 use App\Models\Ebay\EbayActionLog;
 use App\Models\Ebay\EbayOffer;
-use App\Models\Product;
 use App\Models\Scrap\EbaySettings;
+use App\Services\Scrap\ProductMatcher;
 
 /**
  * Pobieranie WŁASNYCH ofert eBay (Sell/Trading) → tabela ebay_offers + auto-mapowanie po SKU.
@@ -126,7 +126,9 @@ class EbayOfferService
     }
 
     /** Automatyczna akcja „auto-przypisanie": nieprzypisane oferty → nasz produkt po SKU
-     *  (ebay_offers.sku ↔ Product.product_code, znormalizowane; wszystkie produkty, też wyłączone).
+     *  (ebay_offers.sku ↔ Product.product_code + tytuł oferty; wszystkie produkty, też wyłączone).
+     *  Sam kod NIE wystarcza — bywa zduplikowany (13.121 = Mazda 3/6/Atenza/Axela/CX5, 18.201 = 21 aut),
+     *  więc przy duplikacie rozstrzyga tytuł: ProductMatcher::pickForCode (ta sama logika co Argo Scope).
      *  NIE dotyka eBay (tylko mapowanie w bazie), więc działa też bez połączonego konta.
      *  Każde dopasowanie trafia do ebay_action_logs. $context = skąd wywołane. Zwraca liczbę przypisanych. */
     public function applyAutoAssign(string $context = EbayActionLog::CONTEXT_CRON): int
@@ -134,15 +136,16 @@ class EbayOfferService
         if (! $this->settings->auto_assign_enabled) {
             return 0;
         }
-        $codes = $this->productCodeMap();
+        $matcher = new ProductMatcher();
+        $byCode = $matcher->candidatesByCode();
 
         $done = 0;
         EbayOffer::whereNull('product_id')
             ->whereNotNull('sku')
             ->where('sku', '!=', '')
-            ->chunkById(500, function ($offers) use ($codes, $context, &$done) {
+            ->chunkById(500, function ($offers) use ($matcher, $byCode, $context, &$done) {
                 foreach ($offers as $o) {
-                    $pid = $codes[$this->norm($o->sku)] ?? null;
+                    $pid = $matcher->pickForCode($byCode, $o->sku, $o->title)['id'];
                     if (! $pid) {
                         continue;
                     }
@@ -180,19 +183,21 @@ class EbayOfferService
         ], $extra));
     }
 
-    /** Auto-mapowanie oferta.sku ↔ Product.product_code (znormalizowane) w obrębie rynku.
-     *  Używane w trakcie pobierania ofert (bez logowania — mechanika fetch). Zwraca liczbę dopasowanych. */
+    /** Auto-mapowanie oferta.sku + tytuł ↔ nasz produkt, w obrębie rynku.
+     *  Używane w trakcie pobierania ofert (bez logowania — mechanika fetch). Zwraca liczbę dopasowanych.
+     *  Przy zduplikowanym product_code rozstrzyga tytuł — patrz ProductMatcher::pickForCode. */
     private function matchBySku(string $marketplace): int
     {
-        $codes = $this->productCodeMap();
+        $matcher = new ProductMatcher();
+        $byCode = $matcher->candidatesByCode();
 
         $matched = 0;
         EbayOffer::where('marketplace', $marketplace)
             ->whereNull('product_id')
             ->where('sku', '!=', '')
-            ->chunkById(500, function ($offers) use ($codes, &$matched) {
+            ->chunkById(500, function ($offers) use ($matcher, $byCode, &$matched) {
                 foreach ($offers as $o) {
-                    $pid = $codes[$this->norm($o->sku)] ?? null;
+                    $pid = $matcher->pickForCode($byCode, $o->sku, $o->title)['id'];
                     if ($pid) {
                         $o->forceFill(['product_id' => $pid, 'match_type' => 'auto'])->save();
                         $matched++;
@@ -201,29 +206,5 @@ class EbayOfferService
             });
 
         return $matched;
-    }
-
-    /** Mapa: znormalizowany product_code → product_id (wszystkie produkty z kodem; pierwszy wygrywa). */
-    private function productCodeMap(): array
-    {
-        $codes = [];
-        Product::whereNotNull('product_code')->where('product_code', '!=', '')
-            ->select(['id', 'product_code'])
-            ->chunk(1000, function ($chunk) use (&$codes) {
-                foreach ($chunk as $p) {
-                    $k = $this->norm($p->product_code);
-                    if ($k !== '' && ! isset($codes[$k])) {
-                        $codes[$k] = $p->id;
-                    }
-                }
-            });
-
-        return $codes;
-    }
-
-    /** Normalizacja klucza (jak ProductMatcher): bez cudzysłowów, trim, wielkie litery. */
-    private function norm(?string $v): string
-    {
-        return strtoupper(trim(str_replace(['"', "'"], '', (string) $v)));
     }
 }

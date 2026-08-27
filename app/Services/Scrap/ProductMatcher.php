@@ -35,22 +35,11 @@ class ProductMatcher
             $hn = $this->norm($sp->herstellernummer);
             $ean = $this->norm($sp->ean);
 
-            $pid = null;
-            $bucket = null;
+            $hit = $this->pickForCode($candidatesByCode, $hn, $sp->title, $ean);
+            $pid = $hit['id'];
+            $bucket = $hit['how'];
 
-            if ($hn !== '' && isset($candidatesByCode[$hn])) {
-                $cands = $candidatesByCode[$hn];
-                if (count($cands) === 1) {                              // 1) SKU jednoznaczne
-                    $pid = $cands[0]['id'];
-                    $bucket = 'sku_unique';
-                } elseif ($ean !== '' && ($hit = $this->pickByEan($ean, $cands)) !== null) {
-                    $pid = $hit;                                        // 2) duplikat → EAN
-                    $bucket = 'sku_by_ean';
-                } else {
-                    $pid = $this->bestByTitle($sp->title, $cands);     // 3) duplikat → nazwa (model+rocznik)
-                    $bucket = 'sku_by_name';
-                }
-            } elseif ($ean !== '' && isset($byEan[$ean])) {            // brak SKU → globalny EAN
+            if (! $pid && $ean !== '' && isset($byEan[$ean])) {        // brak SKU → globalny EAN
                 $pid = $byEan[$ean];
                 $bucket = 'ean_only';
             }
@@ -71,8 +60,9 @@ class ProductMatcher
         ];
     }
 
-    /** [normCode => [ ['id'=>int,'ean'=>string,'tokens'=>set<string>], ... ]]. */
-    private function candidatesByCode(): array
+    /** [normCode => [ ['id'=>int,'ean'=>string,'tokens'=>set<string>], ... ]].
+     *  PUBLICZNE — tej samej mapy używa moduł eBay (ebay_offers), żeby nie mieć drugiej logiki dopasowania. */
+    public function candidatesByCode(): array
     {
         $map = [];
         Product::whereNotNull('product_code')->where('product_code', '!=', '')
@@ -85,7 +75,10 @@ class ProductMatcher
                         $map[$k][] = [
                             'id' => $p->id,
                             'ean' => $this->norm($p->ean),
-                            'tokens' => $this->tokens($this->nameDe($p->name)),
+                            // getRawOriginal, NIE $p->name — Product ma HasTranslations, a app.locale='en'
+                            // nie istnieje w matrycy (cs,de,es,fr,pl,sk...), więc $p->name zwraca PUSTY string.
+                            // Puste tokeny = zerowy scoring = zawsze pierwszy kandydat (stąd „wszędzie Mazda 3").
+                            'tokens' => $this->tokens($this->nameDe($p->getRawOriginal('name'))),
                         ];
                     }
                 }
@@ -114,6 +107,31 @@ class ProductMatcher
     }
 
     /** Krok 2: wśród kandydatów SKU znajdź tego z tym samym EAN. */
+    /** Rozstrzygnięcie JEDNEGO kodu na produkt — wspólne dla Scope (scrap_products) i eBay (ebay_offers).
+     *  product_code NIE jest unikalny (jedna osłona pasuje do wielu modeli: 13.121 = Mazda 3/6/Atenza/Axela/CX5,
+     *  a 18.201 aż do 21 aut), więc sam kod nie wystarcza — przy duplikacie rozstrzyga EAN, a gdy go brak: TYTUŁ.
+     *  Zwraca ['id' => ?int, 'how' => 'sku_unique'|'sku_by_ean'|'sku_by_name'|null].
+     *  @param array $byCode wynik candidatesByCode() (buduj RAZ przed pętlą — czyta całą tabelę produktów) */
+    public function pickForCode(array $byCode, ?string $code, ?string $title, ?string $ean = null): array
+    {
+        $code = $this->norm($code);
+        if ($code === '' || ! isset($byCode[$code])) {
+            return ['id' => null, 'how' => null];
+        }
+
+        $cands = $byCode[$code];
+        if (count($cands) === 1) {                                      // 1) kod jednoznaczny
+            return ['id' => $cands[0]['id'], 'how' => 'sku_unique'];
+        }
+
+        $ean = $this->norm($ean);
+        if ($ean !== '' && ($hit = $this->pickByEan($ean, $cands)) !== null) {
+            return ['id' => $hit, 'how' => 'sku_by_ean'];               // 2) duplikat → EAN
+        }
+
+        return ['id' => $this->bestByTitle($title, $cands), 'how' => 'sku_by_name']; // 3) duplikat → nazwa
+    }
+
     private function pickByEan(string $ean, array $cands): ?int
     {
         foreach ($cands as $c) {
@@ -162,13 +180,16 @@ class ProductMatcher
         return (string) $name;
     }
 
-    /** Zbiór tokenów (set): małe litery, alfanumeryczne (litery+cyfry, więc model i rocznik), długość ≥ 2. */
+    /** Zbiór tokenów (set): małe litery, alfanumeryczne (litery+cyfry, więc model i rocznik).
+     *  Próg długości 2 — ALE pojedyncze cyfry przechodzą, bo bywają całą nazwą modelu
+     *  (Mazda 3 vs Mazda 6 na wspólnym kodzie 13.121). Bez tego oba mają pusty zbiór
+     *  różnicujący i wygrywa kandydat o niższym id. Litery 1-znakowe zostają odsiane jako szum. */
     private function tokens(string $s): array
     {
         $s = preg_replace('/[^a-z0-9äöüß]+/u', ' ', mb_strtolower($s));
         $out = [];
         foreach (preg_split('/\s+/', trim($s)) as $t) {
-            if (mb_strlen($t) >= 2) {
+            if (mb_strlen($t) >= 2 || ctype_digit($t)) {
                 $out[$t] = true;
             }
         }
