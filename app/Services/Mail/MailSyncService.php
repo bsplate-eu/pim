@@ -457,6 +457,13 @@ class MailSyncService
         $from = $this->addresses($message->from);
         $first = $from[0] ?? ['email' => '', 'name' => ''];
 
+        // Reply-To bierzemy tylko wtedy, gdy realnie wskazuje KOGO INNEGO niż nadawca —
+        // wiele serwerów dubluje tam From i pokazywanie tego byłoby tylko szumem.
+        $replyTo = $this->addresses($message->reply_to)[0] ?? null;
+        if ($replyTo && strcasecmp(trim((string) $replyTo['email']), trim((string) $first['email'])) === 0) {
+            $replyTo = null;
+        }
+
         // Temat bywa zakodowany MIME (RFC 2047) — dekodujemy raz i używamy wszędzie
         // (routing/wątkowanie/zapis), bo bez rozszerzenia imap webklex go nie rozkodowuje.
         $subject = Message::decodeMimeHeader($message->subject);
@@ -511,6 +518,10 @@ class MailSyncService
                 'subject'         => $this->str($subject),
                 'from_email'      => mb_substr($first['email'], 0, 255),
                 'from_name'       => mb_substr($first['name'], 0, 255),
+                // Formularze kontaktowe wysyłają z NASZEGO adresu, a adres klienta wkładają
+                // w Reply-To. Bez tego odpowiedź wracała do nas, a klienta nie było jak namierzyć.
+                'reply_to_email'  => mb_substr($replyTo['email'] ?? '', 0, 255) ?: null,
+                'reply_to_name'   => mb_substr($replyTo['name'] ?? '', 0, 255) ?: null,
                 'to_recipients'   => $this->addresses($message->to),
                 'cc_recipients'   => $this->addresses($message->cc),
                 'date'            => $date,

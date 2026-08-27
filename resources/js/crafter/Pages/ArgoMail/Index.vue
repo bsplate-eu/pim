@@ -328,6 +328,10 @@
                                         <template v-if="m.is_sent">do: {{ recipientList(m.to) || "—" }}</template>
                                         <template v-else>od: {{ m.from_name || m.from_email }}<span v-if="m.from_name" class="font-medium text-gray-900"> &lt;{{ m.from_email }}&gt;</span></template>
                                         <button v-if="!m.is_sent && m.from_email" type="button" @click.stop="copyEmail(m.from_email)" class="ml-1 align-middle text-gray-400 hover:text-primary-600" title="Kopiuj adres nadawcy"><ClipboardDocumentIcon class="inline h-3.5 w-3.5" /></button>
+                                        <span v-if="!m.is_sent && m.reply_to_email" class="ml-2 rounded bg-amber-50 px-1.5 py-0.5 text-amber-800 border border-amber-200">
+                                            odpowiedz do: <span class="font-medium">{{ m.reply_to_email }}</span>
+                                            <button type="button" @click.stop="copyEmail(m.reply_to_email)" class="ml-1 align-middle text-amber-500 hover:text-amber-700" title="Kopiuj adres do odpowiedzi"><ClipboardDocumentIcon class="inline h-3.5 w-3.5" /></button>
+                                        </span>
                                         · {{ fullDate(m.date) }}
                                     </div>
                                     <div v-if="m.attachments?.length" class="mb-2 flex flex-wrap gap-2">
@@ -1067,6 +1071,15 @@ function openCompose() {
     const acc = defaultAccountId();
     Object.assign(compose, { open: true, fullSize: false, title: "Nowa wiadomość", account_id: acc, to: "", cc: "", subject: "", body: bodyFor(acc, false), in_reply_to: null, files: [] });
 }
+/**
+ * Adres, na który realnie ma iść odpowiedź. Maile z formularzy kontaktowych mają w polu
+ * „od" NASZ adres, a klienta dopiero w Reply-To — bez tego odpowiedź wracała do nas.
+ */
+function replyTargetOf(m: any): string {
+    if (m?.is_sent) return m.to?.[0]?.email || "";
+    return m?.reply_to_email || m?.from_email || "";
+}
+
 function openReply() {
     if (!selected.value) return;
     const acc = selectedAccountId.value || defaultAccountId();
@@ -1074,7 +1087,7 @@ function openReply() {
     Object.assign(compose, {
         open: true, fullSize: false, title: "Odpowiedz",
         account_id: acc,
-        to: selected.value.is_sent ? (selected.value.to?.[0]?.email || "") : (selected.value.from_email || ""), cc: "",
+        to: replyTargetOf(selected.value), cc: "",
         subject: /^re:/i.test(subj) ? subj : "Re: " + subj,
         body: bodyFor(acc, true),
         in_reply_to: selected.value.message_id || null,

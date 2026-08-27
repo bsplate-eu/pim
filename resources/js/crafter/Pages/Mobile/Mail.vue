@@ -446,7 +446,9 @@ const openReply = (all) => {
   const m = selected.value;
   if (!m || !m.from_email) return;
   const myEmail = (m.account_email || accountsById.value[m.account_id]?.email || "").toLowerCase();
-  const toList = uniq([m.from_email.toLowerCase(), ...(all ? emailsOf(m.to) : [])]).filter((e) => e && e !== myEmail);
+  // Reply-To ma pierwszeństwo: maile z formularzy kontaktowych mają w „od" NASZ adres.
+  const primary = (m.reply_to_email || m.from_email || "").toLowerCase();
+  const toList = uniq([primary, ...(all ? emailsOf(m.to) : [])]).filter((e) => e && e !== myEmail);
   const ccList = all ? uniq(emailsOf(m.cc)).filter((e) => e && e !== myEmail && !toList.includes(e)) : [];
   compose.value = {
     mode: all ? "replyAll" : "reply",
