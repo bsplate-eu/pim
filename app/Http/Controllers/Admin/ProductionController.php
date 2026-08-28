@@ -5,7 +5,10 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Attribute;
 use App\Models\Product;
+use App\Models\ProductionItem;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -32,6 +35,9 @@ class ProductionController extends Controller
         $materialValueIds = $materialValues->pluck('id')->all();
         $materialLabels = $materialValues->mapWithKeys(fn ($value) => [$value->slug => $value->name])->all();
 
+        // Znaczniki produkcyjne — tylko dla kodow, na ktorych ktos cos ustawil.
+        $projects = ProductionItem::pluck('has_project', 'product_code');
+
         $rows = Product::query()
             ->select('id', 'product_code', 'name')
             ->with(['attributeValues' => fn ($query) => $query->whereIn('attribute_values.id', $materialValueIds)])
@@ -39,7 +45,7 @@ class ProductionController extends Controller
             ->orderBy('id')
             ->get()
             ->groupBy('product_code')
-            ->map(function ($group) use ($materialLabels) {
+            ->map(function ($group) use ($materialLabels, $projects) {
                 // Reprezentant kodu = najstarszy produkt (najnizsze id) — po nim bierzemy nazwe.
                 $product = $group->first();
                 $slug = $product->attributeValues->first()?->slug;
@@ -52,12 +58,34 @@ class ProductionController extends Controller
                     'material' => $slug === null ? '' : ($materialLabels[$slug] ?? $slug),
                     // Ile produktow (aut) kryje sie pod tym kodem — sygnal, ze nazwa to jeden z wielu wariantow.
                     'variants' => $group->count(),
+                    'project' => (bool) ($projects[$product->product_code] ?? false),
                 ];
             })
             ->values();
 
         return Inertia::render('Production/Index', [
             'rows' => $rows,
+        ]);
+    }
+
+    /**
+     * Przestawia znacznik „Projekt" na jednym kodzie. Wolane axiosem z gridu.
+     */
+    public function setProject(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'product_code' => ['required', 'string', Rule::exists('products', 'product_code')],
+            'project' => ['required', 'boolean'],
+        ]);
+
+        ProductionItem::updateOrCreate(
+            ['product_code' => $data['product_code']],
+            ['has_project' => $data['project']],
+        );
+
+        return response()->json([
+            'product_code' => $data['product_code'],
+            'project' => $data['project'],
         ]);
     }
 }
