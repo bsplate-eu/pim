@@ -444,6 +444,10 @@ Route::middleware(['crafter.base', 'auth', 'crafter.verified'])->prefix('admin')
     Route::patch('ksef/invoices/{ksefInvoice}/category', [App\Http\Controllers\Admin\KsefController::class, 'updateCategory'])->name('ksef.invoices.category');
     Route::get('ksef/invoices/{ksefInvoice}/pdf', [App\Http\Controllers\Admin\KsefController::class, 'pdf'])->name('ksef.invoices.pdf');
     Route::patch('ksef/invoices/{ksefInvoice}/status', [App\Http\Controllers\Admin\KsefController::class, 'updateStatus'])->name('ksef.invoices.status');
+    // Ręczne koszty (FV kosztowa / ZUS / VAT / CIT / OSS) — ta sama lista co FV z KSeF
+    Route::post('ksef/{company}/koszty', [App\Http\Controllers\Admin\KsefController::class, 'storeManual'])
+        ->whereIn('company', ['pareto', 'bsp'])->name('ksef.manual.store');
+    Route::delete('ksef/invoices/{ksefInvoice}', [App\Http\Controllers\Admin\KsefController::class, 'destroyManual'])->name('ksef.manual.destroy');
     // Ustawienia → kategorie (CRUD)
     Route::post('ksef/{company}/categories', [App\Http\Controllers\Admin\KsefController::class, 'storeCategory'])
         ->whereIn('company', ['pareto', 'bsp'])->name('ksef.categories.store');

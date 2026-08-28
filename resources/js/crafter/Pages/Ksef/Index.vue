@@ -1,5 +1,8 @@
 <template>
     <PageHeader :title="`KSeF — ${companyLabel}`">
+        <Button v-if="tab === 'faktury'" color="gray" variant="outline" :leftIcon="PlusIcon" @click.prevent="openCost()">
+            Dodaj koszt
+        </Button>
         <Button v-if="tab === 'faktury'" :leftIcon="ArrowDownTrayIcon" @click.prevent="importOpen = true">
             Import faktur
         </Button>
@@ -39,6 +42,15 @@
                 <span>razem <span class="font-semibold text-gray-900">{{ formatAmount(liveSummary.sum) }}</span></span>
                 <span>·</span>
                 <span class="text-red-600">do zapłaty {{ formatAmount(liveSummary.sum_unpaid) }}</span>
+                <template v-if="liveSummary.missing_fx > 0">
+                    <span>·</span>
+                    <span
+                        class="rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800"
+                        title="Pozycje w obcej walucie bez kursu NBP — nie są wliczone w sumy. Uzupełnij: artisan ksef:fx-fill"
+                    >
+                        {{ liveSummary.missing_fx }} poz. bez kursu — poza sumą
+                    </span>
+                </template>
             </div>
 
             <!-- Filtry -->
@@ -113,6 +125,7 @@
                             <th class="px-3 py-2 text-left">Nr konta</th>
                             <th class="px-3 py-2 text-center">Opłacone</th>
                             <th class="px-3 py-2 text-center w-16">PDF</th>
+                            <th class="px-2 py-2 w-10"></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -129,7 +142,13 @@
                                 />
                             </td>
 
-                            <td class="px-3 py-1.5 whitespace-nowrap font-medium text-gray-800">{{ row.number }}</td>
+                            <td class="px-3 py-1.5 whitespace-nowrap font-medium text-gray-800">
+                                <span
+                                    v-if="row.is_manual"
+                                    class="mr-1 rounded bg-gray-200 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-gray-600"
+                                    title="Pozycja wpisana ręcznie, nie z KSeF"
+                                >ręcznie</span>{{ row.number }}
+                            </td>
                             <td class="px-3 py-1.5 max-w-[16rem] truncate" :title="row.contractor || ''">{{ row.contractor }}</td>
 
                             <td class="px-3 py-1.5">
@@ -156,8 +175,17 @@
                                 <span v-else class="text-gray-300 text-xs">—</span>
                             </td>
 
+                            <!-- Kwota: oryginał + (dla walut obcych) przeliczenie na PLN kursem NBP -->
                             <td class="px-3 py-1.5 text-right whitespace-nowrap font-medium">
-                                {{ formatAmount(row.amount) }} <span class="text-xs text-gray-400">{{ row.currency }}</span>
+                                <div>{{ formatNumber(row.amount) }} <span class="text-xs text-gray-400">{{ row.currency }}</span></div>
+                                <div
+                                    v-if="row.currency !== 'PLN'"
+                                    class="text-xs font-normal"
+                                    :class="row.amount_pln === null ? 'text-amber-600' : 'text-gray-400'"
+                                    :title="fxTitle(row)"
+                                >
+                                    {{ row.amount_pln === null ? 'brak kursu' : '≈ ' + formatNumber(row.amount_pln) + ' PLN' }}
+                                </div>
                             </td>
 
                             <!-- Nr konta sprzedawcy (Płatność → RachunekBankowy w XML) — klik kopiuje ciągiem, pod przelew -->
@@ -211,6 +239,7 @@
 
                             <td class="px-2 py-1.5 text-center">
                                 <a
+                                    v-if="row.has_pdf"
                                     :href="route('crafter.ksef.invoices.pdf', row.id)"
                                     target="_blank"
                                     rel="noopener"
@@ -219,11 +248,25 @@
                                 >
                                     <DocumentTextIcon class="w-5 h-5" />
                                 </a>
+                                <span v-else class="text-xs text-gray-300">—</span>
+                            </td>
+
+                            <!-- Kasowanie: tylko pozycje wpisane ręcznie (FV z KSeF wróciłaby przy imporcie) -->
+                            <td class="px-2 py-1.5 text-center">
+                                <button
+                                    v-if="row.is_manual"
+                                    type="button"
+                                    @click="removeManual(row)"
+                                    class="inline-flex items-center justify-center rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-600"
+                                    title="Usuń pozycję"
+                                >
+                                    <TrashIcon class="w-4 h-4" />
+                                </button>
                             </td>
                         </tr>
 
                         <tr v-if="rows.length === 0">
-                            <td colspan="11" class="px-3 py-10 text-center text-sm text-gray-400">
+                            <td colspan="12" class="px-3 py-10 text-center text-sm text-gray-400">
                                 Brak faktur dla wybranych filtrów. Kliknij „Import faktur", aby zaciągnąć FV z KSeF.
                             </td>
                         </tr>
@@ -280,6 +323,145 @@
     </PageContent>
 
     <!-- Modal: Import faktur -->
+    <!-- ════════ Dodaj koszt ręcznie: FV kosztowa / ZUS / VAT / CIT / OSS ════════ -->
+    <Modal :open="costOpen" externalOpen @toggleOpen="costOpen = false">
+        <template #title>Dodaj koszt — {{ companyLabel }}</template>
+        <template #content>
+            <div class="space-y-4">
+                <!-- Typ kosztu -->
+                <div class="inline-flex flex-wrap gap-1 rounded-lg bg-gray-100 p-1">
+                    <button
+                        v-for="(label, key) in kinds"
+                        :key="key"
+                        type="button"
+                        @click="setKind(key)"
+                        :class="[
+                            'rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
+                            costForm.kind === key ? 'bg-white text-primary-700 shadow-sm' : 'text-gray-500 hover:text-gray-700',
+                        ]"
+                    >
+                        {{ label }}
+                    </button>
+                </div>
+
+                <p class="rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-800">
+                    {{ kindHint }}
+                </p>
+
+                <!-- ── FV kosztowa ── -->
+                <template v-if="costForm.kind === 'invoice'">
+                    <div class="grid grid-cols-3 gap-3">
+                        <div class="col-span-2">
+                            <label class="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">Kontrahent *</label>
+                            <input v-model="costForm.contractor" type="text" placeholder="Nazwa firmy" class="block w-full rounded-md border-gray-300 text-sm" />
+                        </div>
+                        <div>
+                            <label class="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">NIP</label>
+                            <input v-model="costForm.contractor_nip" type="text" placeholder="9252014791" class="block w-full rounded-md border-gray-300 text-sm" />
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-3 gap-3">
+                        <div>
+                            <label class="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">Nr FV *</label>
+                            <input v-model="costForm.number" type="text" placeholder="FV 123/08/2026" class="block w-full rounded-md border-gray-300 text-sm" />
+                        </div>
+                        <div>
+                            <label class="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">Data wystawienia *</label>
+                            <input v-model="costForm.issue_date" type="date" class="block w-full rounded-md border-gray-300 text-sm" />
+                        </div>
+                        <div>
+                            <label class="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">Termin płatności</label>
+                            <input v-model="costForm.due_date" type="date" class="block w-full rounded-md border-gray-300 text-sm" />
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-3 gap-3">
+                        <div>
+                            <label class="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">Kwota brutto *</label>
+                            <input v-model="costForm.amount" type="number" step="0.01" min="0" class="block w-full rounded-md border-gray-300 text-sm" />
+                        </div>
+                        <div>
+                            <label class="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">Waluta</label>
+                            <select v-model="costForm.currency" class="block w-full rounded-md border-gray-300 text-sm">
+                                <option v-for="c in CURRENCIES" :key="c" :value="c">{{ c }}</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">Kategoria</label>
+                            <input v-model="costForm.category" type="text" :list="'ksef-cats-' + company" placeholder="—" class="block w-full rounded-md border-gray-300 text-sm" />
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">Nr konta do przelewu</label>
+                        <input v-model="costForm.bank_account" type="text" placeholder="PL00 0000 0000 0000 0000 0000 0000" class="block w-full rounded-md border-gray-300 font-mono text-sm" />
+                    </div>
+                </template>
+
+                <!-- ── ZUS / VAT / CIT / OSS ── -->
+                <template v-else>
+                    <div class="grid grid-cols-3 gap-3">
+                        <div>
+                            <label class="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">
+                                Kwota * <span class="text-gray-400">({{ costForm.kind === 'oss' ? 'EUR' : 'PLN' }})</span>
+                            </label>
+                            <input v-model="costForm.amount" type="number" step="0.01" min="0" class="block w-full rounded-md border-gray-300 text-sm" />
+                        </div>
+                        <div v-if="isQuarterly">
+                            <label class="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">Kwartał *</label>
+                            <select v-model="costForm.period_quarter" @change="refreshDue" class="block w-full rounded-md border-gray-300 text-sm">
+                                <option v-for="q in 4" :key="q" :value="q">Q{{ q }}</option>
+                            </select>
+                        </div>
+                        <div v-else>
+                            <label class="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">Miesiąc *</label>
+                            <select v-model="costForm.period_month" @change="refreshDue" class="block w-full rounded-md border-gray-300 text-sm">
+                                <option v-for="(m, i) in MONTHS" :key="i" :value="i + 1">{{ m }}</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">Rok *</label>
+                            <select v-model="costForm.period_year" @change="refreshDue" class="block w-full rounded-md border-gray-300 text-sm">
+                                <option v-for="y in YEAR_CHOICES" :key="y" :value="y">{{ y }}</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">Termin płatności</label>
+                            <input v-model="costForm.due_date" type="date" class="block w-full rounded-md border-gray-300 text-sm" />
+                            <p v-if="costForm.kind === 'zus'" class="mt-1 text-xs text-gray-400">
+                                Podpowiadam 20. — spółki z o.o. i S.A. płacą do 15., popraw jeśli trzeba.
+                            </p>
+                        </div>
+                        <div>
+                            <label class="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">Kategoria</label>
+                            <input v-model="costForm.category" type="text" :list="'ksef-cats-' + company" :placeholder="kinds[costForm.kind]" class="block w-full rounded-md border-gray-300 text-sm" />
+                        </div>
+                    </div>
+                </template>
+
+                <div>
+                    <label class="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">Opis / za co</label>
+                    <textarea v-model="costForm.items_text" rows="2" class="block w-full rounded-md border-gray-300 text-sm" :placeholder="costForm.kind === 'invoice' ? 'Pozycje z faktury' : 'Zostaw puste — wpiszę „' + kinds[costForm.kind] + ' za ' + periodLabelPreview + '”'"></textarea>
+                </div>
+
+                <p class="text-xs text-gray-500">
+                    Zapisze się jako: <span class="font-medium text-gray-700">{{ numberPreview || '—' }}</span>
+                    <template v-if="costForm.kind === 'oss'"> · kwota w EUR zostanie przeliczona na PLN kursem NBP z dnia roboczego przed końcem kwartału</template>
+                </p>
+            </div>
+        </template>
+        <template #buttons="{ setIsOpen }">
+            <Button :loading="savingCost" @click.prevent="submitCost">Zapisz koszt</Button>
+            <Button color="gray" variant="outline" @click.prevent="() => { setIsOpen(false); costOpen = false; }">
+                Anuluj
+            </Button>
+        </template>
+    </Modal>
+
     <Modal :open="importOpen" externalOpen @toggleOpen="importOpen = false">
         <template #title>Import faktur z KSeF — {{ companyLabel }}</template>
         <template #content>
@@ -364,9 +546,14 @@ interface BankAccount {
 
 interface Invoice {
     id: number;
+    kind: string;
+    kind_label: string;
+    period_label: string | null;
+    is_manual: boolean;
     issue_date: string | null;
     number: string;
     contractor: string | null;
+    contractor_nip: string | null;
     bank_account: string | null;
     bank_accounts: BankAccount[];
     items_text: string | null;
@@ -374,6 +561,9 @@ interface Invoice {
     due_date: string | null;
     amount: number;
     currency: string;
+    amount_pln: number | null;
+    fx_rate: number | null;
+    fx_date: string | null;
     status: string;
     has_pdf: boolean;
 }
@@ -387,7 +577,8 @@ interface Props {
     filters: { year: string | number; month: string | number; quarter: string | number; status: string };
     years: number[];
     categories: Category[];
-    summary: { count: number; sum: number; sum_unpaid: number };
+    kinds: Record<string, string>;
+    summary: { count: number; sum: number; sum_unpaid: number; missing_fx: number };
     importMeta: { imported: number };
 }
 
@@ -416,11 +607,15 @@ watch(() => props.invoices, (v) => { rows.value = v.map((x) => ({ ...x })); });
 watch(() => props.categories, (v) => { cats.value = [...v]; });
 
 // Podsumowanie liczone NA ŻYWO z wierszy — reaguje na filtry i na „opłacone".
+// Sumujemy WYŁĄCZNIE amount_pln: amount bywa w EUR/CZK i dodawanie go do złotówek zawyżało „razem".
+// Pozycje bez kursu (amount_pln === null) świadomie wypadają z sum i są liczone osobno.
 const liveSummary = computed(() => {
     const list = rows.value;
-    const sum = list.reduce((s, r) => s + Number(r.amount || 0), 0);
-    const sumUnpaid = list.filter((r) => r.status !== "paid").reduce((s, r) => s + Number(r.amount || 0), 0);
-    return { count: list.length, sum, sum_unpaid: sumUnpaid };
+    const pln = (r: Invoice) => (r.amount_pln === null ? 0 : Number(r.amount_pln));
+    const sum = list.reduce((s, r) => s + pln(r), 0);
+    const sumUnpaid = list.filter((r) => r.status !== "paid").reduce((s, r) => s + pln(r), 0);
+    const missingFx = list.filter((r) => r.amount_pln === null).length;
+    return { count: list.length, sum, sum_unpaid: sumUnpaid, missing_fx: missingFx };
 });
 
 const local = reactive({
@@ -438,6 +633,142 @@ const importOpen = ref(false);
 const importing = ref(false);
 const importView = ref<string>("all");
 const importFilter = reactive({ year: "all", month: "all", quarter: "all" });
+
+// ── Dodaj koszt ręcznie: FV kosztowa / ZUS / VAT / CIT / OSS ──
+const CURRENCIES = ["PLN", "EUR", "CZK", "USD", "GBP", "HUF", "RON", "SEK", "DKK", "NOK"];
+const QUARTERLY_KINDS = ["cit", "oss"];
+const KIND_HINTS: Record<string, string> = {
+    invoice: "Faktura kosztowa, której nie ma w KSeF (np. zagraniczna). Wpisujesz dane z ręki.",
+    zus: "Składki ZUS za wskazany miesiąc. Numer i odbiorcę uzupełnię sam; koszt wpada w miesiąc, KTÓREGO dotyczy, nie w ten, w którym płacisz.",
+    vat: "VAT za wskazany miesiąc. Termin ustawowy: 25. następnego miesiąca.",
+    cit: "Zaliczka CIT za kwartał. Termin ustawowy: 20. miesiąca po kwartale.",
+    oss: "VAT OSS za kwartał — kwota w EUR. Przeliczę ją na PLN kursem średnim NBP; na liście zobaczysz obie kwoty.",
+};
+
+const TODAY = new Date();
+const YEAR_CHOICES = Array.from({ length: 6 }, (_, i) => TODAY.getFullYear() - 4 + i);
+
+const costOpen = ref(false);
+const savingCost = ref(false);
+const costForm = reactive({
+    kind: "invoice",
+    contractor: "",
+    contractor_nip: "",
+    number: "",
+    issue_date: "",
+    due_date: "",
+    amount: "" as string | number,
+    currency: "PLN",
+    category: "",
+    items_text: "",
+    bank_account: "",
+    period_month: TODAY.getMonth() + 1,
+    period_quarter: Math.floor(TODAY.getMonth() / 3) + 1,
+    period_year: TODAY.getFullYear(),
+});
+
+const isQuarterly = computed(() => QUARTERLY_KINDS.includes(costForm.kind));
+const kindHint = computed(() => KIND_HINTS[costForm.kind] ?? "");
+const periodLabelPreview = computed(() =>
+    isQuarterly.value
+        ? `Q${costForm.period_quarter}/${costForm.period_year}`
+        : `${String(costForm.period_month).padStart(2, "0")}/${costForm.period_year}`,
+);
+const numberPreview = computed(() =>
+    costForm.kind === "invoice" ? costForm.number.trim() : `${costForm.kind.toUpperCase()} ${periodLabelPreview.value}`,
+);
+
+function toYmd(d: Date): string {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function openCost() {
+    const today = new Date();
+    Object.assign(costForm, {
+        kind: "invoice",
+        contractor: "",
+        contractor_nip: "",
+        number: "",
+        issue_date: toYmd(today),
+        due_date: "",
+        amount: "",
+        currency: "PLN",
+        category: "",
+        items_text: "",
+        bank_account: "",
+        period_month: today.getMonth() + 1,
+        period_quarter: Math.floor(today.getMonth() / 3) + 1,
+        period_year: today.getFullYear(),
+    });
+    costOpen.value = true;
+}
+
+function setKind(kind: string) {
+    costForm.kind = kind;
+    costForm.due_date = "";
+    if (kind !== "invoice") refreshDue();
+}
+
+/** Termin ustawowy daniny — tylko podpowiedź, pole zostaje edytowalne. */
+function refreshDue() {
+    if (costForm.kind === "invoice") return;
+    const periodMonth = isQuarterly.value ? Number(costForm.period_quarter) * 3 : Number(costForm.period_month);
+    let m = periodMonth + 1;
+    let y = Number(costForm.period_year);
+    if (m > 12) { m = 1; y += 1; }
+    // OSS: koniec miesiąca po kwartale; VAT: 25.; ZUS i CIT: 20.
+    const day = costForm.kind === "oss" ? new Date(y, m, 0).getDate() : costForm.kind === "vat" ? 25 : 20;
+    costForm.due_date = `${y}-${String(m).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
+function submitCost() {
+    const kind = costForm.kind;
+    const payload: Record<string, unknown> = {
+        kind,
+        amount: costForm.amount,
+        category: costForm.category || null,
+        items_text: costForm.items_text || null,
+        due_date: costForm.due_date || null,
+    };
+
+    if (kind === "invoice") {
+        Object.assign(payload, {
+            contractor: costForm.contractor,
+            contractor_nip: costForm.contractor_nip || null,
+            number: costForm.number,
+            issue_date: costForm.issue_date,
+            currency: costForm.currency,
+            bank_account: costForm.bank_account || null,
+        });
+    } else {
+        Object.assign(payload, {
+            period_year: costForm.period_year,
+            ...(isQuarterly.value ? { period_quarter: costForm.period_quarter } : { period_month: costForm.period_month }),
+        });
+    }
+
+    savingCost.value = true;
+    router.post(route("crafter.ksef.manual.store", props.company), payload, {
+        preserveScroll: true,
+        onSuccess: () => { costOpen.value = false; },
+        onError: (errors) => {
+            const first = Object.values(errors ?? {})[0];
+            if (first) toast.error(String(first));
+        },
+        onFinish: () => { savingCost.value = false; },
+    });
+}
+
+/** Kasować wolno tylko pozycje wpisane ręcznie — FV z KSeF wróciłaby przy następnym imporcie. */
+async function removeManual(row: Invoice) {
+    if (!window.confirm(`Usunąć „${row.number}" z listy kosztów?`)) return;
+    try {
+        await axios.delete(route("crafter.ksef.manual.destroy", row.id));
+        rows.value = rows.value.filter((r) => r.id !== row.id);
+    } catch {
+        toast.error("Nie udało się usunąć pozycji.");
+    }
+}
 
 const pageRoute = props.company === "bsp" ? "crafter.ksef.bsp" : "crafter.ksef.pareto";
 
@@ -579,8 +910,19 @@ function copyAccount(nr: string | null) {
 }
 
 // ── formatowanie / dni ──
+/** Sumy są w PLN, więc tu „zł" jest na miejscu. Do kwot w walucie obcej: formatNumber(). */
 function formatAmount(n: number): string {
-    return new Intl.NumberFormat("pl-PL", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(n || 0)) + " zł";
+    return formatNumber(n) + " zł";
+}
+
+function formatNumber(n: number | null): string {
+    return new Intl.NumberFormat("pl-PL", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(n || 0));
+}
+
+/** Skąd wzięła się kwota w PLN — kurs i data tabeli NBP zapisane przy rekordzie. */
+function fxTitle(row: Invoice): string {
+    if (row.amount_pln === null) return "Brak kursu NBP — pozycja nie wchodzi do sum.";
+    return `Kurs NBP ${row.fx_rate ?? "?"} z ${row.fx_date ?? "?"}`;
 }
 
 function formatDate(d: string | null): string {

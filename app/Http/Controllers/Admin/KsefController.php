@@ -9,6 +9,7 @@ use App\Models\Ksef\KsefSignalSettings;
 use App\Services\Ksef\DuePaymentsService;
 use App\Services\Ksef\KsefClient;
 use App\Services\Ksef\KsefInvoiceParser;
+use App\Services\Ksef\NbpRateService;
 use App\Services\Ksef\SignalSender;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -64,9 +65,14 @@ class KsefController extends Controller
             ->get()
             ->map(fn (KsefInvoice $i) => [
                 'id' => $i->id,
+                'kind' => $i->kind,
+                'kind_label' => KsefInvoice::KINDS[$i->kind] ?? $i->kind,
+                'period_label' => $i->periodLabel(),
+                'is_manual' => $i->isManual(),
                 'issue_date' => $i->issue_date?->toDateString(),
                 'number' => $i->number,
                 'contractor' => $i->contractor,
+                'contractor_nip' => $i->contractor_nip,
                 'bank_account' => $i->bank_account,
                 'bank_accounts' => $i->bank_accounts ?: [],
                 'items_text' => $i->items_text,
@@ -74,13 +80,18 @@ class KsefController extends Controller
                 'due_date' => $i->due_date?->toDateString(),
                 'amount' => (float) $i->amount,
                 'currency' => $i->currency,
+                'amount_pln' => $i->amount_pln !== null ? (float) $i->amount_pln : null,
+                'fx_rate' => $i->fx_rate !== null ? (float) $i->fx_rate : null,
+                'fx_date' => $i->fx_date?->toDateString(),
                 'status' => $i->status,
-                'has_pdf' => true, // klik zawsze otwiera (placeholder lub realny PDF)
+                'has_pdf' => ! $i->isManual(), // ręczny koszt nie ma XML-a, więc i PDF-a
             ]);
 
-        // Podsumowanie (jak nagłówek Planera kosztów)
-        $sum = (clone $base)->sum('amount');
-        $sumUnpaid = (clone $base)->where('status', 'unpaid')->sum('amount');
+        // Podsumowanie (jak nagłówek Planera kosztów). Sumujemy WYŁĄCZNIE amount_pln —
+        // amount bywa w EUR/CZK i dodawanie go do złotówek zawyżało „razem".
+        $sum = (clone $base)->sum('amount_pln');
+        $sumUnpaid = (clone $base)->where('status', 'unpaid')->sum('amount_pln');
+        $missingFx = (clone $base)->whereNull('amount_pln')->count();
 
         // Lata dostępne w danych firmy (do filtra)
         $years = KsefInvoice::where('company', $company)
@@ -105,10 +116,12 @@ class KsefController extends Controller
             'filters' => $filters,
             'years' => $years,
             'categories' => $categories,
+            'kinds' => KsefInvoice::KINDS,
             'summary' => [
                 'count' => $invoices->count(),
                 'sum' => (float) $sum,
                 'sum_unpaid' => (float) $sumUnpaid,
+                'missing_fx' => $missingFx, // pozycje bez przeliczenia na PLN — nie weszły do sum
             ],
             'importMeta' => [
                 'imported' => KsefInvoice::where('company', $company)->count(),
@@ -156,6 +169,193 @@ class KsefController extends Controller
         $ksefInvoice->save();
 
         return response()->json(['ok' => true, 'status' => $ksefInvoice->status]);
+    }
+
+    // ── Ręczne koszty: FV kosztowa / ZUS / VAT / CIT / OSS ──
+
+    /**
+     * Dodanie kosztu z ręki. Ląduje w tej samej tabeli co FV z KSeF (`source = 'manual'`),
+     * więc od razu liczy się w sumach, filtrach, checkboxie „Opłacone" i w powiadomieniu
+     * „Do zapłaty". Daniny (ZUS/VAT/CIT/OSS) dostają numer i kontrahenta z automatu.
+     */
+    public function storeManual(Request $request, string $company): RedirectResponse
+    {
+        abort_unless(isset(self::COMPANIES[$company]), 404);
+
+        $kind = (string) $request->input('kind');
+        abort_unless(isset(KsefInvoice::KINDS[$kind]), 422);
+
+        $data = $request->validate($this->manualRules($kind));
+
+        $row = $kind === 'invoice'
+            ? $this->buildManualInvoice($data)
+            : $this->buildManualLevy($kind, $data);
+
+        $row->company = $company;
+        $row->kind = $kind;
+        $row->source = 'manual';
+        $row->status = 'unpaid';
+        $row->imported_at = now();
+        $this->applyFx($row);
+
+        // Tabela ma unikat (company, number) — sprawdzamy sami, żeby zamiast 500 poszedł komunikat.
+        if (KsefInvoice::where('company', $company)->where('number', $row->number)->exists()) {
+            return back()->with('error', 'Pozycja "' . $row->number . '" jest już na liście.');
+        }
+
+        $row->save();
+
+        $note = $row->amount_pln === null
+            ? ' Nie udało się pobrać kursu NBP — kwotę w PLN dolicz przez artisan ksef:fx-fill.'
+            : '';
+
+        return back()->with('success', 'Dodano: ' . $row->number . '.' . $note);
+    }
+
+    /** Kasowanie pozycji — tylko ręcznych. FV z KSeF wróciłaby przy następnym imporcie. */
+    public function destroyManual(KsefInvoice $ksefInvoice): JsonResponse
+    {
+        abort_unless($ksefInvoice->isManual(), 403);
+        $ksefInvoice->delete();
+
+        return response()->json(['ok' => true]);
+    }
+
+    /** @return array<string, array<int, string>> */
+    private function manualRules(string $kind): array
+    {
+        $common = [
+            'kind' => ['required', 'string'],
+            'amount' => ['required', 'numeric', 'min:0.01', 'max:99999999'],
+            'category' => ['nullable', 'string', 'max:120'],
+            'items_text' => ['nullable', 'string', 'max:1000'],
+            'due_date' => ['nullable', 'date'],
+        ];
+
+        if ($kind === 'invoice') {
+            return $common + [
+                'contractor' => ['required', 'string', 'max:255'],
+                'contractor_nip' => ['nullable', 'string', 'max:32'],
+                'number' => ['required', 'string', 'max:255'],
+                'issue_date' => ['required', 'date'],
+                'currency' => ['required', 'string', 'in:PLN,EUR,CZK,USD,GBP,HUF,RON,SEK,DKK,NOK'],
+                'bank_account' => ['nullable', 'string', 'max:64'],
+            ];
+        }
+
+        $period = in_array($kind, KsefInvoice::QUARTERLY_KINDS, true)
+            ? ['period_quarter' => ['required', 'integer', 'min:1', 'max:4']]
+            : ['period_month' => ['required', 'integer', 'min:1', 'max:12']];
+
+        return $common + $period + [
+            'period_year' => ['required', 'integer', 'min:2000', 'max:2100'],
+        ];
+    }
+
+    /** FV kosztowa wpisana ręcznie — wszystkie dane od użytkownika. */
+    private function buildManualInvoice(array $d): KsefInvoice
+    {
+        $row = new KsefInvoice();
+        $row->number = trim($d['number']);
+        $row->contractor = trim($d['contractor']);
+        $row->contractor_nip = $this->normalizeNip($d['contractor_nip'] ?? null);
+        $row->issue_date = $d['issue_date'];
+        $row->due_date = $d['due_date'] ?? null;
+        $row->amount = (float) $d['amount'];
+        $row->currency = strtoupper($d['currency']);
+        $row->category = $d['category'] ?? null;
+        $row->items_text = $d['items_text'] ?? null;
+        $bank = preg_replace('/[\s\-]+/u', '', (string) ($d['bank_account'] ?? ''));
+        $row->bank_account = $bank !== '' ? mb_strtoupper($bank) : null;
+
+        return $row;
+    }
+
+    /**
+     * ZUS / VAT / CIT / OSS. Data kosztu = koniec okresu (miesiąca albo kwartału), dzięki czemu
+     * danina wpada w miesiąc, KTÓREGO dotyczy, a nie w ten, w którym się ją płaci.
+     * Termin podpowiadamy ustawowy — formularz i tak pozwala go poprawić.
+     */
+    private function buildManualLevy(string $kind, array $d): KsefInvoice
+    {
+        $year = (int) $d['period_year'];
+        $quarterly = in_array($kind, KsefInvoice::QUARTERLY_KINDS, true);
+
+        if ($quarterly) {
+            $quarter = (int) $d['period_quarter'];
+            $periodEnd = Carbon::create($year, $quarter * 3, 1)->endOfMonth()->startOfDay();
+            $label = 'Q' . $quarter . '/' . $year;
+        } else {
+            $month = (int) $d['period_month'];
+            $periodEnd = Carbon::create($year, $month, 1)->endOfMonth()->startOfDay();
+            $label = str_pad((string) $month, 2, '0', STR_PAD_LEFT) . '/' . $year;
+        }
+
+        $next = $periodEnd->copy()->addDay(); // pierwszy dzień następnego okresu
+
+        $row = new KsefInvoice();
+        $row->number = strtoupper($kind) . ' ' . $label;
+        $row->contractor = match ($kind) {
+            'zus' => 'ZUS',
+            'oss' => 'Urząd Skarbowy (OSS)',
+            default => 'Urząd Skarbowy',
+        };
+        $row->issue_date = $periodEnd->toDateString();
+        $row->due_date = $d['due_date'] ?? match ($kind) {
+            'zus' => $next->copy()->day(20)->toDateString(),   // 15. dla osób prawnych — poprawialne w formularzu
+            'vat' => $next->copy()->day(25)->toDateString(),
+            'cit' => $next->copy()->day(20)->toDateString(),
+            'oss' => $next->copy()->endOfMonth()->toDateString(),
+            default => null,
+        };
+        $row->amount = (float) $d['amount'];
+        $row->currency = $kind === 'oss' ? 'EUR' : 'PLN';   // OSS deklaruje się i płaci w euro
+        // Pola opcjonalne bywają w ogóle nieobecne w zwalidowanych danych — stąd `?? null`.
+        $row->category = ($d['category'] ?? null) ?: KsefInvoice::KINDS[$kind];
+        $row->items_text = ($d['items_text'] ?? null) ?: (KsefInvoice::KINDS[$kind] . ' za ' . $label);
+        $row->period_year = $year;
+        $row->period_month = $quarterly ? null : (int) $d['period_month'];
+        $row->period_quarter = $quarterly ? (int) $d['period_quarter'] : null;
+
+        return $row;
+    }
+
+    /**
+     * Kwota w PLN + kurs, którym ją policzono. Zapisujemy oba, żeby kwota nie drgnęła przy
+     * późniejszym podglądzie. Brak kursu → `amount_pln = null`: pozycja nie wejdzie do sum
+     * (lepiej dziura, którą widać, niż zła kwota, której nie widać).
+     */
+    private function applyFx(KsefInvoice $row): void
+    {
+        $currency = strtoupper((string) ($row->currency ?: 'PLN'));
+        $amount = (float) $row->amount;
+
+        if ($currency === 'PLN') {
+            $row->amount_pln = round($amount, 2);
+            $row->fx_rate = 1;
+            $row->fx_date = null;
+
+            return;
+        }
+
+        $fx = app(NbpRateService::class)->toPln($amount, $currency, $row->issue_date ?: now());
+        if ($fx === null) {
+            $row->amount_pln = null;
+
+            return;
+        }
+
+        $row->amount_pln = $fx['amount_pln'];
+        $row->fx_rate = $fx['fx_rate'];
+        $row->fx_date = $fx['fx_date'];
+    }
+
+    /** NIP do porównywalnej postaci: same cyfry (bez PL, myślników i spacji). */
+    private function normalizeNip(?string $nip): ?string
+    {
+        $v = preg_replace('/\D+/', '', (string) $nip);
+
+        return $v !== '' ? $v : null;
     }
 
     // ── Ustawienia → kategorie (CRUD) ──
@@ -304,6 +504,7 @@ class KsefController extends Controller
             }
             $row->amount = is_numeric($inv['gross'] ?? null) ? (float) $inv['gross'] : (float) ($row->amount ?? 0);
             $row->currency = $inv['currency'] ?? ($row->currency ?? 'PLN');
+            $this->applyFx($row);
             $row->source = 'ksef';
             $row->imported_at = now();
             if (! $row->exists) {
