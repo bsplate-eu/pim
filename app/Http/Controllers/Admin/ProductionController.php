@@ -40,6 +40,14 @@ class ProductionController extends Controller
     ];
 
     /**
+     * Etapy wykluczaja sie wzajemnie — kod jest na jednym etapie naraz.
+     * Pilnujemy tego TUTAJ, a nie tylko w gridzie: procenty na ekranie licza
+     * sie z zalozenia „suma etapow + bez etapu = 100%", wiec kod z dwoma
+     * etapami rozjechalby cale podsumowanie.
+     */
+    private const STAGE_FLAGS = ['etap_1', 'etap_2', 'etap_3'];
+
+    /**
      * Lista kodow produkcyjnych (bez powtorzen) do gridu produkcji.
      */
     public function index(Request $request): Response
@@ -103,15 +111,25 @@ class ProductionController extends Controller
             'value' => ['required', 'boolean'],
         ]);
 
-        ProductionItem::updateOrCreate(
-            ['product_code' => $data['product_code']],
-            [self::FLAGS[$data['flag']] => $data['value']],
-        );
+        $values = [self::FLAGS[$data['flag']] => $data['value']];
+
+        // Zaznaczenie etapu zdejmuje pozostale. Odznaczenie nie rusza niczego —
+        // kod po prostu wypada z etapow.
+        if ($data['value'] && in_array($data['flag'], self::STAGE_FLAGS, true)) {
+            foreach (self::STAGE_FLAGS as $stage) {
+                if ($stage !== $data['flag']) {
+                    $values[self::FLAGS[$stage]] = false;
+                }
+            }
+        }
+
+        $item = ProductionItem::updateOrCreate(['product_code' => $data['product_code']], $values);
 
         return response()->json([
             'product_code' => $data['product_code'],
-            'flag' => $data['flag'],
-            'value' => $data['value'],
+            // Oddajemy komplet znacznikow — grid nie musi zgadywac, co serwer
+            // zdjal przy wykluczaniu etapow.
+            'flags' => collect(self::FLAGS)->map(fn ($column) => (bool) $item->{$column}),
         ]);
     }
 }

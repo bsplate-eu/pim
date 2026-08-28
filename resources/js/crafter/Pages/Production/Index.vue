@@ -8,8 +8,8 @@
     <PageContent>
         <div class="w-full">
             <Card>
-                <!-- Zakladki filtrowania po znaczniku „Projekt". -->
-                <div class="mb-4 border-b border-gray-200">
+                <!-- Rzad 1: filtrowanie po znacznikach Projekt / Team Steel. -->
+                <div class="border-b border-gray-200">
                     <nav class="-mb-px flex gap-6">
                         <button
                             v-for="tab in tabs"
@@ -22,6 +22,60 @@
                             <span class="ml-1 text-xs text-gray-400">{{ tab.count }}</span>
                         </button>
                     </nav>
+                </div>
+
+                <!-- Rzad 2: etapy. Dziala RAZEM z rzedem 1 (przeciecie), nie zamiast. -->
+                <div class="mb-4 border-b border-gray-200">
+                    <nav class="-mb-px flex gap-6">
+                        <button
+                            v-for="tab in stageTabs"
+                            :key="tab.key"
+                            type="button"
+                            @click="activeStage = tab.key"
+                            :class="stageTabClass(activeStage === tab.key)"
+                            :style="activeStage === tab.key && tab.color
+                                ? { borderColor: tab.color, color: tab.color }
+                                : {}"
+                        >
+                            <span
+                                v-if="tab.color"
+                                class="mr-2 inline-block h-2 w-2 rounded-full align-middle"
+                                :style="{ background: tab.color }"
+                            />
+                            {{ tab.label }}
+                            <span class="ml-1 text-xs text-gray-400">
+                                {{ tab.count }} · {{ formatPercent(tab.percent) }}
+                            </span>
+                        </button>
+                    </nav>
+                </div>
+
+                <!-- Podzial na etapy liczony po CALYM zbiorze kodow: wszystkie = 100%. -->
+                <div class="mb-4">
+                    <div class="flex h-2 w-full overflow-hidden rounded bg-gray-100">
+                        <div
+                            v-for="part in stageBreakdown"
+                            :key="part.key"
+                            :style="{ width: part.percent + '%', background: part.color }"
+                            :title="`${part.label}: ${part.count} kodów (${formatPercent(part.percent)})`"
+                        />
+                    </div>
+                    <div class="mt-2 flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-gray-600">
+                        <span v-for="part in stageBreakdown" :key="part.key" class="whitespace-nowrap">
+                            <span
+                                class="mr-1 inline-block h-2 w-2 rounded-full align-middle"
+                                :style="{ background: part.color }"
+                            />
+                            {{ part.label }}
+                            <strong class="ml-1 text-gray-900">{{ part.count }}</strong>
+                            <span class="text-gray-400"> · {{ formatPercent(part.percent) }}</span>
+                        </span>
+                        <span class="whitespace-nowrap text-gray-400">
+                            bez etapu
+                            <strong class="text-gray-600">{{ noStage.count }}</strong>
+                            · {{ formatPercent(noStage.percent) }}
+                        </span>
+                    </div>
                 </div>
 
                 <div class="mb-4 flex flex-wrap items-baseline gap-x-6 gap-y-1">
@@ -118,6 +172,19 @@ type FlagKey =
     | "bez_wspornikow"
     | "projekty_gotowe";
 
+type StageKey = "etap_1" | "etap_2" | "etap_3";
+
+// Etapy wykluczaja sie wzajemnie (pilnuje tego takze kontroler). Kolor jedzie
+// stad do naglowka kolumny, tla komorki, zakladki i paska podzialu.
+const STAGES: Array<{ key: StageKey; label: string; color: string; background: string }> = [
+    { key: "etap_1", label: "Etap 1", color: "#dc2626", background: "#fee2e2" },
+    { key: "etap_2", label: "Etap 2", color: "#ea580c", background: "#ffedd5" },
+    { key: "etap_3", label: "Etap 3", color: "#16a34a", background: "#dcfce7" },
+];
+
+const STAGE_KEYS: StageKey[] = STAGES.map((s) => s.key);
+const isStage = (flag: FlagKey): flag is StageKey => (STAGE_KEYS as string[]).includes(flag);
+
 interface Props {
     rows: ProductionRow[];
 }
@@ -130,7 +197,7 @@ const rows = ref<ProductionRow[]>([...props.rows]);
 const gridRef = ref<any>(null);
 
 // RevoGrid nie sledzi mutacji pol wiersza — podmiana referencji zrodla wymusza
-// przerysowanie (i przelicza liczniki zakladek oraz filtr).
+// przerysowanie (i przelicza liczniki zakladek, procenty oraz filtr).
 function refreshGrid(): void {
     const grid = gridRef.value;
     if (grid) grid.setSource([...grid.getSource()]);
@@ -145,8 +212,19 @@ async function setFlag(code: string, flag: FlagKey, value: boolean): Promise<voi
     const row = source.find((r) => r.product_code === code);
     if (!row) return;
 
-    const previous = row[flag];
+    // Cofamy caly komplet, nie samo klikniete pole — zaznaczenie etapu zdejmuje
+    // dwa pozostale, wiec przy bledzie trzeba przywrocic wszystkie trzy.
+    const snapshot: Partial<Record<FlagKey, boolean>> = { [flag]: row[flag] };
+
     row[flag] = value;
+
+    if (value && isStage(flag)) {
+        STAGE_KEYS.filter((k) => k !== flag).forEach((other) => {
+            snapshot[other] = row[other];
+            row[other] = false;
+        });
+    }
+
     refreshGrid();
 
     try {
@@ -156,37 +234,59 @@ async function setFlag(code: string, flag: FlagKey, value: boolean): Promise<voi
             value,
         });
     } catch (e) {
-        row[flag] = previous;
+        Object.entries(snapshot).forEach(([key, was]) => {
+            (row as any)[key] = was;
+        });
         refreshGrid();
         toast.error(`Nie udalo sie zapisac znacznika dla ${code}`);
     }
 }
 
-/** Kolumna z checkboxem Tak/Nie dla jednego znacznika. */
+/** Kolumna z checkboxem Tak/Nie. Etapy dostaja swoj kolor w naglowku i w tle komorki. */
 function flagColumn(flag: FlagKey, name: string, size: number) {
+    const stage = STAGES.find((s) => s.key === flag);
+
     return {
         prop: flag,
         name,
         readonly: true,
         size,
         sortable: true,
+        columnTemplate: stage
+            ? (h: any) => h("span", { style: { color: stage.color, fontWeight: "600" } }, name)
+            : undefined,
         cellTemplate: (h: any, p: any) => {
             const code = String(p.model?.product_code ?? "");
             const checked = !!p.model?.[flag];
-            return h("label", { class: "revo-project-cell" }, [
-                h("input", {
-                    type: "checkbox",
-                    checked,
-                    onClick: (e: any) => e.stopPropagation(),
-                    onChange: (e: any) =>
-                        setFlag(code, flag, !!(e.target as HTMLInputElement).checked),
-                }),
-                h(
-                    "span",
-                    { style: { marginLeft: "6px", color: checked ? "#15803d" : "#9ca3af" } },
-                    checked ? "Tak" : "Nie"
-                ),
-            ]);
+            const accent = stage?.color ?? "#15803d";
+
+            return h(
+                "label",
+                {
+                    class: "revo-flag-cell",
+                    style: checked && stage ? { background: stage.background } : {},
+                },
+                [
+                    h("input", {
+                        type: "checkbox",
+                        checked,
+                        onClick: (e: any) => e.stopPropagation(),
+                        onChange: (e: any) =>
+                            setFlag(code, flag, !!(e.target as HTMLInputElement).checked),
+                    }),
+                    h(
+                        "span",
+                        {
+                            style: {
+                                marginLeft: "6px",
+                                color: checked ? accent : "#9ca3af",
+                                fontWeight: checked ? "600" : "400",
+                            },
+                        },
+                        checked ? "Tak" : "Nie"
+                    ),
+                ]
+            );
         },
     };
 }
@@ -258,7 +358,7 @@ const columns = [
     flagColumn("projekty_gotowe", "Projekty gotowe", 165),
 ];
 
-// === ZAKLADKI ===
+// === ZAKLADKI: RZAD 1 (znaczniki) ===
 type TabKey = "all" | "project" | "noproject" | "team_steel";
 const activeTab = ref<TabKey>("all");
 
@@ -280,8 +380,10 @@ function tabClass(active: boolean): string {
 
 // Liczniki licza po CALYM zbiorze, nie po biezacym filtrze tekstowym — zakladka
 // ma mowic ile jest kodow w danym stanie, niezaleznie od tego czego akurat szukasz.
+const allRows = computed<any[]>(() => gridRef.value?.getSource?.() ?? []);
+
 const tabs = computed(() => {
-    const source: any[] = gridRef.value?.getSource?.() ?? [];
+    const source = allRows.value;
     const withProject = source.filter((r) => r.project).length;
     const withTeamSteel = source.filter((r) => r.team_steel).length;
     return [
@@ -289,6 +391,66 @@ const tabs = computed(() => {
         { key: "project" as TabKey, label: "Projekt", count: withProject },
         { key: "noproject" as TabKey, label: "Bez projektu", count: source.length - withProject },
         { key: "team_steel" as TabKey, label: "Team Steel", count: withTeamSteel },
+    ];
+});
+
+// === ZAKLADKI: RZAD 2 (etapy) ===
+type StageTabKey = "all" | StageKey | "none";
+const activeStage = ref<StageTabKey>("all");
+
+function matchesStage(row: any, tab: StageTabKey): boolean {
+    if (tab === "all") return true;
+    if (tab === "none") return !STAGE_KEYS.some((k) => row?.[k]);
+    return !!row?.[tab];
+}
+
+function stageTabClass(active: boolean): string {
+    return [
+        "border-b-2 px-1 py-2 text-sm font-medium whitespace-nowrap",
+        active
+            ? "border-gray-700 text-gray-900"
+            : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700",
+    ].join(" ");
+}
+
+// === PODZIAL NA ETAPY ===
+// Baza to WSZYSTKIE kody (nie widoczne po filtrze) — „wszystkie oslony = 100%".
+// Etapy wykluczaja sie, wiec suma trzech + „bez etapu" zawsze daje 100%.
+const stageBreakdown = computed(() => {
+    const source = allRows.value;
+    const total = source.length || 1;
+
+    return STAGES.map((stage) => {
+        const count = source.filter((r) => r[stage.key]).length;
+        return {
+            key: stage.key,
+            label: stage.label,
+            color: stage.color,
+            count,
+            percent: (count / total) * 100,
+        };
+    });
+});
+
+const noStage = computed(() => {
+    const source = allRows.value;
+    const total = source.length || 1;
+    const count = source.filter((r) => !STAGE_KEYS.some((k) => r[k])).length;
+    return { count, percent: (count / total) * 100 };
+});
+
+const stageTabs = computed(() => {
+    const source = allRows.value;
+    return [
+        { key: "all" as StageTabKey, label: "Wszystkie etapy", color: "", count: source.length, percent: 100 },
+        ...stageBreakdown.value.map((part) => ({
+            key: part.key as StageTabKey,
+            label: part.label,
+            color: part.color,
+            count: part.count,
+            percent: part.percent,
+        })),
+        { key: "none" as StageTabKey, label: "Bez etapu", color: "#9ca3af", count: noStage.value.count, percent: noStage.value.percent },
     ];
 });
 
@@ -319,11 +481,13 @@ const filterFn = computed<((row: any) => boolean) | null>(() => {
     const name = String(search.name ?? "").trim().toLowerCase();
     const material = String(search.material ?? "all");
     const tab = activeTab.value;
+    const stage = activeStage.value;
 
-    if (!code && !name && material === "all" && tab === "all") return null;
+    if (!code && !name && material === "all" && tab === "all" && stage === "all") return null;
 
     return (row: any) => {
-        if (!matchesTab(row, tab)) {
+        // Oba rzedy zakladek dzialaja razem: „Projekt" + „Etap 2" = kody z obu.
+        if (!matchesTab(row, tab) || !matchesStage(row, stage)) {
             return false;
         }
         if (code && !String(row.product_code ?? "").toLowerCase().includes(code)) {
@@ -346,32 +510,38 @@ const filterFn = computed<((row: any) => boolean) | null>(() => {
 // Wszystko liczone z zrodla gridu, nie z props.rows — po kliknieciu znacznika
 // grid podmienia referencje zrodla, wiec te wartosci przeliczaja sie same.
 const visibleRows = computed<any[]>(() => {
-    const source: any[] = gridRef.value?.getSource?.() ?? [];
     const filter = filterFn.value;
-    return filter ? source.filter(filter) : source;
+    return filter ? allRows.value.filter(filter) : allRows.value;
 });
 
 const visibleCount = computed<number>(() => visibleRows.value.length);
-const totalCount = computed<number>(() => gridRef.value?.getSource?.()?.length ?? 0);
+const totalCount = computed<number>(() => allRows.value.length);
 
-const sumSales = (rows: any[]): number =>
-    rows.reduce((sum, row) => sum + (Number(row?.sales_12m) || 0), 0);
+const sumSales = (list: any[]): number =>
+    list.reduce((sum, row) => sum + (Number(row?.sales_12m) || 0), 0);
 
 const visibleSales = computed<number>(() => sumSales(visibleRows.value));
-const totalSales = computed<number>(() => sumSales(gridRef.value?.getSource?.() ?? []));
+const totalSales = computed<number>(() => sumSales(allRows.value));
 
 // Widok zawezony = zakladka inna niz „Wszystkie" albo cokolwiek w filtrach.
 const isNarrowed = computed<boolean>(() => filterFn.value !== null);
 
 const qtyFormatter = new Intl.NumberFormat("pl-PL");
 const formatQty = (value: number): string => qtyFormatter.format(value);
+
+const percentFormatter = new Intl.NumberFormat("pl-PL", {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+});
+const formatPercent = (value: number): string => percentFormatter.format(value) + "%";
 </script>
 
 <style scoped>
-:deep(.revo-project-cell) {
+:deep(.revo-flag-cell) {
     display: flex;
     align-items: center;
     height: 100%;
+    width: 100%;
     cursor: pointer;
 }
 </style>

@@ -1,1 +1,0 @@
-import{_ as o}from"./EditTranslationModal.vue_vue_type_script_setup_true_lang-4629e448.js";import"./vendor-46a0eb74.js";import"./index-43ec5447.js";import"./Modal.vue_vue_type_script_setup_true_lang-29efd40b.js";export{o as default};
