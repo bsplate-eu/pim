@@ -24,9 +24,22 @@
                     </nav>
                 </div>
 
-                <div class="mb-3 text-xs text-gray-500">
-                    Widocznych: <strong>{{ visibleCount }}</strong>
-                    / Wszystkich kodów: <strong>{{ totalCount }}</strong>
+                <div class="mb-4 flex flex-wrap items-baseline gap-x-6 gap-y-1">
+                    <div class="text-sm">
+                        <span class="text-gray-500">Podsumowanie ilości sprzedanych:</span>
+                        <strong class="ml-1 text-base text-gray-900">
+                            {{ formatQty(visibleSales) }} szt.
+                        </strong>
+                        <!-- Przy aktywnej zakladce/filtrze pokazujemy tez calosc, zeby nie
+                             dalo sie wziac sumy wycinka za sume wszystkiego. -->
+                        <span v-if="isNarrowed" class="ml-1 text-xs text-gray-400">
+                            z {{ formatQty(totalSales) }} szt. na wszystkich kodach
+                        </span>
+                    </div>
+                    <div class="text-xs text-gray-500">
+                        Widocznych: <strong>{{ visibleCount }}</strong>
+                        / Wszystkich kodów: <strong>{{ totalCount }}</strong>
+                    </div>
                 </div>
 
                 <div class="mb-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -309,14 +322,29 @@ const filterFn = computed<((row: any) => boolean) | null>(() => {
     };
 });
 
-// === LICZNIKI ===
-const visibleCount = computed<number>(() => {
-    const source = gridRef.value?.getSource?.() ?? [];
+// === LICZNIKI I PODSUMOWANIE ===
+// Wszystko liczone z zrodla gridu, nie z props.rows — po kliknieciu znacznika
+// grid podmienia referencje zrodla, wiec te wartosci przeliczaja sie same.
+const visibleRows = computed<any[]>(() => {
+    const source: any[] = gridRef.value?.getSource?.() ?? [];
     const filter = filterFn.value;
-    return filter ? source.filter(filter).length : source.length;
+    return filter ? source.filter(filter) : source;
 });
 
+const visibleCount = computed<number>(() => visibleRows.value.length);
 const totalCount = computed<number>(() => gridRef.value?.getSource?.()?.length ?? 0);
+
+const sumSales = (rows: any[]): number =>
+    rows.reduce((sum, row) => sum + (Number(row?.sales_12m) || 0), 0);
+
+const visibleSales = computed<number>(() => sumSales(visibleRows.value));
+const totalSales = computed<number>(() => sumSales(gridRef.value?.getSource?.() ?? []));
+
+// Widok zawezony = zakladka inna niz „Wszystkie" albo cokolwiek w filtrach.
+const isNarrowed = computed<boolean>(() => filterFn.value !== null);
+
+const qtyFormatter = new Intl.NumberFormat("pl-PL");
+const formatQty = (value: number): string => qtyFormatter.format(value);
 </script>
 
 <style scoped>
