@@ -35,6 +35,7 @@ class ProductionController extends Controller
         'etap_1' => 'etap_1',
         'etap_2' => 'etap_2',
         'etap_3' => 'etap_3',
+        'gotowe' => 'gotowe',
         'bez_wspornikow' => 'bez_wspornikow',
         'projekty_gotowe' => 'projekty_gotowe',
     ];
@@ -45,7 +46,7 @@ class ProductionController extends Controller
      * sie z zalozenia „suma etapow + bez etapu = 100%", wiec kod z dwoma
      * etapami rozjechalby cale podsumowanie.
      */
-    private const STAGE_FLAGS = ['etap_1', 'etap_2', 'etap_3'];
+    private const STAGE_FLAGS = ['etap_1', 'etap_2', 'etap_3', 'gotowe'];
 
     /**
      * Lista kodow produkcyjnych (bez powtorzen) do gridu produkcji.

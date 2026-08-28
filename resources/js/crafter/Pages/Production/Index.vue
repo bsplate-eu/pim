@@ -157,6 +157,7 @@ interface ProductionRow {
     etap_1: boolean;
     etap_2: boolean;
     etap_3: boolean;
+    gotowe: boolean;
     bez_wspornikow: boolean;
     projekty_gotowe: boolean;
 }
@@ -169,17 +170,21 @@ type FlagKey =
     | "etap_1"
     | "etap_2"
     | "etap_3"
+    | "gotowe"
     | "bez_wspornikow"
     | "projekty_gotowe";
 
-type StageKey = "etap_1" | "etap_2" | "etap_3";
+type StageKey = "etap_1" | "etap_2" | "etap_3" | "gotowe";
 
-// Etapy wykluczaja sie wzajemnie (pilnuje tego takze kontroler). Kolor jedzie
-// stad do naglowka kolumny, tla komorki, zakladki i paska podzialu.
+// Linia etapow — elementy wykluczaja sie wzajemnie (pilnuje tego takze kontroler).
+// Kolor jedzie stad do naglowka kolumny, tla komorki, zakladki i paska podzialu.
+// Zielen zostaje wylacznie dla „Gotowe" — Etap 3 jest niebieski, wiec konca
+// procesu nie da sie pomylic z etapem posrednim.
 const STAGES: Array<{ key: StageKey; label: string; color: string; background: string }> = [
     { key: "etap_1", label: "Etap 1", color: "#dc2626", background: "#fee2e2" },
     { key: "etap_2", label: "Etap 2", color: "#ea580c", background: "#ffedd5" },
-    { key: "etap_3", label: "Etap 3", color: "#16a34a", background: "#dcfce7" },
+    { key: "etap_3", label: "Etap 3", color: "#2563eb", background: "#dbeafe" },
+    { key: "gotowe", label: "Gotowe", color: "#16a34a", background: "#dcfce7" },
 ];
 
 const STAGE_KEYS: StageKey[] = STAGES.map((s) => s.key);
@@ -354,6 +359,7 @@ const columns = [
     flagColumn("etap_1", "Etap 1", 110),
     flagColumn("etap_2", "Etap 2", 110),
     flagColumn("etap_3", "Etap 3", 110),
+    flagColumn("gotowe", "Gotowe", 120),
     flagColumn("bez_wspornikow", "Bez wsporników", 160),
     flagColumn("projekty_gotowe", "Projekty gotowe", 165),
 ];
