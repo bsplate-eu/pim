@@ -843,3 +843,9 @@ Route::middleware(['crafter.base', 'auth', 'crafter.verified'])->prefix('admin')
     Route::post('scope/rumuni/align-reset', [App\Http\Controllers\Admin\Scope\ScopeRumuniController::class, 'alignReset'])
         ->name('scope.rumuni.align-reset');
 });
+
+/* Argo PIM → Produkcja — pelna lista kodow z bazy (grid jak w cenniku) */
+Route::middleware(['crafter.base', 'auth', 'crafter.verified'])->prefix('admin')->name('crafter.')->group(function () {
+    Route::get('production', [App\Http\Controllers\Admin\ProductionController::class, 'index'])
+        ->name('production.index');
+});

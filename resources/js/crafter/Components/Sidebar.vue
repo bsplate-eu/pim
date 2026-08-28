@@ -69,6 +69,7 @@
                     'crafter.attribute.index',
                     'crafter.template.index',
                     'crafter.media.index',
+                    'crafter.module.production',
                 ]"
             >
                 <SidebarSubGroup title="Integracje" v-can="'crafter.integration.index'">
@@ -106,6 +107,13 @@
                         {{ $t("crafter", "Sources") }}
                     </SidebarItem>
                 </SidebarSubGroup>
+
+                <SidebarItem
+                    :href="route('crafter.production.index')"
+                    v-can="'crafter.module.production'"
+                >
+                    Produkcja
+                </SidebarItem>
 
                 <SidebarSubGroup title="Opcje">
                     <SidebarItem

@@ -53,6 +53,9 @@ return [
         'ai-tools.mail.'             => 'crafter.module.mail',
         'mobile.mail'                => 'crafter.module.mail',
 
+        // ——— Argo PIM ———
+        'production.'                => 'crafter.module.production',
+
         // ——— Matryca tłumaczeń (v2) ———
         'translation-phrases.'       => 'crafter.module.translations',
         'translation-review.'        => 'crafter.module.translations',
