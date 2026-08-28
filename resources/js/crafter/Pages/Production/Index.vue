@@ -132,6 +132,22 @@ async function setProject(code: string, value: boolean): Promise<void> {
 }
 
 const columns = [
+    {
+        // Liczba porzadkowa liczona z pozycji w AKTUALNYM widoku — po posortowaniu
+        // po sprzedazy Lp 1 to najlepiej schodzacy kod, po filtrze numeracja leci od nowa.
+        // `p.data` to wiersze widoku (juz posortowane/przefiltrowane); `rowIndex` jest
+        // awaryjnie, gdyby model nie znalazl sie w tablicy.
+        prop: "__lp__",
+        name: "Lp",
+        readonly: true,
+        sortable: false,
+        size: 70,
+        cellTemplate: (h: any, p: any) => {
+            const index = Array.isArray(p.data) ? p.data.indexOf(p.model) : -1;
+            const lp = (index >= 0 ? index : Number(p.rowIndex) || 0) + 1;
+            return h("span", { style: { color: "#9ca3af" } }, String(lp));
+        },
+    },
     { prop: "product_code", name: "Kod", readonly: true, size: 160, sortable: true },
     {
         prop: "name",
