@@ -40,3 +40,7 @@ _DEPLOY_*
 # --- Skrypty i eksporty robocze (importery, rekoncyliacje, feedy Selly) ---
 /_*
 *.csv
+
+# Dane wgrywane migracjami (np. sprzedaz z Subiekta) — te CSV MUSZA byc w repo,
+# inaczej migracja na prodzie nie ma czego wczytac.
+!database/data/*.csv

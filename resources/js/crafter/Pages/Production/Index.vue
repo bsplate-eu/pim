@@ -85,6 +85,7 @@ interface ProductionRow {
     material: string;
     variants: number;
     project: boolean;
+    sales_12m: number;
 }
 
 interface Props {
@@ -151,6 +152,25 @@ const columns = [
         },
     },
     { prop: "material", name: "Materiał", readonly: true, size: 140, sortable: true },
+    {
+        // Sprzedaz z raportu Subiekta (31.08.2025 - 31.08.2026). Zero wyszarzone,
+        // zeby wzrokiem od razu bylo widac, co sie w ogole nie sprzedawalo.
+        prop: "sales_12m",
+        name: "Sprzedaż 12 mc",
+        readonly: true,
+        size: 150,
+        sortable: true,
+        cellCompare: (prop: string, a: any, b: any): number =>
+            (Number(a?.[prop]) || 0) - (Number(b?.[prop]) || 0),
+        cellTemplate: (h: any, p: any) => {
+            const value = Number(p.model?.sales_12m) || 0;
+            return h(
+                "span",
+                value === 0 ? { style: { color: "#9ca3af" } } : {},
+                String(value)
+            );
+        },
+    },
     {
         prop: "project",
         name: "Projekt",

@@ -35,8 +35,8 @@ class ProductionController extends Controller
         $materialValueIds = $materialValues->pluck('id')->all();
         $materialLabels = $materialValues->mapWithKeys(fn ($value) => [$value->slug => $value->name])->all();
 
-        // Znaczniki produkcyjne — tylko dla kodow, na ktorych ktos cos ustawil.
-        $projects = ProductionItem::pluck('has_project', 'product_code');
+        // Dane produkcyjne — tylko dla kodow, na ktorych cos ustawiono albo wgrano.
+        $items = ProductionItem::get(['product_code', 'has_project', 'sales_12m'])->keyBy('product_code');
 
         $rows = Product::query()
             ->select('id', 'product_code', 'name')
@@ -45,10 +45,11 @@ class ProductionController extends Controller
             ->orderBy('id')
             ->get()
             ->groupBy('product_code')
-            ->map(function ($group) use ($materialLabels, $projects) {
+            ->map(function ($group) use ($materialLabels, $items) {
                 // Reprezentant kodu = najstarszy produkt (najnizsze id) — po nim bierzemy nazwe.
                 $product = $group->first();
                 $slug = $product->attributeValues->first()?->slug;
+                $item = $items[$product->product_code] ?? null;
 
                 return [
                     'product_id' => $product->id,
@@ -58,7 +59,9 @@ class ProductionController extends Controller
                     'material' => $slug === null ? '' : ($materialLabels[$slug] ?? $slug),
                     // Ile produktow (aut) kryje sie pod tym kodem — sygnal, ze nazwa to jeden z wielu wariantow.
                     'variants' => $group->count(),
-                    'project' => (bool) ($projects[$product->product_code] ?? false),
+                    'project' => (bool) ($item?->has_project ?? false),
+                    // Sprzedaz 12M z raportu Subiekta. Kod bez wiersza w raporcie = 0.
+                    'sales_12m' => (int) ($item?->sales_12m ?? 0),
                 ];
             })
             ->values();
