@@ -85,8 +85,12 @@ interface ProductionRow {
     material: string;
     variants: number;
     project: boolean;
+    team_steel: boolean;
     sales_12m: number;
 }
+
+// Znaczniki produkcyjne — jedna definicja napedza kolumne, zapis i zakladke.
+type FlagKey = "project" | "team_steel";
 
 interface Props {
     rows: ProductionRow[];
@@ -106,29 +110,59 @@ function refreshGrid(): void {
     if (grid) grid.setSource([...grid.getSource()]);
 }
 
-// === ZNACZNIK „PROJEKT" ===
+// === ZNACZNIKI PRODUKCYJNE ===
 // Zapis idzie od razu po kliknieciu (bez przycisku Save). Wiersz przestawiamy
 // optymistycznie, a przy bledzie cofamy — inaczej grid pokazywalby stan,
 // ktorego nie ma w bazie.
-async function setProject(code: string, value: boolean): Promise<void> {
+async function setFlag(code: string, flag: FlagKey, value: boolean): Promise<void> {
     const source: ProductionRow[] = gridRef.value?.getSource?.() ?? [];
     const row = source.find((r) => r.product_code === code);
     if (!row) return;
 
-    const previous = row.project;
-    row.project = value;
+    const previous = row[flag];
+    row[flag] = value;
     refreshGrid();
 
     try {
-        await axios.post(route("crafter.production.project"), {
+        await axios.post(route("crafter.production.flag"), {
             product_code: code,
-            project: value,
+            flag,
+            value,
         });
     } catch (e) {
-        row.project = previous;
+        row[flag] = previous;
         refreshGrid();
         toast.error(`Nie udalo sie zapisac znacznika dla ${code}`);
     }
+}
+
+/** Kolumna z checkboxem Tak/Nie dla jednego znacznika. */
+function flagColumn(flag: FlagKey, name: string, size: number) {
+    return {
+        prop: flag,
+        name,
+        readonly: true,
+        size,
+        sortable: true,
+        cellTemplate: (h: any, p: any) => {
+            const code = String(p.model?.product_code ?? "");
+            const checked = !!p.model?.[flag];
+            return h("label", { class: "revo-project-cell" }, [
+                h("input", {
+                    type: "checkbox",
+                    checked,
+                    onClick: (e: any) => e.stopPropagation(),
+                    onChange: (e: any) =>
+                        setFlag(code, flag, !!(e.target as HTMLInputElement).checked),
+                }),
+                h(
+                    "span",
+                    { style: { marginLeft: "6px", color: checked ? "#15803d" : "#9ca3af" } },
+                    checked ? "Tak" : "Nie"
+                ),
+            ]);
+        },
+    };
 }
 
 const columns = [
@@ -187,40 +221,18 @@ const columns = [
             );
         },
     },
-    {
-        prop: "project",
-        name: "Projekt",
-        readonly: true,
-        size: 120,
-        sortable: true,
-        cellTemplate: (h: any, p: any) => {
-            const code = String(p.model?.product_code ?? "");
-            const checked = !!p.model?.project;
-            return h("label", { class: "revo-project-cell" }, [
-                h("input", {
-                    type: "checkbox",
-                    checked,
-                    onClick: (e: any) => e.stopPropagation(),
-                    onChange: (e: any) =>
-                        setProject(code, !!(e.target as HTMLInputElement).checked),
-                }),
-                h(
-                    "span",
-                    { style: { marginLeft: "6px", color: checked ? "#15803d" : "#9ca3af" } },
-                    checked ? "Tak" : "Nie"
-                ),
-            ]);
-        },
-    },
+    flagColumn("project", "Projekt", 120),
+    flagColumn("team_steel", "Team Steel", 140),
 ];
 
 // === ZAKLADKI ===
-type TabKey = "all" | "project" | "noproject";
+type TabKey = "all" | "project" | "noproject" | "team_steel";
 const activeTab = ref<TabKey>("all");
 
 function matchesTab(row: any, tab: TabKey): boolean {
     if (tab === "project") return !!row?.project;
     if (tab === "noproject") return !row?.project;
+    if (tab === "team_steel") return !!row?.team_steel;
     return true;
 }
 
@@ -238,10 +250,12 @@ function tabClass(active: boolean): string {
 const tabs = computed(() => {
     const source: any[] = gridRef.value?.getSource?.() ?? [];
     const withProject = source.filter((r) => r.project).length;
+    const withTeamSteel = source.filter((r) => r.team_steel).length;
     return [
         { key: "all" as TabKey, label: "Wszystkie", count: source.length },
         { key: "project" as TabKey, label: "Projekt", count: withProject },
         { key: "noproject" as TabKey, label: "Bez projektu", count: source.length - withProject },
+        { key: "team_steel" as TabKey, label: "Team Steel", count: withTeamSteel },
     ];
 });
 

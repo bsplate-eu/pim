@@ -15,9 +15,13 @@ class ProductionItem extends Model
     protected $fillable = [
         'product_code',
         'has_project',
+        'team_steel',
+        'sales_12m',
     ];
 
     protected $casts = [
         'has_project' => 'boolean',
+        'team_steel' => 'boolean',
+        'sales_12m' => 'integer',
     ];
 }

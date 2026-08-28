@@ -852,6 +852,6 @@ Route::middleware(['crafter.base', 'auth', 'crafter.verified'])->prefix('admin')
 Route::middleware(['crafter.base', 'auth', 'crafter.verified'])->prefix('admin')->name('crafter.')->group(function () {
     Route::get('production', [App\Http\Controllers\Admin\ProductionController::class, 'index'])
         ->name('production.index');
-    Route::post('production/project', [App\Http\Controllers\Admin\ProductionController::class, 'setProject'])
-        ->name('production.project');
+    Route::post('production/flag', [App\Http\Controllers\Admin\ProductionController::class, 'setFlag'])
+        ->name('production.flag');
 });

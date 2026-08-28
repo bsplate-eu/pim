@@ -26,6 +26,15 @@ use Inertia\Response;
 class ProductionController extends Controller
 {
     /**
+     * Znaczniki przestawiane z gridu: nazwa z frontu => kolumna w bazie.
+     * Bialalista — bez niej `setFlag` pozwalalby pisac po dowolnej kolumnie.
+     */
+    private const FLAGS = [
+        'project' => 'has_project',
+        'team_steel' => 'team_steel',
+    ];
+
+    /**
      * Lista kodow produkcyjnych (bez powtorzen) do gridu produkcji.
      */
     public function index(Request $request): Response
@@ -36,7 +45,7 @@ class ProductionController extends Controller
         $materialLabels = $materialValues->mapWithKeys(fn ($value) => [$value->slug => $value->name])->all();
 
         // Dane produkcyjne — tylko dla kodow, na ktorych cos ustawiono albo wgrano.
-        $items = ProductionItem::get(['product_code', 'has_project', 'sales_12m'])->keyBy('product_code');
+        $items = ProductionItem::get(['product_code', 'has_project', 'team_steel', 'sales_12m'])->keyBy('product_code');
 
         $rows = Product::query()
             ->select('id', 'product_code', 'name')
@@ -60,6 +69,7 @@ class ProductionController extends Controller
                     // Ile produktow (aut) kryje sie pod tym kodem — sygnal, ze nazwa to jeden z wielu wariantow.
                     'variants' => $group->count(),
                     'project' => (bool) ($item?->has_project ?? false),
+                    'team_steel' => (bool) ($item?->team_steel ?? false),
                     // Sprzedaz 12M z raportu Subiekta. Kod bez wiersza w raporcie = 0.
                     'sales_12m' => (int) ($item?->sales_12m ?? 0),
                 ];
@@ -72,23 +82,25 @@ class ProductionController extends Controller
     }
 
     /**
-     * Przestawia znacznik „Projekt" na jednym kodzie. Wolane axiosem z gridu.
+     * Przestawia jeden znacznik na jednym kodzie. Wolane axiosem z gridu.
      */
-    public function setProject(Request $request): JsonResponse
+    public function setFlag(Request $request): JsonResponse
     {
         $data = $request->validate([
             'product_code' => ['required', 'string', Rule::exists('products', 'product_code')],
-            'project' => ['required', 'boolean'],
+            'flag' => ['required', 'string', Rule::in(array_keys(self::FLAGS))],
+            'value' => ['required', 'boolean'],
         ]);
 
         ProductionItem::updateOrCreate(
             ['product_code' => $data['product_code']],
-            ['has_project' => $data['project']],
+            [self::FLAGS[$data['flag']] => $data['value']],
         );
 
         return response()->json([
             'product_code' => $data['product_code'],
-            'project' => $data['project'],
+            'flag' => $data['flag'],
+            'value' => $data['value'],
         ]);
     }
 }
