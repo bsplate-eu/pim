@@ -16,12 +16,22 @@ class ProductionItem extends Model
         'product_code',
         'has_project',
         'team_steel',
+        'etap_1',
+        'etap_2',
+        'etap_3',
+        'bez_wspornikow',
+        'projekty_gotowe',
         'sales_12m',
     ];
 
     protected $casts = [
         'has_project' => 'boolean',
         'team_steel' => 'boolean',
+        'etap_1' => 'boolean',
+        'etap_2' => 'boolean',
+        'etap_3' => 'boolean',
+        'bez_wspornikow' => 'boolean',
+        'projekty_gotowe' => 'boolean',
         'sales_12m' => 'integer',
     ];
 }

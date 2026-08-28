@@ -32,6 +32,11 @@ class ProductionController extends Controller
     private const FLAGS = [
         'project' => 'has_project',
         'team_steel' => 'team_steel',
+        'etap_1' => 'etap_1',
+        'etap_2' => 'etap_2',
+        'etap_3' => 'etap_3',
+        'bez_wspornikow' => 'bez_wspornikow',
+        'projekty_gotowe' => 'projekty_gotowe',
     ];
 
     /**
@@ -45,7 +50,8 @@ class ProductionController extends Controller
         $materialLabels = $materialValues->mapWithKeys(fn ($value) => [$value->slug => $value->name])->all();
 
         // Dane produkcyjne — tylko dla kodow, na ktorych cos ustawiono albo wgrano.
-        $items = ProductionItem::get(['product_code', 'has_project', 'team_steel', 'sales_12m'])->keyBy('product_code');
+        $items = ProductionItem::get(array_merge(['product_code', 'sales_12m'], array_values(self::FLAGS)))
+            ->keyBy('product_code');
 
         $rows = Product::query()
             ->select('id', 'product_code', 'name')
@@ -60,7 +66,7 @@ class ProductionController extends Controller
                 $slug = $product->attributeValues->first()?->slug;
                 $item = $items[$product->product_code] ?? null;
 
-                return [
+                $row = [
                     'product_id' => $product->id,
                     'product_code' => $product->product_code,
                     // Nazwy w bazie bywaja z encjami HTML (&quot;) — te same, co na liscie produktow.
@@ -68,11 +74,16 @@ class ProductionController extends Controller
                     'material' => $slug === null ? '' : ($materialLabels[$slug] ?? $slug),
                     // Ile produktow (aut) kryje sie pod tym kodem — sygnal, ze nazwa to jeden z wielu wariantow.
                     'variants' => $group->count(),
-                    'project' => (bool) ($item?->has_project ?? false),
-                    'team_steel' => (bool) ($item?->team_steel ?? false),
                     // Sprzedaz 12M z raportu Subiekta. Kod bez wiersza w raporcie = 0.
                     'sales_12m' => (int) ($item?->sales_12m ?? 0),
                 ];
+
+                // Znaczniki lecą pod nazwami z frontu — dodanie kolejnego to jeden wpis w FLAGS.
+                foreach (self::FLAGS as $key => $column) {
+                    $row[$key] = (bool) ($item?->{$column} ?? false);
+                }
+
+                return $row;
             })
             ->values();
 

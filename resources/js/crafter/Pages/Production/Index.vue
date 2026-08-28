@@ -97,13 +97,26 @@ interface ProductionRow {
     name: string;
     material: string;
     variants: number;
+    sales_12m: number;
     project: boolean;
     team_steel: boolean;
-    sales_12m: number;
+    etap_1: boolean;
+    etap_2: boolean;
+    etap_3: boolean;
+    bez_wspornikow: boolean;
+    projekty_gotowe: boolean;
 }
 
 // Znaczniki produkcyjne — jedna definicja napedza kolumne, zapis i zakladke.
-type FlagKey = "project" | "team_steel";
+// Kolejny znacznik = wpis tutaj, w FLAGS w kontrolerze i kolumna w migracji.
+type FlagKey =
+    | "project"
+    | "team_steel"
+    | "etap_1"
+    | "etap_2"
+    | "etap_3"
+    | "bez_wspornikow"
+    | "projekty_gotowe";
 
 interface Props {
     rows: ProductionRow[];
@@ -200,7 +213,9 @@ const columns = [
         prop: "name",
         name: "Nazwa",
         readonly: true,
-        size: 520,
+        // Wezsza niz wczesniej — przy siedmiu znacznikach tabela nie miesci sie
+        // na ekranie, a najdluzsze nazwy i tak siedza w ~380 px.
+        size: 420,
         sortable: true,
         // Pod jednym kodem siedzi zwykle kilkanascie aut — nazwa to nazwa pierwszego z nich.
         // Znacznik "+N" mowi, ze wariantow jest wiecej, zeby nikt nie wzial jej za jedyna.
@@ -236,6 +251,11 @@ const columns = [
     },
     flagColumn("project", "Projekt", 120),
     flagColumn("team_steel", "Team Steel", 140),
+    flagColumn("etap_1", "Etap 1", 110),
+    flagColumn("etap_2", "Etap 2", 110),
+    flagColumn("etap_3", "Etap 3", 110),
+    flagColumn("bez_wspornikow", "Bez wsporników", 160),
+    flagColumn("projekty_gotowe", "Projekty gotowe", 165),
 ];
 
 // === ZAKLADKI ===
