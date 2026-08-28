@@ -110,6 +110,7 @@
                             <th class="px-3 py-2 text-left">Termin</th>
                             <th class="px-3 py-2 text-center">Dni</th>
                             <th class="px-3 py-2 text-right">Kwota</th>
+                            <th class="px-3 py-2 text-left">Nr konta</th>
                             <th class="px-3 py-2 text-center">Opłacone</th>
                             <th class="px-3 py-2 text-center w-16">PDF</th>
                         </tr>
@@ -159,6 +160,44 @@
                                 {{ formatAmount(row.amount) }} <span class="text-xs text-gray-400">{{ row.currency }}</span>
                             </td>
 
+                            <!-- Nr konta sprzedawcy (Płatność → RachunekBankowy w XML) — klik kopiuje ciągiem, pod przelew -->
+                            <td class="px-3 py-1.5 whitespace-nowrap">
+                                <div v-if="row.bank_account" class="group relative inline-flex items-center gap-1">
+                                    <button
+                                        type="button"
+                                        @click="copyAccount(row.bank_account)"
+                                        class="font-mono text-xs text-gray-700 hover:text-primary-600 hover:underline"
+                                        title="Kliknij, aby skopiować"
+                                    >
+                                        {{ formatAccount(row.bank_account) }}
+                                    </button>
+                                    <span
+                                        v-if="row.bank_accounts.length > 1"
+                                        class="rounded bg-amber-100 px-1 text-[10px] font-semibold text-amber-700"
+                                        title="Sprzedawca podał kilka rachunków"
+                                    >
+                                        +{{ row.bank_accounts.length - 1 }}
+                                    </span>
+                                    <div
+                                        v-if="hasAccountDetails(row)"
+                                        class="pointer-events-none absolute left-0 top-full z-20 mt-1 hidden w-72 rounded-md border border-gray-200 bg-white p-3 text-xs shadow-lg group-hover:block"
+                                    >
+                                        <div
+                                            v-for="(acc, i) in row.bank_accounts"
+                                            :key="i"
+                                            :class="i > 0 ? 'mt-2 border-t border-gray-100 pt-2' : ''"
+                                        >
+                                            <div class="font-mono text-gray-800">{{ formatAccount(acc.nr) }}</div>
+                                            <div v-if="acc.bank || acc.swift" class="text-gray-500">
+                                                {{ [acc.bank, acc.swift].filter(Boolean).join(' · ') }}
+                                            </div>
+                                            <div v-if="acc.opis" class="text-gray-400">{{ acc.opis }}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <span v-else class="text-xs text-gray-300">—</span>
+                            </td>
+
                             <!-- Opłacone (zaznaczenie) -->
                             <td class="px-3 py-1.5 text-center">
                                 <input
@@ -184,7 +223,7 @@
                         </tr>
 
                         <tr v-if="rows.length === 0">
-                            <td colspan="10" class="px-3 py-10 text-center text-sm text-gray-400">
+                            <td colspan="11" class="px-3 py-10 text-center text-sm text-gray-400">
                                 Brak faktur dla wybranych filtrów. Kliknij „Import faktur", aby zaciągnąć FV z KSeF.
                             </td>
                         </tr>
@@ -316,11 +355,20 @@ import { ArrowDownTrayIcon, DocumentTextIcon, XMarkIcon, TrashIcon, PlusIcon } f
 import { useToast } from "@brackets/vue-toastification";
 import { PageHeader, PageContent, Button, Modal, Card, CardHeader, CardContent } from "crafter/Components";
 
+interface BankAccount {
+    nr: string;
+    bank?: string;
+    swift?: string;
+    opis?: string;
+}
+
 interface Invoice {
     id: number;
     issue_date: string | null;
     number: string;
     contractor: string | null;
+    bank_account: string | null;
+    bank_accounts: BankAccount[];
     items_text: string | null;
     category: string | null;
     due_date: string | null;
@@ -474,6 +522,60 @@ async function removeCategory(cat: Category) {
     } catch {
         toast.error("Nie udało się usunąć kategorii.");
     }
+}
+
+// ── nr konta ──
+/** Czy warto pokazywać dymek: kilka rachunków albo nazwa banku / SWIFT / opis. */
+function hasAccountDetails(row: Invoice): boolean {
+    return row.bank_accounts.length > 1 || row.bank_accounts.some((a) => a.bank || a.swift || a.opis);
+}
+
+/**
+ * NRB (26 cyfr) czytamy jak na przelewie: 2 + bloki po 4; IBAN z prefiksem kraju — bloki po 4.
+ * Rachunki zagraniczne w innym formacie (np. czeskie „2008111003/5500") zostawiamy jak są —
+ * dzielenie ich na czwórki tylko utrudnia odczyt.
+ */
+function formatAccount(nr: string | null): string {
+    const v = (nr || "").replace(/\s+/g, "");
+    if (/^\d{26}$/.test(v)) return (v.slice(0, 2) + " " + (v.slice(2).match(/.{1,4}/g) || []).join(" ")).trim();
+    if (/^[A-Z]{2}\d{2}[A-Z0-9]{10,30}$/.test(v)) return (v.match(/.{1,4}/g) || []).join(" ");
+    return v;
+}
+
+/**
+ * Kopiujemy numer CIĄGIEM (bez spacji) — tak wchodzi do formularza przelewu.
+ * PIM chodzi po http, gdzie navigator.clipboard bywa niedostępny → najpierw execCommand.
+ */
+function copyAccount(nr: string | null) {
+    const text = (nr || "").replace(/\s+/g, "");
+    if (!text) return;
+
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.setAttribute("readonly", "");
+    ta.style.cssText = "position:fixed;top:-9999px;left:-9999px;opacity:0;";
+    document.body.appendChild(ta);
+    ta.select();
+    let ok = false;
+    try {
+        ok = document.execCommand("copy");
+    } catch {
+        ok = false;
+    }
+    document.body.removeChild(ta);
+
+    if (ok) {
+        toast.success(`Skopiowano: ${text}`);
+        return;
+    }
+    if (navigator.clipboard?.writeText) {
+        navigator.clipboard.writeText(text).then(
+            () => toast.success(`Skopiowano: ${text}`),
+            () => toast.error("Nie udało się skopiować numeru konta."),
+        );
+        return;
+    }
+    toast.error("Nie udało się skopiować numeru konta.");
 }
 
 // ── formatowanie / dni ──

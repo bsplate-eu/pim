@@ -17,6 +17,8 @@ class KsefInvoice extends Model
         'issue_date',
         'number',
         'contractor',
+        'bank_account',
+        'bank_accounts',
         'items_text',
         'category',
         'due_date',
@@ -34,6 +36,7 @@ class KsefInvoice extends Model
         'issue_date' => 'date',
         'due_date' => 'date',
         'amount' => 'decimal:2',
+        'bank_accounts' => 'array',
         'imported_at' => 'datetime',
     ];
 

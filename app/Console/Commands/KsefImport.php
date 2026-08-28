@@ -87,6 +87,8 @@ class KsefImport extends Command
                 $row->issue_date = $inv['issue_date'] ?? null;
                 $row->number = $inv['number'] ?? $ref;
                 $row->contractor = $contractor;
+                $row->bank_account = $inv['bank_account'] ?? null;
+                $row->bank_accounts = ($inv['bank_accounts'] ?? []) ?: null;
                 $row->items_text = $inv['items_text'] ?? null;
                 $row->xml = $inv['xml'] ?? null;
                 if (! empty($inv['due_date'])) {

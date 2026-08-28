@@ -67,6 +67,8 @@ class KsefController extends Controller
                 'issue_date' => $i->issue_date?->toDateString(),
                 'number' => $i->number,
                 'contractor' => $i->contractor,
+                'bank_account' => $i->bank_account,
+                'bank_accounts' => $i->bank_accounts ?: [],
                 'items_text' => $i->items_text,
                 'category' => $i->category,
                 'due_date' => $i->due_date?->toDateString(),
@@ -293,6 +295,8 @@ class KsefController extends Controller
             $row->issue_date = $inv['issue_date'] ?? null;
             $row->number = $inv['number'] ?? $ksefNumber;
             $row->contractor = $contractor;
+            $row->bank_account = $inv['bank_account'] ?? null;  // NrRB z sekcji Platnosc
+            $row->bank_accounts = ($inv['bank_accounts'] ?? []) ?: null;
             $row->items_text = $inv['items_text'] ?? null;     // realne pozycje (P_7) z XML
             $row->xml = $inv['xml'] ?? null;                   // pełny dokument — pod PDF
             if (! empty($inv['due_date'])) {
@@ -389,6 +393,9 @@ class KsefController extends Controller
         $lines[] = '';
         $lines[] = 'Sprzedawca: ' . ($p['seller']['name'] ?? ($row->contractor ?? '-')) . '   NIP ' . ($p['seller']['nip'] ?? '-');
         $lines[] = 'Nabywca:    ' . ($p['buyer']['name'] ?? '-') . '   NIP ' . ($p['buyer']['nip'] ?? '-');
+        foreach ($p['bank_accounts'] ?? [] as $acc) {
+            $lines[] = 'Rachunek:   ' . $acc['nr'] . (isset($acc['bank']) ? '   ' . $acc['bank'] : '');
+        }
         $lines[] = '';
         $lines[] = 'Pozycje:';
         foreach (array_slice($p['items'] ?? [], 0, 40) as $it) {
