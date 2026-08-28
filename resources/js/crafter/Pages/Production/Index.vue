@@ -2,7 +2,7 @@
     <PageHeader
         sticky
         title="Produkcja"
-        subtitle="Wszystkie kody z bazy PIM"
+        subtitle="Kody produkcyjne z bazy PIM — jeden kod, jeden wiersz"
     />
 
     <PageContent>
@@ -10,10 +10,10 @@
             <Card>
                 <div class="mb-3 text-xs text-gray-500">
                     Widocznych: <strong>{{ visibleCount }}</strong>
-                    / Wszystkich: <strong>{{ totalCount }}</strong>
+                    / Wszystkich kodów: <strong>{{ totalCount }}</strong>
                 </div>
 
-                <div class="mb-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                <div class="mb-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                     <TextInput
                         v-model="search.code"
                         name="search_code"
@@ -26,13 +26,6 @@
                         name="search_name"
                         label="Nazwa"
                         placeholder="fragment nazwy"
-                        clearable
-                    />
-                    <TextInput
-                        v-model="search.ean"
-                        name="search_ean"
-                        label="EAN"
-                        placeholder="fragment EAN"
                         clearable
                     />
                     <SelectInput
@@ -48,7 +41,7 @@
                     v-model="rows"
                     :columns="columns"
                     :filter="filterFn"
-                    keyField="product_id"
+                    keyField="product_code"
                     height="auto"
                 />
             </Card>
@@ -71,11 +64,8 @@ interface ProductionRow {
     product_id: number;
     product_code: string;
     name: string;
-    ean: string;
-    width: number | null;
-    weight: number | null;
     material: string;
-    enabled: boolean;
+    variants: number;
 }
 
 interface Props {
@@ -87,61 +77,33 @@ const props = defineProps<Props>();
 // Kopia lokalna — DataGrid pracuje na v-model (props Inertii sa zamrozone).
 const rows = ref<ProductionRow[]>([...props.rows]);
 
-const numericCompare = (prop: string, a: any, b: any): number => {
-    const av = parseFloat(a?.[prop] ?? 0) || 0;
-    const bv = parseFloat(b?.[prop] ?? 0) || 0;
-    return av - bv;
-};
-
-const decimalCell = (h: any, p: any, prop: string): any => {
-    const value = p.model?.[prop];
-    if (value === null || value === undefined || value === "") {
-        return h("span", { style: { color: "#9ca3af" } }, "—");
-    }
-    return h("span", {}, (parseFloat(value) || 0).toFixed(2));
-};
-
 const columns = [
-    { prop: "product_code", name: "Kod", readonly: true, size: 150, sortable: true },
-    { prop: "name", name: "Nazwa", readonly: true, size: 420, sortable: true },
-    { prop: "ean", name: "EAN", readonly: true, size: 160, sortable: true },
-    { prop: "material", name: "Materiał", readonly: true, size: 130, sortable: true },
+    { prop: "product_code", name: "Kod", readonly: true, size: 160, sortable: true },
     {
-        prop: "width",
-        name: "Szerokość",
+        prop: "name",
+        name: "Nazwa",
         readonly: true,
-        size: 120,
+        size: 560,
         sortable: true,
-        cellCompare: numericCompare,
-        cellTemplate: (h: any, p: any) => decimalCell(h, p, "width"),
+        // Pod jednym kodem siedzi zwykle kilkanascie aut — nazwa to nazwa pierwszego z nich.
+        // Znacznik "+N" mowi, ze wariantow jest wiecej, zeby nikt nie wzial jej za jedyna.
+        cellTemplate: (h: any, p: any) => {
+            const name = String(p.model?.name ?? "");
+            const extra = Number(p.model?.variants ?? 1) - 1;
+            if (extra <= 0) return h("span", {}, name);
+            return h("span", { title: `Kod obejmuje ${extra + 1} produktów (aut)` }, [
+                name,
+                h("span", { style: { color: "#9ca3af", marginLeft: "6px" } }, `+${extra}`),
+            ]);
+        },
     },
-    {
-        prop: "weight",
-        name: "Waga",
-        readonly: true,
-        size: 110,
-        sortable: true,
-        cellCompare: numericCompare,
-        cellTemplate: (h: any, p: any) => decimalCell(h, p, "weight"),
-    },
-    {
-        prop: "enabled",
-        name: "Status",
-        readonly: true,
-        size: 120,
-        sortable: true,
-        cellTemplate: (h: any, p: any) =>
-            p.model?.enabled
-                ? h("span", {}, "Aktywny")
-                : h("span", { style: { color: "#b91c1c" } }, "Wyłączony"),
-    },
+    { prop: "material", name: "Materiał", readonly: true, size: 140, sortable: true },
 ];
 
 // === WYSZUKIWARKA ===
 const search = reactive({
     code: "",
     name: "",
-    ean: "",
     material: "all",
 });
 
@@ -163,19 +125,15 @@ const materialOptions = computed<Array<{ value: string; label: string }>>(() => 
 const filterFn = computed<((row: any) => boolean) | null>(() => {
     const code = String(search.code ?? "").trim().toLowerCase();
     const name = String(search.name ?? "").trim().toLowerCase();
-    const ean = String(search.ean ?? "").trim().toLowerCase();
     const material = String(search.material ?? "all");
 
-    if (!code && !name && !ean && material === "all") return null;
+    if (!code && !name && material === "all") return null;
 
     return (row: any) => {
         if (code && !String(row.product_code ?? "").toLowerCase().includes(code)) {
             return false;
         }
         if (name && !String(row.name ?? "").toLowerCase().includes(name)) {
-            return false;
-        }
-        if (ean && !String(row.ean ?? "").toLowerCase().includes(ean)) {
             return false;
         }
         if (material === "none" && String(row.material ?? "") !== "") {
