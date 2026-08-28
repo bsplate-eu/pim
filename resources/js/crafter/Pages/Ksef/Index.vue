@@ -323,7 +323,7 @@
     </PageContent>
 
     <!-- Modal: Import faktur -->
-    <!-- ════════ Dodaj koszt ręcznie: FV kosztowa / ZUS / VAT / CIT / OSS ════════ -->
+    <!-- ════════ Dodaj koszt ręcznie: FV kosztowa / ZUS / VAT / PIT-4 / OSS ════════ -->
     <Modal :open="costOpen" externalOpen @toggleOpen="costOpen = false">
         <template #title>Dodaj koszt — {{ companyLabel }}</template>
         <template #content>
@@ -349,7 +349,7 @@
                 </p>
 
                 <!-- ── FV kosztowa ── -->
-                <template v-if="costForm.kind === 'invoice'">
+                <template v-if="isInvoiceKind">
                     <div class="grid grid-cols-3 gap-3">
                         <div class="col-span-2">
                             <label class="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">Kontrahent *</label>
@@ -383,9 +383,13 @@
                         </div>
                         <div>
                             <label class="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">Waluta</label>
-                            <select v-model="costForm.currency" class="block w-full rounded-md border-gray-300 text-sm">
+                            <select v-if="!fixedCurrency" v-model="costForm.currency" class="block w-full rounded-md border-gray-300 text-sm">
                                 <option v-for="c in CURRENCIES" :key="c" :value="c">{{ c }}</option>
                             </select>
+                            <div v-else class="rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-600">
+                                {{ fixedCurrency }}
+                                <span v-if="fixedCurrency !== 'PLN'" class="text-xs text-gray-400">— przeliczę na PLN</span>
+                            </div>
                         </div>
                         <div>
                             <label class="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">Kategoria</label>
@@ -399,7 +403,7 @@
                     </div>
                 </template>
 
-                <!-- ── ZUS / VAT / CIT / OSS ── -->
+                <!-- ── ZUS / VAT / PIT-4 / OSS ── -->
                 <template v-else>
                     <div class="grid grid-cols-3 gap-3">
                         <div>
@@ -445,12 +449,13 @@
 
                 <div>
                     <label class="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">Opis / za co</label>
-                    <textarea v-model="costForm.items_text" rows="2" class="block w-full rounded-md border-gray-300 text-sm" :placeholder="costForm.kind === 'invoice' ? 'Pozycje z faktury' : 'Zostaw puste — wpiszę „' + kinds[costForm.kind] + ' za ' + periodLabelPreview + '”'"></textarea>
+                    <textarea v-model="costForm.items_text" rows="2" class="block w-full rounded-md border-gray-300 text-sm" :placeholder="isInvoiceKind ? 'Pozycje z faktury' : 'Zostaw puste — wpiszę „' + kinds[costForm.kind] + ' za ' + periodLabelPreview + '”'"></textarea>
                 </div>
 
                 <p class="text-xs text-gray-500">
                     Zapisze się jako: <span class="font-medium text-gray-700">{{ numberPreview || '—' }}</span>
                     <template v-if="costForm.kind === 'oss'"> · kwota w EUR zostanie przeliczona na PLN kursem NBP z dnia roboczego przed końcem kwartału</template>
+                    <template v-else-if="fixedCurrency && fixedCurrency !== 'PLN'"> · kwota w {{ fixedCurrency }} zostanie przeliczona na PLN kursem NBP z dnia roboczego przed datą wystawienia</template>
                 </p>
             </div>
         </template>
@@ -634,14 +639,19 @@ const importing = ref(false);
 const importView = ref<string>("all");
 const importFilter = reactive({ year: "all", month: "all", quarter: "all" });
 
-// ── Dodaj koszt ręcznie: FV kosztowa / ZUS / VAT / CIT / OSS ──
+// ── Dodaj koszt ręcznie: FV kosztowa / ZUS / VAT / PIT-4 / OSS ──
 const CURRENCIES = ["PLN", "EUR", "CZK", "USD", "GBP", "HUF", "RON", "SEK", "DKK", "NOK"];
-const QUARTERLY_KINDS = ["cit", "oss"];
+const QUARTERLY_KINDS = ["oss"];
+const INVOICE_KINDS = ["invoice", "rumunia", "paxy"];
+// Typy z walutą narzuconą — użytkownik jej nie wybiera (musi się zgadzać z KsefInvoice::FIXED_CURRENCY).
+const FIXED_CURRENCY: Record<string, string> = { rumunia: "EUR", paxy: "PLN", oss: "EUR" };
 const KIND_HINTS: Record<string, string> = {
     invoice: "Faktura kosztowa, której nie ma w KSeF (np. zagraniczna). Wpisujesz dane z ręki.",
+    rumunia: "Faktura z Rumunii — kwota w EUR, przeliczę ją na PLN kursem średnim NBP. Trafia domyślnie do kategorii „Rumunia”.",
+    paxy: "Koszt PAXY w PLN. Trafia domyślnie do kategorii „PAXY”, resztę wypełniasz jak przy fakturze.",
     zus: "Składki ZUS za wskazany miesiąc. Numer i odbiorcę uzupełnię sam; koszt wpada w miesiąc, KTÓREGO dotyczy, nie w ten, w którym płacisz.",
     vat: "VAT za wskazany miesiąc. Termin ustawowy: 25. następnego miesiąca.",
-    cit: "Zaliczka CIT za kwartał. Termin ustawowy: 20. miesiąca po kwartale.",
+    pit4: "Zaliczka na PIT od wynagrodzeń (PIT-4) za wskazany miesiąc. Termin ustawowy: 20. następnego miesiąca.",
     oss: "VAT OSS za kwartał — kwota w EUR. Przeliczę ją na PLN kursem średnim NBP; na liście zobaczysz obie kwoty.",
 };
 
@@ -668,14 +678,17 @@ const costForm = reactive({
 });
 
 const isQuarterly = computed(() => QUARTERLY_KINDS.includes(costForm.kind));
+const isInvoiceKind = computed(() => INVOICE_KINDS.includes(costForm.kind));
+const fixedCurrency = computed(() => FIXED_CURRENCY[costForm.kind] ?? null);
 const kindHint = computed(() => KIND_HINTS[costForm.kind] ?? "");
 const periodLabelPreview = computed(() =>
     isQuarterly.value
         ? `Q${costForm.period_quarter}/${costForm.period_year}`
         : `${String(costForm.period_month).padStart(2, "0")}/${costForm.period_year}`,
 );
+// Prefiks numeru bierzemy z etykiety typu, nie z klucza — inaczej „pit4" dałoby „PIT4 07/2026".
 const numberPreview = computed(() =>
-    costForm.kind === "invoice" ? costForm.number.trim() : `${costForm.kind.toUpperCase()} ${periodLabelPreview.value}`,
+    isInvoiceKind.value ? costForm.number.trim() : `${props.kinds[costForm.kind]} ${periodLabelPreview.value}`,
 );
 
 function toYmd(d: Date): string {
@@ -706,17 +719,18 @@ function openCost() {
 function setKind(kind: string) {
     costForm.kind = kind;
     costForm.due_date = "";
-    if (kind !== "invoice") refreshDue();
+    costForm.currency = FIXED_CURRENCY[kind] ?? "PLN";
+    if (!INVOICE_KINDS.includes(kind)) refreshDue();
 }
 
 /** Termin ustawowy daniny — tylko podpowiedź, pole zostaje edytowalne. */
 function refreshDue() {
-    if (costForm.kind === "invoice") return;
+    if (isInvoiceKind.value) return;
     const periodMonth = isQuarterly.value ? Number(costForm.period_quarter) * 3 : Number(costForm.period_month);
     let m = periodMonth + 1;
     let y = Number(costForm.period_year);
     if (m > 12) { m = 1; y += 1; }
-    // OSS: koniec miesiąca po kwartale; VAT: 25.; ZUS i CIT: 20.
+    // OSS: koniec miesiąca po kwartale; VAT: 25.; ZUS i PIT-4: 20.
     const day = costForm.kind === "oss" ? new Date(y, m, 0).getDate() : costForm.kind === "vat" ? 25 : 20;
     costForm.due_date = `${y}-${String(m).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
@@ -731,7 +745,7 @@ function submitCost() {
         due_date: costForm.due_date || null,
     };
 
-    if (kind === "invoice") {
+    if (INVOICE_KINDS.includes(kind)) {
         Object.assign(payload, {
             contractor: costForm.contractor,
             contractor_nip: costForm.contractor_nip || null,

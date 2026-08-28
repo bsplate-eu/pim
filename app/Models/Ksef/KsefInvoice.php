@@ -54,17 +54,33 @@ class KsefInvoice extends Model
     /** XML bywa duży — nie wystawiamy go domyślnie do JSON/Inertia. */
     protected $hidden = ['xml'];
 
-    /** Typy pozycji: faktura z KSeF/ręczna + daniny publiczne wpisywane z ręki. */
+    /**
+     * Typy pozycji: faktura z KSeF/ręczna + daniny publiczne wpisywane z ręki.
+     * Etykieta jest zarazem prefiksem numeru pozycji („PIT-4 07/2026"), więc nie zmieniaj
+     * jej w oderwaniu od danych — stare wpisy zostaną z poprzednim brzmieniem.
+     */
     public const KINDS = [
         'invoice' => 'FV kosztowa',
+        'rumunia' => 'Rumunia',
+        'paxy' => 'PAXY',
         'zus' => 'ZUS',
         'vat' => 'VAT',
-        'cit' => 'CIT',
+        'pit4' => 'PIT-4',
         'oss' => 'OSS',
     ];
 
+    /** Typy o kształcie faktury (kontrahent, numer, daty) — reszta to daniny z okresem. */
+    public const INVOICE_KINDS = ['invoice', 'rumunia', 'paxy'];
+
+    /** Typy z walutą narzuconą na sztywno — użytkownik jej nie wybiera. */
+    public const FIXED_CURRENCY = [
+        'rumunia' => 'EUR',
+        'paxy' => 'PLN',
+        'oss' => 'EUR',
+    ];
+
     /** Typy rozliczane kwartalnie (reszta miesięcznie). */
-    public const QUARTERLY_KINDS = ['cit', 'oss'];
+    public const QUARTERLY_KINDS = ['oss'];
 
     public function isPaid(): bool
     {

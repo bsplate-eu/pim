@@ -75,6 +75,9 @@ class KsefFxFill extends Command
 
         $this->info("Sprawdzono {$total}: przeliczono {$done}, bez kursu {$failed}.");
 
-        return $failed > 0 ? self::FAILURE : self::SUCCESS;
+        // Świadomie SUCCESS także przy brakach: koszt z datą przyszłą (np. OSS za trwający kwartał)
+        // nie ma jeszcze tabeli NBP i zrobiłby z tej komendy codziennie „failed" bez powodu.
+        // Pozycje bez kursu widać na liście jako osobny licznik.
+        return self::SUCCESS;
     }
 }

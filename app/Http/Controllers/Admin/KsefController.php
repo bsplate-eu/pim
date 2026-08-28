@@ -171,12 +171,12 @@ class KsefController extends Controller
         return response()->json(['ok' => true, 'status' => $ksefInvoice->status]);
     }
 
-    // ── Ręczne koszty: FV kosztowa / ZUS / VAT / CIT / OSS ──
+    // ── Ręczne koszty: FV kosztowa / ZUS / VAT / PIT-4 / OSS ──
 
     /**
      * Dodanie kosztu z ręki. Ląduje w tej samej tabeli co FV z KSeF (`source = 'manual'`),
      * więc od razu liczy się w sumach, filtrach, checkboxie „Opłacone" i w powiadomieniu
-     * „Do zapłaty". Daniny (ZUS/VAT/CIT/OSS) dostają numer i kontrahenta z automatu.
+     * „Do zapłaty". Daniny (ZUS/VAT/PIT-4/OSS) dostają numer i kontrahenta z automatu.
      */
     public function storeManual(Request $request, string $company): RedirectResponse
     {
@@ -187,8 +187,8 @@ class KsefController extends Controller
 
         $data = $request->validate($this->manualRules($kind));
 
-        $row = $kind === 'invoice'
-            ? $this->buildManualInvoice($data)
+        $row = in_array($kind, KsefInvoice::INVOICE_KINDS, true)
+            ? $this->buildManualInvoice($kind, $data)
             : $this->buildManualLevy($kind, $data);
 
         $row->company = $company;
@@ -232,13 +232,16 @@ class KsefController extends Controller
             'due_date' => ['nullable', 'date'],
         ];
 
-        if ($kind === 'invoice') {
+        if (in_array($kind, KsefInvoice::INVOICE_KINDS, true)) {
             return $common + [
                 'contractor' => ['required', 'string', 'max:255'],
                 'contractor_nip' => ['nullable', 'string', 'max:32'],
                 'number' => ['required', 'string', 'max:255'],
                 'issue_date' => ['required', 'date'],
-                'currency' => ['required', 'string', 'in:PLN,EUR,CZK,USD,GBP,HUF,RON,SEK,DKK,NOK'],
+                // Typy z walutą na sztywno (Rumunia = EUR) nie dostają jej z formularza.
+                'currency' => isset(KsefInvoice::FIXED_CURRENCY[$kind])
+                    ? ['nullable', 'string']
+                    : ['required', 'string', 'in:PLN,EUR,CZK,USD,GBP,HUF,RON,SEK,DKK,NOK'],
                 'bank_account' => ['nullable', 'string', 'max:64'],
             ];
         }
@@ -252,8 +255,8 @@ class KsefController extends Controller
         ];
     }
 
-    /** FV kosztowa wpisana ręcznie — wszystkie dane od użytkownika. */
-    private function buildManualInvoice(array $d): KsefInvoice
+    /** FV kosztowa wpisana ręcznie — wszystkie dane od użytkownika (poza walutą typów stałowalutowych). */
+    private function buildManualInvoice(string $kind, array $d): KsefInvoice
     {
         $row = new KsefInvoice();
         $row->number = trim($d['number']);
@@ -262,8 +265,9 @@ class KsefController extends Controller
         $row->issue_date = $d['issue_date'];
         $row->due_date = $d['due_date'] ?? null;
         $row->amount = (float) $d['amount'];
-        $row->currency = strtoupper($d['currency']);
-        $row->category = $d['category'] ?? null;
+        $row->currency = KsefInvoice::FIXED_CURRENCY[$kind] ?? strtoupper((string) ($d['currency'] ?? 'PLN'));
+        // Rumunia trafia domyślnie do własnej kategorii — inaczej ginie wśród reszty kosztów.
+        $row->category = ($d['category'] ?? null) ?: ($kind === 'invoice' ? null : KsefInvoice::KINDS[$kind]);
         $row->items_text = $d['items_text'] ?? null;
         $bank = preg_replace('/[\s\-]+/u', '', (string) ($d['bank_account'] ?? ''));
         $row->bank_account = $bank !== '' ? mb_strtoupper($bank) : null;
@@ -272,7 +276,7 @@ class KsefController extends Controller
     }
 
     /**
-     * ZUS / VAT / CIT / OSS. Data kosztu = koniec okresu (miesiąca albo kwartału), dzięki czemu
+     * ZUS / VAT / PIT-4 / OSS. Data kosztu = koniec okresu (miesiąca albo kwartału), dzięki czemu
      * danina wpada w miesiąc, KTÓREGO dotyczy, a nie w ten, w którym się ją płaci.
      * Termin podpowiadamy ustawowy — formularz i tak pozwala go poprawić.
      */
@@ -294,7 +298,7 @@ class KsefController extends Controller
         $next = $periodEnd->copy()->addDay(); // pierwszy dzień następnego okresu
 
         $row = new KsefInvoice();
-        $row->number = strtoupper($kind) . ' ' . $label;
+        $row->number = KsefInvoice::KINDS[$kind] . ' ' . $label;   // „PIT-4 07/2026", „ZUS 07/2026"
         $row->contractor = match ($kind) {
             'zus' => 'ZUS',
             'oss' => 'Urząd Skarbowy (OSS)',
@@ -304,7 +308,7 @@ class KsefController extends Controller
         $row->due_date = $d['due_date'] ?? match ($kind) {
             'zus' => $next->copy()->day(20)->toDateString(),   // 15. dla osób prawnych — poprawialne w formularzu
             'vat' => $next->copy()->day(25)->toDateString(),
-            'cit' => $next->copy()->day(20)->toDateString(),
+            'pit4' => $next->copy()->day(20)->toDateString(),
             'oss' => $next->copy()->endOfMonth()->toDateString(),
             default => null,
         };

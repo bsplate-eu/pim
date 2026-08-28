@@ -49,6 +49,14 @@ class Kernel extends ConsoleKernel
             ->withoutOverlapping()
             ->name('ksef_import_daily');
 
+        // KSeF — dolicza kwoty w PLN tam, gdzie zabrakło kursu NBP (import w dniu wolnym,
+        // NBP chwilowo nieosiągalne, koszt wpisany z datą przyszłą). Pozycja bez kursu nie
+        // wchodzi do sum, więc to musi się samo naprawiać, a nie czekać na czyjąś pamięć.
+        $schedule->command('ksef:fx-fill')
+            ->dailyAt('06:30')
+            ->withoutOverlapping()
+            ->name('ksef_fx_fill');
+
         // KSeF — dzienne powiadomienie Signal o fakturach do zapłaty (godzina z ustawień, domyślnie 07:00)
         $signalTime = '07:00';
         try {
