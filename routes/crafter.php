@@ -856,6 +856,16 @@ Route::middleware(['crafter.base', 'auth', 'crafter.verified'])->prefix('admin')
         ->name('production.flag');
     Route::get('production/reports', [App\Http\Controllers\Admin\ProductionController::class, 'reports'])
         ->name('production.reports');
-    Route::get('production/settings', [App\Http\Controllers\Admin\ProductionController::class, 'settings'])
+    Route::get('production/settings', [App\Http\Controllers\Admin\ProductionStageController::class, 'index'])
         ->name('production.settings');
+    Route::post('production/stages', [App\Http\Controllers\Admin\ProductionStageController::class, 'store'])
+        ->name('production.stages.store');
+    Route::put('production/stages/{stage}', [App\Http\Controllers\Admin\ProductionStageController::class, 'update'])
+        ->name('production.stages.update');
+    Route::delete('production/stages/{stage}', [App\Http\Controllers\Admin\ProductionStageController::class, 'destroy'])
+        ->name('production.stages.destroy');
+    Route::post('production/stages/reorder', [App\Http\Controllers\Admin\ProductionStageController::class, 'reorder'])
+        ->name('production.stages.reorder');
+    Route::post('production/stages/recalculate', [App\Http\Controllers\Admin\ProductionStageController::class, 'recalculate'])
+        ->name('production.stages.recalculate');
 });

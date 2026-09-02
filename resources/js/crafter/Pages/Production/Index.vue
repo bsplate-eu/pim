@@ -24,9 +24,9 @@
                     </nav>
                 </div>
 
-                <!-- Rzad 2: etapy. Dziala RAZEM z rzedem 1 (przeciecie), nie zamiast. -->
+                <!-- Rzad 2: etapy ze slownika. Dziala RAZEM z rzedem 1 (przeciecie). -->
                 <div class="mb-4 border-b border-gray-200">
-                    <nav class="-mb-px flex gap-6">
+                    <nav class="-mb-px flex flex-wrap gap-x-6">
                         <button
                             v-for="tab in stageTabs"
                             :key="tab.key"
@@ -55,13 +55,13 @@
                     <div class="flex h-2 w-full overflow-hidden rounded bg-gray-100">
                         <div
                             v-for="part in stageBreakdown"
-                            :key="part.key"
+                            :key="part.id"
                             :style="{ width: part.percent + '%', background: part.color }"
                             :title="`${part.label}: ${part.count} kodów (${formatPercent(part.percent)})`"
                         />
                     </div>
                     <div class="mt-2 flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-gray-600">
-                        <span v-for="part in stageBreakdown" :key="part.key" class="whitespace-nowrap">
+                        <span v-for="part in stageBreakdown" :key="part.id" class="whitespace-nowrap">
                             <span
                                 class="mr-1 inline-block h-2 w-2 rounded-full align-middle"
                                 :style="{ background: part.color }"
@@ -145,6 +145,12 @@ import {
     TextInput,
 } from "crafter/Components";
 
+interface Stage {
+    id: number;
+    name: string;
+    color: string;
+}
+
 interface ProductionRow {
     product_id: number;
     product_code: string;
@@ -152,46 +158,20 @@ interface ProductionRow {
     material: string;
     variants: number;
     sales_12m: number;
+    stage_id: number | null;
     project: boolean;
     team_steel: boolean;
-    etap_1: boolean;
-    etap_2: boolean;
-    etap_3: boolean;
-    gotowe: boolean;
     bez_wspornikow: boolean;
     projekty_gotowe: boolean;
 }
 
-// Znaczniki produkcyjne — jedna definicja napedza kolumne, zapis i zakladke.
-// Kolejny znacznik = wpis tutaj, w FLAGS w kontrolerze i kolumna w migracji.
-type FlagKey =
-    | "project"
-    | "team_steel"
-    | "etap_1"
-    | "etap_2"
-    | "etap_3"
-    | "gotowe"
-    | "bez_wspornikow"
-    | "projekty_gotowe";
-
-type StageKey = "etap_1" | "etap_2" | "etap_3" | "gotowe";
-
-// Linia etapow — elementy wykluczaja sie wzajemnie (pilnuje tego takze kontroler).
-// Kolor jedzie stad do naglowka kolumny, tla komorki, zakladki i paska podzialu.
-// Zielen zostaje wylacznie dla „Gotowe" — Etap 3 jest niebieski, wiec konca
-// procesu nie da sie pomylic z etapem posrednim.
-const STAGES: Array<{ key: StageKey; label: string; color: string; background: string }> = [
-    { key: "etap_1", label: "Etap 1", color: "#dc2626", background: "#fee2e2" },
-    { key: "etap_2", label: "Etap 2", color: "#ea580c", background: "#ffedd5" },
-    { key: "etap_3", label: "Etap 3", color: "#2563eb", background: "#dbeafe" },
-    { key: "gotowe", label: "Gotowe", color: "#16a34a", background: "#dcfce7" },
-];
-
-const STAGE_KEYS: StageKey[] = STAGES.map((s) => s.key);
-const isStage = (flag: FlagKey): flag is StageKey => (STAGE_KEYS as string[]).includes(flag);
+// Znaczniki reczne — etapow tu nie ma, te wynikaja ze sprzedazy i przelicza je
+// serwer. Kolejny znacznik = wpis tutaj, w FLAGS w kontrolerze i kolumna w migracji.
+type FlagKey = "project" | "team_steel" | "bez_wspornikow" | "projekty_gotowe";
 
 interface Props {
     rows: ProductionRow[];
+    stages: Stage[];
 }
 
 const props = defineProps<Props>();
@@ -201,6 +181,10 @@ const toast = useToast();
 const rows = ref<ProductionRow[]>([...props.rows]);
 const gridRef = ref<any>(null);
 
+const stageById = computed<Map<number, Stage>>(
+    () => new Map(props.stages.map((s) => [s.id, s]))
+);
+
 // RevoGrid nie sledzi mutacji pol wiersza — podmiana referencji zrodla wymusza
 // przerysowanie (i przelicza liczniki zakladek, procenty oraz filtr).
 function refreshGrid(): void {
@@ -208,7 +192,7 @@ function refreshGrid(): void {
     if (grid) grid.setSource([...grid.getSource()]);
 }
 
-// === ZNACZNIKI PRODUKCYJNE ===
+// === ZNACZNIKI RECZNE ===
 // Zapis idzie od razu po kliknieciu (bez przycisku Save). Wiersz przestawiamy
 // optymistycznie, a przy bledzie cofamy — inaczej grid pokazywalby stan,
 // ktorego nie ma w bazie.
@@ -217,19 +201,8 @@ async function setFlag(code: string, flag: FlagKey, value: boolean): Promise<voi
     const row = source.find((r) => r.product_code === code);
     if (!row) return;
 
-    // Cofamy caly komplet, nie samo klikniete pole — zaznaczenie etapu zdejmuje
-    // dwa pozostale, wiec przy bledzie trzeba przywrocic wszystkie trzy.
-    const snapshot: Partial<Record<FlagKey, boolean>> = { [flag]: row[flag] };
-
+    const previous = row[flag];
     row[flag] = value;
-
-    if (value && isStage(flag)) {
-        STAGE_KEYS.filter((k) => k !== flag).forEach((other) => {
-            snapshot[other] = row[other];
-            row[other] = false;
-        });
-    }
-
     refreshGrid();
 
     try {
@@ -239,78 +212,71 @@ async function setFlag(code: string, flag: FlagKey, value: boolean): Promise<voi
             value,
         });
     } catch (e) {
-        Object.entries(snapshot).forEach(([key, was]) => {
-            (row as any)[key] = was;
-        });
+        row[flag] = previous;
         refreshGrid();
         toast.error(`Nie udalo sie zapisac znacznika dla ${code}`);
     }
 }
 
-/** Kolumna z checkboxem Tak/Nie. Etapy dostaja swoj kolor w naglowku i w tle komorki. */
+/** Kolumna z checkboxem Tak/Nie dla znacznika ustawianego recznie. */
 function flagColumn(flag: FlagKey, name: string, size: number) {
-    const stage = STAGES.find((s) => s.key === flag);
-
     return {
         prop: flag,
         name,
         readonly: true,
         size,
         sortable: true,
-        columnTemplate: stage
-            ? (h: any) => h("span", { style: { color: stage.color, fontWeight: "600" } }, name)
-            : undefined,
         cellTemplate: (h: any, p: any) => {
             const code = String(p.model?.product_code ?? "");
             const checked = !!p.model?.[flag];
-            const accent = stage?.color ?? "#15803d";
 
-            return h(
-                "label",
-                {
-                    class: "revo-flag-cell",
-                    style: checked && stage ? { background: stage.background } : {},
-                },
-                [
-                    h("input", {
-                        type: "checkbox",
-                        checked,
-                        onClick: (e: any) => e.stopPropagation(),
-                        onChange: (e: any) =>
-                            setFlag(code, flag, !!(e.target as HTMLInputElement).checked),
-                    }),
-                    h(
-                        "span",
-                        {
-                            style: {
-                                marginLeft: "6px",
-                                color: checked ? accent : "#9ca3af",
-                                fontWeight: checked ? "600" : "400",
-                            },
+            return h("label", { class: "revo-flag-cell" }, [
+                h("input", {
+                    type: "checkbox",
+                    checked,
+                    onClick: (e: any) => e.stopPropagation(),
+                    onChange: (e: any) =>
+                        setFlag(code, flag, !!(e.target as HTMLInputElement).checked),
+                }),
+                h(
+                    "span",
+                    {
+                        style: {
+                            marginLeft: "6px",
+                            color: checked ? "#15803d" : "#9ca3af",
+                            fontWeight: checked ? "600" : "400",
                         },
-                        checked ? "Tak" : "Nie"
-                    ),
-                ]
-            );
+                    },
+                    checked ? "Tak" : "Nie"
+                ),
+            ]);
         },
     };
 }
 
-const columns = [
+const columns = computed(() => [
     {
         // Liczba porzadkowa liczona z pozycji w AKTUALNYM widoku — po posortowaniu
         // po sprzedazy Lp 1 to najlepiej schodzacy kod, po filtrze numeracja leci od nowa.
-        // `p.data` to wiersze widoku (juz posortowane/przefiltrowane); `rowIndex` jest
-        // awaryjnie, gdyby model nie znalazl sie w tablicy.
+        // Przed numerem kolorowy pasek etapu: etap widac katem oka przy przewijaniu,
+        // bez czytania kolumny.
         prop: "__lp__",
         name: "Lp",
         readonly: true,
         sortable: false,
-        size: 70,
+        size: 80,
         cellTemplate: (h: any, p: any) => {
             const index = Array.isArray(p.data) ? p.data.indexOf(p.model) : -1;
             const lp = (index >= 0 ? index : Number(p.rowIndex) || 0) + 1;
-            return h("span", { style: { color: "#9ca3af" } }, String(lp));
+            const stage = stageById.value.get(Number(p.model?.stage_id));
+
+            return h("span", { class: "revo-lp-cell" }, [
+                h("span", {
+                    class: "revo-lp-stripe",
+                    style: { background: stage?.color ?? "transparent" },
+                }),
+                h("span", { style: { color: "#9ca3af" } }, String(lp)),
+            ]);
         },
     },
     { prop: "product_code", name: "Kod", readonly: true, size: 160, sortable: true },
@@ -318,8 +284,6 @@ const columns = [
         prop: "name",
         name: "Nazwa",
         readonly: true,
-        // Wezsza niz wczesniej — przy siedmiu znacznikach tabela nie miesci sie
-        // na ekranie, a najdluzsze nazwy i tak siedza w ~380 px.
         size: 420,
         sortable: true,
         // Pod jednym kodem siedzi zwykle kilkanascie aut — nazwa to nazwa pierwszego z nich.
@@ -336,8 +300,8 @@ const columns = [
     },
     { prop: "material", name: "Materiał", readonly: true, size: 140, sortable: true },
     {
-        // Sprzedaz z raportu Subiekta (31.08.2025 - 31.08.2026). Zero wyszarzone,
-        // zeby wzrokiem od razu bylo widac, co sie w ogole nie sprzedawalo.
+        // Sprzedaz z raportu Subiekta. Zero wyszarzone, zeby wzrokiem od razu
+        // bylo widac, co sie w ogole nie sprzedawalo.
         prop: "sales_12m",
         name: "Sprzedaż 12 mc",
         readonly: true,
@@ -347,22 +311,41 @@ const columns = [
             (Number(a?.[prop]) || 0) - (Number(b?.[prop]) || 0),
         cellTemplate: (h: any, p: any) => {
             const value = Number(p.model?.sales_12m) || 0;
+            return h("span", value === 0 ? { style: { color: "#9ca3af" } } : {}, String(value));
+        },
+    },
+    {
+        // Etap wynika ze sprzedazy i przedzialow z Ustawien — stad tylko do odczytu.
+        // Jedna kolumna zamiast kolumny-na-etap, bo etapow moze byc dowolnie duzo.
+        prop: "stage_id",
+        name: "Etap",
+        readonly: true,
+        size: 150,
+        sortable: true,
+        cellCompare: (prop: string, a: any, b: any): number =>
+            (Number(a?.[prop]) || 0) - (Number(b?.[prop]) || 0),
+        cellTemplate: (h: any, p: any) => {
+            const stage = stageById.value.get(Number(p.model?.stage_id));
+
+            if (!stage) {
+                return h("span", { style: { color: "#d1d5db" } }, "—");
+            }
+
             return h(
                 "span",
-                value === 0 ? { style: { color: "#9ca3af" } } : {},
-                String(value)
+                {
+                    class: "revo-stage-badge",
+                    style: { color: stage.color, background: stage.color + "1f" },
+                },
+                stage.name
             );
         },
     },
     flagColumn("project", "Projekt", 120),
     flagColumn("team_steel", "Team Steel", 140),
-    flagColumn("etap_1", "Etap 1", 110),
-    flagColumn("etap_2", "Etap 2", 110),
-    flagColumn("etap_3", "Etap 3", 110),
-    flagColumn("gotowe", "Gotowe", 120),
     flagColumn("bez_wspornikow", "Bez wsporników", 160),
     flagColumn("projekty_gotowe", "Projekty gotowe", 165),
-];
+]);
 
 // === ZAKLADKI: RZAD 1 (znaczniki) ===
 type TabKey = "all" | "project" | "noproject" | "team_steel";
@@ -400,14 +383,14 @@ const tabs = computed(() => {
     ];
 });
 
-// === ZAKLADKI: RZAD 2 (etapy) ===
-type StageTabKey = "all" | StageKey | "none";
+// === ZAKLADKI: RZAD 2 (etapy ze slownika) ===
+type StageTabKey = "all" | "none" | number;
 const activeStage = ref<StageTabKey>("all");
 
 function matchesStage(row: any, tab: StageTabKey): boolean {
     if (tab === "all") return true;
-    if (tab === "none") return !STAGE_KEYS.some((k) => row?.[k]);
-    return !!row?.[tab];
+    if (tab === "none") return row?.stage_id === null || row?.stage_id === undefined;
+    return Number(row?.stage_id) === Number(tab);
 }
 
 function stageTabClass(active: boolean): string {
@@ -421,16 +404,16 @@ function stageTabClass(active: boolean): string {
 
 // === PODZIAL NA ETAPY ===
 // Baza to WSZYSTKIE kody (nie widoczne po filtrze) — „wszystkie oslony = 100%".
-// Etapy wykluczaja sie, wiec suma trzech + „bez etapu" zawsze daje 100%.
+// Etap jest jeden na kod, wiec suma etapow + „bez etapu" zawsze daje 100%.
 const stageBreakdown = computed(() => {
     const source = allRows.value;
     const total = source.length || 1;
 
-    return STAGES.map((stage) => {
-        const count = source.filter((r) => r[stage.key]).length;
+    return props.stages.map((stage) => {
+        const count = source.filter((r) => Number(r.stage_id) === stage.id).length;
         return {
-            key: stage.key,
-            label: stage.label,
+            id: stage.id,
+            label: stage.name,
             color: stage.color,
             count,
             percent: (count / total) * 100,
@@ -441,7 +424,7 @@ const stageBreakdown = computed(() => {
 const noStage = computed(() => {
     const source = allRows.value;
     const total = source.length || 1;
-    const count = source.filter((r) => !STAGE_KEYS.some((k) => r[k])).length;
+    const count = source.filter((r) => r.stage_id === null || r.stage_id === undefined).length;
     return { count, percent: (count / total) * 100 };
 });
 
@@ -450,7 +433,7 @@ const stageTabs = computed(() => {
     return [
         { key: "all" as StageTabKey, label: "Wszystkie etapy", color: "", count: source.length, percent: 100 },
         ...stageBreakdown.value.map((part) => ({
-            key: part.key as StageTabKey,
+            key: part.id as StageTabKey,
             label: part.label,
             color: part.color,
             count: part.count,
@@ -513,8 +496,6 @@ const filterFn = computed<((row: any) => boolean) | null>(() => {
 });
 
 // === LICZNIKI I PODSUMOWANIE ===
-// Wszystko liczone z zrodla gridu, nie z props.rows — po kliknieciu znacznika
-// grid podmienia referencje zrodla, wiec te wartosci przeliczaja sie same.
 const visibleRows = computed<any[]>(() => {
     const filter = filterFn.value;
     return filter ? allRows.value.filter(filter) : allRows.value;
@@ -549,5 +530,29 @@ const formatPercent = (value: number): string => percentFormatter.format(value) 
     height: 100%;
     width: 100%;
     cursor: pointer;
+}
+
+:deep(.revo-lp-cell) {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 100%;
+}
+
+:deep(.revo-lp-stripe) {
+    display: inline-block;
+    width: 3px;
+    height: 16px;
+    border-radius: 2px;
+    flex: none;
+}
+
+:deep(.revo-stage-badge) {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 18px;
 }
 </style>

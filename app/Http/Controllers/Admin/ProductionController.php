@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Attribute;
 use App\Models\Product;
 use App\Models\ProductionItem;
+use App\Models\ProductionStage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -15,10 +16,10 @@ use Inertia\Response;
 /**
  * Produkcja — wlasny dzial w menu (miedzy Argo HQ a Argo PIM).
  *
- * Ekran glowny: lista kodow produkcyjnych. Jeden kod = jeden wiersz,
- * bo w PIM ten sam `product_code` powtarza sie dla kazdego auta, do ktorego
- * czesc pasuje (np. 18.201 to 21 wpisow) — z punktu widzenia produkcji to
- * ciagle jedna sztuka do zrobienia.
+ * Ekran glowny: lista kodow produkcyjnych. Jeden kod = jeden wiersz, bo w PIM
+ * ten sam `product_code` powtarza sie dla kazdego auta, do ktorego czesc pasuje
+ * (np. 18.201 to 21 wpisow) — z punktu widzenia produkcji to ciagle jedna
+ * sztuka do zrobienia.
  *
  * Wszystkie wiersze ida do przegladarki naraz, filtrowanie i sortowanie robi
  * DataGrid po stronie klienta — bez paginacji i bez round-tripow.
@@ -28,25 +29,16 @@ class ProductionController extends Controller
     /**
      * Znaczniki przestawiane z gridu: nazwa z frontu => kolumna w bazie.
      * Bialalista — bez niej `setFlag` pozwalalby pisac po dowolnej kolumnie.
+     *
+     * Etapow tu nie ma: od czasu slownika `production_stages` etap wynika
+     * wylacznie ze sprzedazy i przelicza go StageAssigner, a nie klikniecie.
      */
     private const FLAGS = [
         'project' => 'has_project',
         'team_steel' => 'team_steel',
-        'etap_1' => 'etap_1',
-        'etap_2' => 'etap_2',
-        'etap_3' => 'etap_3',
-        'gotowe' => 'gotowe',
         'bez_wspornikow' => 'bez_wspornikow',
         'projekty_gotowe' => 'projekty_gotowe',
     ];
-
-    /**
-     * Etapy wykluczaja sie wzajemnie — kod jest na jednym etapie naraz.
-     * Pilnujemy tego TUTAJ, a nie tylko w gridzie: procenty na ekranie licza
-     * sie z zalozenia „suma etapow + bez etapu = 100%", wiec kod z dwoma
-     * etapami rozjechalby cale podsumowanie.
-     */
-    private const STAGE_FLAGS = ['etap_1', 'etap_2', 'etap_3', 'gotowe'];
 
     /**
      * Lista kodow produkcyjnych (bez powtorzen) do gridu produkcji.
@@ -58,9 +50,13 @@ class ProductionController extends Controller
         $materialValueIds = $materialValues->pluck('id')->all();
         $materialLabels = $materialValues->mapWithKeys(fn ($value) => [$value->slug => $value->name])->all();
 
+        $stages = ProductionStage::orderBy('position')->orderBy('id')->get();
+
         // Dane produkcyjne — tylko dla kodow, na ktorych cos ustawiono albo wgrano.
-        $items = ProductionItem::get(array_merge(['product_code', 'sales_12m'], array_values(self::FLAGS)))
-            ->keyBy('product_code');
+        $items = ProductionItem::get(array_merge(
+            ['product_code', 'sales_12m', 'stage_id'],
+            array_values(self::FLAGS)
+        ))->keyBy('product_code');
 
         $rows = Product::query()
             ->select('id', 'product_code', 'name')
@@ -85,6 +81,7 @@ class ProductionController extends Controller
                     'variants' => $group->count(),
                     // Sprzedaz 12M z raportu Subiekta. Kod bez wiersza w raporcie = 0.
                     'sales_12m' => (int) ($item?->sales_12m ?? 0),
+                    'stage_id' => $item?->stage_id,
                 ];
 
                 // Znaczniki lecą pod nazwami z frontu — dodanie kolejnego to jeden wpis w FLAGS.
@@ -98,6 +95,11 @@ class ProductionController extends Controller
 
         return Inertia::render('Production/Index', [
             'rows' => $rows,
+            'stages' => $stages->map(fn (ProductionStage $stage) => [
+                'id' => $stage->id,
+                'name' => $stage->name,
+                'color' => $stage->color,
+            ])->values(),
         ]);
     }
 
@@ -111,14 +113,6 @@ class ProductionController extends Controller
     }
 
     /**
-     * Ustawienia modulu — jak wyzej, placeholder.
-     */
-    public function settings(Request $request): Response
-    {
-        return Inertia::render('Production/Settings');
-    }
-
-    /**
      * Przestawia jeden znacznik na jednym kodzie. Wolane axiosem z gridu.
      */
     public function setFlag(Request $request): JsonResponse
@@ -129,24 +123,13 @@ class ProductionController extends Controller
             'value' => ['required', 'boolean'],
         ]);
 
-        $values = [self::FLAGS[$data['flag']] => $data['value']];
-
-        // Zaznaczenie etapu zdejmuje pozostale. Odznaczenie nie rusza niczego —
-        // kod po prostu wypada z etapow.
-        if ($data['value'] && in_array($data['flag'], self::STAGE_FLAGS, true)) {
-            foreach (self::STAGE_FLAGS as $stage) {
-                if ($stage !== $data['flag']) {
-                    $values[self::FLAGS[$stage]] = false;
-                }
-            }
-        }
-
-        $item = ProductionItem::updateOrCreate(['product_code' => $data['product_code']], $values);
+        $item = ProductionItem::updateOrCreate(
+            ['product_code' => $data['product_code']],
+            [self::FLAGS[$data['flag']] => $data['value']],
+        );
 
         return response()->json([
             'product_code' => $data['product_code'],
-            // Oddajemy komplet znacznikow — grid nie musi zgadywac, co serwer
-            // zdjal przy wykluczaniu etapow.
             'flags' => collect(self::FLAGS)->map(fn ($column) => (bool) $item->{$column}),
         ]);
     }
