@@ -3,7 +3,11 @@
         sticky
         title="Produkcja"
         subtitle="Kody produkcyjne z bazy PIM — jeden kod, jeden wiersz"
-    />
+    >
+        <!-- Barometr liczy z CALEGO zbioru, nie z widocznego po filtrze — ma mowic
+             ile calosci jest zrobione, niezaleznie od tego czego akurat szukasz. -->
+        <ProgressGauge :done="doneCount" :total="totalCount" />
+    </PageHeader>
 
     <PageContent>
         <div class="w-full">
@@ -125,6 +129,7 @@ import {
     SelectInput,
     TextInput,
 } from "crafter/Components";
+import ProgressGauge from "./ProgressGauge.vue";
 
 interface Stage {
     id: number;
