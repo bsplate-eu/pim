@@ -44,7 +44,12 @@ class ProductionStageController extends Controller
                     'sales_from' => $stage->sales_from,
                     'sales_to' => $stage->sales_to,
                     'position' => $stage->position,
-                    'codes' => $stage->items()->count(),
+                    // Bez kodow wypchnietych do „Gotowe" (Projekt albo Team Steel),
+                    // zeby liczba zgadzala sie z tym, co pokazuje tabela.
+                    'codes' => $stage->items()
+                        ->where('has_project', false)
+                        ->where('team_steel', false)
+                        ->count(),
                 ])
                 ->values(),
             'histogram' => $this->histogram(),

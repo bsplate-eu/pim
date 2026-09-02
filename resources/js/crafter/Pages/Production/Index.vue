@@ -70,7 +70,11 @@
                             <strong class="ml-1 text-gray-900">{{ part.count }}</strong>
                             <span class="text-gray-400"> · {{ formatPercent(part.percent) }}</span>
                         </span>
-                        <span class="whitespace-nowrap text-gray-400">
+                        <!-- Tylko gdy cos naprawde zostalo poza etapami. Przy przedzialach
+                             pokrywajacych caly zakres byloby to wieczne zero.
+                             „Gotowe" celowo NIE ma tu segmentu — nachodzi na etapy,
+                             wiec rozbiloby sume do 100%. -->
+                        <span v-if="noStage.count > 0" class="whitespace-nowrap text-gray-400">
                             bez etapu
                             <strong class="text-gray-600">{{ noStage.count }}</strong>
                             · {{ formatPercent(noStage.percent) }}
@@ -268,13 +272,12 @@ const columns = computed(() => [
         cellTemplate: (h: any, p: any) => {
             const index = Array.isArray(p.data) ? p.data.indexOf(p.model) : -1;
             const lp = (index >= 0 ? index : Number(p.rowIndex) || 0) + 1;
-            const stage = stageById.value.get(Number(p.model?.stage_id));
+            const color = isDone(p.model)
+                ? DONE_COLOR
+                : stageById.value.get(Number(p.model?.stage_id))?.color ?? "transparent";
 
             return h("span", { class: "revo-lp-cell" }, [
-                h("span", {
-                    class: "revo-lp-stripe",
-                    style: { background: stage?.color ?? "transparent" },
-                }),
+                h("span", { class: "revo-lp-stripe", style: { background: color } }),
                 h("span", { style: { color: "#9ca3af" } }, String(lp)),
             ]);
         },
@@ -322,10 +325,20 @@ const columns = computed(() => [
         readonly: true,
         size: 150,
         sortable: true,
-        cellCompare: (prop: string, a: any, b: any): number =>
-            (Number(a?.[prop]) || 0) - (Number(b?.[prop]) || 0),
+        // Sortujemy po TYM, co widac: „Gotowe" na koniec, bez etapu na poczatek.
+        // Inaczej wiersze wypchniete do Gotowe rozsypalyby sie po swoich starych etapach.
+        cellCompare: (prop: string, a: any, b: any): number => {
+            const key = (row: any): number =>
+                isDone(row) ? Number.MAX_SAFE_INTEGER : (Number(row?.stage_id) || -1);
+            return key(a) - key(b);
+        },
         cellTemplate: (h: any, p: any) => {
-            const stage = stageById.value.get(Number(p.model?.stage_id));
+            // Reczne oznaczenie przebija etap ze sprzedazy — kod pokazuje sie
+            // jako „Gotowe", a nie jako Etap N.
+            const done = isDone(p.model);
+            const stage = done
+                ? { name: "Gotowe", color: DONE_COLOR }
+                : stageById.value.get(Number(p.model?.stage_id));
 
             if (!stage) {
                 return h("span", { style: { color: "#d1d5db" } }, "—");
@@ -383,14 +396,31 @@ const tabs = computed(() => {
     ];
 });
 
-// === ZAKLADKI: RZAD 2 (etapy ze slownika) ===
-type StageTabKey = "all" | "none" | number;
+// === ZAKLADKI: RZAD 2 (etapy ze slownika + „Gotowe") ===
+// „Gotowe" nie jest etapem ze slownika — nie wynika ze sprzedazy, tylko z tego,
+// ze kod ma juz Projekt albo Team Steel. Ale WYPYCHA z etapu: kod oznaczony
+// recznie znika z Etapu N i pokazuje sie w Gotowe. Dzieki temu kubelki sa
+// rozlaczne i procenty dalej sumuja sie do 100%.
+//
+// Wypchniecie liczy sie na froncie, a nie kasuje `stage_id` w bazie: zdjecie
+// Team Steel ma natychmiast przywrocic etap ze sprzedazy, bez biegania do
+// „Przelicz etapy".
+const DONE_COLOR = "#16a34a";
+
+type StageTabKey = "all" | "none" | "done" | number;
 const activeStage = ref<StageTabKey>("all");
+
+const isDone = (row: any): boolean => !!row?.project || !!row?.team_steel;
+
+/** Etap widoczny na ekranie: „gotowe" przebija etap ze sprzedazy. */
+const shownStageId = (row: any): number | null =>
+    isDone(row) ? null : (row?.stage_id ?? null);
 
 function matchesStage(row: any, tab: StageTabKey): boolean {
     if (tab === "all") return true;
-    if (tab === "none") return row?.stage_id === null || row?.stage_id === undefined;
-    return Number(row?.stage_id) === Number(tab);
+    if (tab === "done") return isDone(row);
+    if (tab === "none") return !isDone(row) && shownStageId(row) === null;
+    return shownStageId(row) === Number(tab);
 }
 
 function stageTabClass(active: boolean): string {
@@ -409,28 +439,46 @@ const stageBreakdown = computed(() => {
     const source = allRows.value;
     const total = source.length || 1;
 
-    return props.stages.map((stage) => {
-        const count = source.filter((r) => Number(r.stage_id) === stage.id).length;
+    const stages = props.stages.map((stage) => {
+        const count = source.filter((r) => shownStageId(r) === stage.id).length;
         return {
-            id: stage.id,
+            id: stage.id as number | string,
             label: stage.name,
             color: stage.color,
             count,
             percent: (count / total) * 100,
         };
     });
+
+    // „Gotowe" na koncu paska — wypchniete z etapow, wiec nie dubluje zadnego segmentu.
+    const done = doneCount.value;
+    stages.push({
+        id: "done",
+        label: "Gotowe",
+        color: DONE_COLOR,
+        count: done,
+        percent: (done / total) * 100,
+    });
+
+    return stages;
 });
 
 const noStage = computed(() => {
     const source = allRows.value;
     const total = source.length || 1;
-    const count = source.filter((r) => r.stage_id === null || r.stage_id === undefined).length;
+    const count = source.filter((r) => !isDone(r) && shownStageId(r) === null).length;
     return { count, percent: (count / total) * 100 };
 });
 
+const doneCount = computed<number>(() => allRows.value.filter(isDone).length);
+
 const stageTabs = computed(() => {
     const source = allRows.value;
-    return [
+    const total = source.length || 1;
+
+    // stageBreakdown niesie juz „Gotowe" na koncu — zakladki lecą z tego samego
+    // zrodla co pasek, zeby liczby nie mialy prawa sie rozjechac.
+    const tabs = [
         { key: "all" as StageTabKey, label: "Wszystkie etapy", color: "", count: source.length, percent: 100 },
         ...stageBreakdown.value.map((part) => ({
             key: part.id as StageTabKey,
@@ -439,8 +487,21 @@ const stageTabs = computed(() => {
             count: part.count,
             percent: part.percent,
         })),
-        { key: "none" as StageTabKey, label: "Bez etapu", color: "#9ca3af", count: noStage.value.count, percent: noStage.value.percent },
     ];
+
+    // „Bez etapu" pokazujemy tylko wtedy, gdy naprawde cos zostalo poza etapami.
+    // Przy przedzialach pokrywajacych caly zakres byloby to wieczne zero.
+    if (noStage.value.count > 0) {
+        tabs.push({
+            key: "none" as StageTabKey,
+            label: "Bez etapu",
+            color: "#9ca3af",
+            count: noStage.value.count,
+            percent: noStage.value.percent,
+        });
+    }
+
+    return tabs;
 });
 
 // === WYSZUKIWARKA ===
