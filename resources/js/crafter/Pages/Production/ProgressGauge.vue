@@ -13,15 +13,18 @@
     <div class="flex items-center gap-3">
         <svg :width="W" :height="H" :viewBox="`0 0 ${W} ${H}`" class="flex-none">
             <!-- tlo: caly zakres na czerwono -->
-            <path :d="arcPath(0, 1)" :stroke="RED" :stroke-width="w" fill="none" stroke-linecap="round" />
-            <!-- wykonane -->
+            <path :d="arcPath(0, 1)" :stroke="RED" :stroke-width="w" fill="none" stroke-linecap="butt" />
+            <!-- Wykonane. Koncowki PLASKIE, nie zaokraglone: round dokladalby po w/2
+                 (6 jednostek) na kazdym koncu, a przy 4,1% sam luk ma dlugosc 4,9 —
+                 zielony puchlby ponad trzykrotnie i pokazywal ~14% zamiast 4,1%.
+                 To przyrzad pomiarowy, wiec dokladnosc przed estetyka. -->
             <path
                 v-if="ratio > 0"
                 :d="arcPath(0, ratio)"
                 :stroke="GREEN"
                 :stroke-width="w"
                 fill="none"
-                stroke-linecap="round"
+                stroke-linecap="butt"
             />
 
             <g v-for="tick in ticks" :key="tick.value">
@@ -113,8 +116,10 @@ const ticks = computed(() =>
     })
 );
 
-const needle = computed(() => polar(r - 3, START + SWEEP * ratio.value));
-const hub = computed(() => polar(6, START + SWEEP * ratio.value + 180));
+// Ogon dluzszy niz piasta (4,5), zeby przy niskich wartosciach bylo widac, ze to
+// wskazowka obracajaca sie wokol srodka, a nie kreska laczaca dwie kropki.
+const needle = computed(() => polar(r - 2, START + SWEEP * ratio.value));
+const hub = computed(() => polar(11, START + SWEEP * ratio.value + 180));
 
 const formatter = new Intl.NumberFormat("pl-PL", {
     minimumFractionDigits: 1,
