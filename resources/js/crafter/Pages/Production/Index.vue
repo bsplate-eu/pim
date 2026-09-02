@@ -43,43 +43,20 @@
                                 :style="{ background: tab.color }"
                             />
                             {{ tab.label }}
-                            <span class="ml-1 text-xs text-gray-400">
-                                {{ tab.count }} · {{ formatPercent(tab.percent) }}
-                            </span>
+                            <span class="ml-1 text-xs text-gray-400">{{ tab.count }}</span>
                         </button>
                     </nav>
                 </div>
 
-                <!-- Podzial na etapy liczony po CALYM zbiorze kodow: wszystkie = 100%. -->
-                <div class="mb-4">
-                    <div class="flex h-2 w-full overflow-hidden rounded bg-gray-100">
-                        <div
-                            v-for="part in stageBreakdown"
-                            :key="part.id"
-                            :style="{ width: part.percent + '%', background: part.color }"
-                            :title="`${part.label}: ${part.count} kodów (${formatPercent(part.percent)})`"
-                        />
-                    </div>
-                    <div class="mt-2 flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-gray-600">
-                        <span v-for="part in stageBreakdown" :key="part.id" class="whitespace-nowrap">
-                            <span
-                                class="mr-1 inline-block h-2 w-2 rounded-full align-middle"
-                                :style="{ background: part.color }"
-                            />
-                            {{ part.label }}
-                            <strong class="ml-1 text-gray-900">{{ part.count }}</strong>
-                            <span class="text-gray-400"> · {{ formatPercent(part.percent) }}</span>
-                        </span>
-                        <!-- Tylko gdy cos naprawde zostalo poza etapami. Przy przedzialach
-                             pokrywajacych caly zakres byloby to wieczne zero.
-                             „Gotowe" celowo NIE ma tu segmentu — nachodzi na etapy,
-                             wiec rozbiloby sume do 100%. -->
-                        <span v-if="noStage.count > 0" class="whitespace-nowrap text-gray-400">
-                            bez etapu
-                            <strong class="text-gray-600">{{ noStage.count }}</strong>
-                            · {{ formatPercent(noStage.percent) }}
-                        </span>
-                    </div>
+                <!-- Proporcja etapow na oko. Bez liczb — te sa juz przy zakladkach,
+                     a legenda pod paskiem powtarzalaby je slowo w slowo. -->
+                <div class="mb-4 flex h-2 w-full overflow-hidden rounded bg-gray-100">
+                    <div
+                        v-for="part in stageBreakdown"
+                        :key="part.id"
+                        :style="{ width: part.share + '%', background: part.color }"
+                        :title="`${part.label}: ${part.count} kodów`"
+                    />
                 </div>
 
                 <div class="mb-4 flex flex-wrap items-baseline gap-x-6 gap-y-1">
@@ -435,6 +412,8 @@ function stageTabClass(active: boolean): string {
 // === PODZIAL NA ETAPY ===
 // Baza to WSZYSTKIE kody (nie widoczne po filtrze) — „wszystkie oslony = 100%".
 // Etap jest jeden na kod, wiec suma etapow + „bez etapu" zawsze daje 100%.
+// `share` to wylacznie szerokosc segmentu paska — nigdzie nie pokazujemy go
+// jako liczby. Procenty przy etapach zdjete: maja byc rozwiazane inaczej.
 const stageBreakdown = computed(() => {
     const source = allRows.value;
     const total = source.length || 1;
@@ -446,7 +425,7 @@ const stageBreakdown = computed(() => {
             label: stage.name,
             color: stage.color,
             count,
-            percent: (count / total) * 100,
+            share: (count / total) * 100,
         };
     });
 
@@ -457,7 +436,7 @@ const stageBreakdown = computed(() => {
         label: "Gotowe",
         color: DONE_COLOR,
         count: done,
-        percent: (done / total) * 100,
+        share: (done / total) * 100,
     });
 
     return stages;
@@ -465,27 +444,24 @@ const stageBreakdown = computed(() => {
 
 const noStage = computed(() => {
     const source = allRows.value;
-    const total = source.length || 1;
     const count = source.filter((r) => !isDone(r) && shownStageId(r) === null).length;
-    return { count, percent: (count / total) * 100 };
+    return { count };
 });
 
 const doneCount = computed<number>(() => allRows.value.filter(isDone).length);
 
 const stageTabs = computed(() => {
     const source = allRows.value;
-    const total = source.length || 1;
 
     // stageBreakdown niesie juz „Gotowe" na koncu — zakladki lecą z tego samego
     // zrodla co pasek, zeby liczby nie mialy prawa sie rozjechac.
     const tabs = [
-        { key: "all" as StageTabKey, label: "Wszystkie etapy", color: "", count: source.length, percent: 100 },
+        { key: "all" as StageTabKey, label: "Wszystkie etapy", color: "", count: source.length },
         ...stageBreakdown.value.map((part) => ({
             key: part.id as StageTabKey,
             label: part.label,
             color: part.color,
             count: part.count,
-            percent: part.percent,
         })),
     ];
 
@@ -497,7 +473,6 @@ const stageTabs = computed(() => {
             label: "Bez etapu",
             color: "#9ca3af",
             count: noStage.value.count,
-            percent: noStage.value.percent,
         });
     }
 
@@ -576,12 +551,6 @@ const isNarrowed = computed<boolean>(() => filterFn.value !== null);
 
 const qtyFormatter = new Intl.NumberFormat("pl-PL");
 const formatQty = (value: number): string => qtyFormatter.format(value);
-
-const percentFormatter = new Intl.NumberFormat("pl-PL", {
-    minimumFractionDigits: 1,
-    maximumFractionDigits: 1,
-});
-const formatPercent = (value: number): string => percentFormatter.format(value) + "%";
 </script>
 
 <style scoped>
