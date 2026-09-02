@@ -36,7 +36,7 @@ class ProductionController extends Controller
     private const FLAGS = [
         'project' => 'has_project',
         'team_steel' => 'team_steel',
-        'bez_wspornikow' => 'bez_wspornikow',
+        'brak_zestawu' => 'brak_zestawu',
         'projekty_gotowe' => 'projekty_gotowe',
     ];
 

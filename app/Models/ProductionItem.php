@@ -19,7 +19,7 @@ class ProductionItem extends Model
         'stage_id',
         'has_project',
         'team_steel',
-        'bez_wspornikow',
+        'brak_zestawu',
         'projekty_gotowe',
         'sales_12m',
     ];
@@ -27,7 +27,7 @@ class ProductionItem extends Model
     protected $casts = [
         'has_project' => 'boolean',
         'team_steel' => 'boolean',
-        'bez_wspornikow' => 'boolean',
+        'brak_zestawu' => 'boolean',
         'projekty_gotowe' => 'boolean',
         'sales_12m' => 'integer',
     ];

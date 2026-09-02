@@ -155,13 +155,13 @@ interface ProductionRow {
     stage_id: number | null;
     project: boolean;
     team_steel: boolean;
-    bez_wspornikow: boolean;
+    brak_zestawu: boolean;
     projekty_gotowe: boolean;
 }
 
 // Znaczniki reczne — etapow tu nie ma, te wynikaja ze sprzedazy i przelicza je
 // serwer. Kolejny znacznik = wpis tutaj, w FLAGS w kontrolerze i kolumna w migracji.
-type FlagKey = "project" | "team_steel" | "bez_wspornikow" | "projekty_gotowe";
+type FlagKey = "project" | "team_steel" | "brak_zestawu" | "projekty_gotowe";
 
 interface Props {
     rows: ProductionRow[];
@@ -346,18 +346,22 @@ const columns = computed(() => [
     },
     flagColumn("project", "Projekt", 120),
     flagColumn("team_steel", "Team Steel", 140),
-    flagColumn("bez_wspornikow", "Bez wsporników", 160),
+    flagColumn("brak_zestawu", "Brak zestawu", 150),
     flagColumn("projekty_gotowe", "Projekty gotowe", 165),
 ]);
 
 // === ZAKLADKI: RZAD 1 (znaczniki) ===
-type TabKey = "all" | "project" | "noproject" | "team_steel";
+type TabKey = "all" | "project" | "team_steel" | "nokit" | "noproject";
 const activeTab = ref<TabKey>("all");
 
+// „Bez zestawów" to przeciecie dwoch warunkow: kod jest juz ruszony (Projekt albo
+// Team Steel) I ma zaznaczony brak zestawu. Sam brak zestawu na nietknietym kodzie
+// nie jest problemem produkcyjnym — dopiero na tym, ktory poszedl dalej.
 function matchesTab(row: any, tab: TabKey): boolean {
     if (tab === "project") return !!row?.project;
-    if (tab === "noproject") return !row?.project;
     if (tab === "team_steel") return !!row?.team_steel;
+    if (tab === "nokit") return isDone(row) && !!row?.brak_zestawu;
+    if (tab === "noproject") return !row?.project;
     return true;
 }
 
@@ -378,11 +382,14 @@ const tabs = computed(() => {
     const source = allRows.value;
     const withProject = source.filter((r) => r.project).length;
     const withTeamSteel = source.filter((r) => r.team_steel).length;
+    const withoutKit = source.filter((r) => isDone(r) && r.brak_zestawu).length;
+
     return [
         { key: "all" as TabKey, label: "Wszystkie", count: source.length },
         { key: "project" as TabKey, label: "Projekt", count: withProject },
-        { key: "noproject" as TabKey, label: "Bez projektu", count: source.length - withProject },
         { key: "team_steel" as TabKey, label: "Team Steel", count: withTeamSteel },
+        { key: "nokit" as TabKey, label: "Bez zestawów", count: withoutKit },
+        { key: "noproject" as TabKey, label: "Bez projektu", count: source.length - withProject },
     ];
 });
 
