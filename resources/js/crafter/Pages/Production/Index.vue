@@ -3,11 +3,7 @@
         sticky
         title="Produkcja"
         subtitle="Kody produkcyjne z bazy PIM — jeden kod, jeden wiersz"
-    >
-        <!-- Barometr liczy z CALEGO zbioru, nie z widocznego po filtrze — ma mowic
-             ile calosci jest zrobione, niezaleznie od tego czego akurat szukasz. -->
-        <ProgressGauge :done="doneCount" :total="totalCount" />
-    </PageHeader>
+    />
 
     <PageContent>
         <div class="w-full">
@@ -52,33 +48,43 @@
                     </nav>
                 </div>
 
-                <!-- Proporcja etapow na oko. Bez liczb — te sa juz przy zakladkach,
-                     a legenda pod paskiem powtarzalaby je slowo w slowo. -->
-                <div class="mb-4 flex h-2 w-full overflow-hidden rounded bg-gray-100">
-                    <div
-                        v-for="part in stageBreakdown"
-                        :key="part.id"
-                        :style="{ width: part.share + '%', background: part.color }"
-                        :title="`${part.label}: ${part.count} kodów`"
-                    />
-                </div>
+                <!-- Pasek etapow i podsumowanie po lewej, barometr po prawej —
+                     jeden rzad, zeby nie rozpychac karty w pionie. -->
+                <div class="mb-4 flex items-center gap-6">
+                    <div class="min-w-0 flex-1">
+                        <!-- Proporcja etapow na oko. Bez liczb — te sa juz przy zakladkach,
+                             a legenda pod paskiem powtarzalaby je slowo w slowo. -->
+                        <div class="flex h-2 w-full overflow-hidden rounded bg-gray-100">
+                            <div
+                                v-for="part in stageBreakdown"
+                                :key="part.id"
+                                :style="{ width: part.share + '%', background: part.color }"
+                                :title="`${part.label}: ${part.count} kodów`"
+                            />
+                        </div>
 
-                <div class="mb-4 flex flex-wrap items-baseline gap-x-6 gap-y-1">
-                    <div class="text-sm">
-                        <span class="text-gray-500">Podsumowanie ilości sprzedanych:</span>
-                        <strong class="ml-1 text-base text-gray-900">
-                            {{ formatQty(visibleSales) }} szt.
-                        </strong>
-                        <!-- Przy aktywnej zakladce/filtrze pokazujemy tez calosc, zeby nie
-                             dalo sie wziac sumy wycinka za sume wszystkiego. -->
-                        <span v-if="isNarrowed" class="ml-1 text-xs text-gray-400">
-                            z {{ formatQty(totalSales) }} szt. na wszystkich kodach
-                        </span>
+                        <div class="mt-3 flex flex-wrap items-baseline gap-x-6 gap-y-1">
+                            <div class="text-sm">
+                                <span class="text-gray-500">Podsumowanie ilości sprzedanych:</span>
+                                <strong class="ml-1 text-base text-gray-900">
+                                    {{ formatQty(visibleSales) }} szt.
+                                </strong>
+                                <!-- Przy aktywnej zakladce/filtrze pokazujemy tez calosc, zeby nie
+                                     dalo sie wziac sumy wycinka za sume wszystkiego. -->
+                                <span v-if="isNarrowed" class="ml-1 text-xs text-gray-400">
+                                    z {{ formatQty(totalSales) }} szt. na wszystkich kodach
+                                </span>
+                            </div>
+                            <div class="text-xs text-gray-500">
+                                Widocznych: <strong>{{ visibleCount }}</strong>
+                                / Wszystkich kodów: <strong>{{ totalCount }}</strong>
+                            </div>
+                        </div>
                     </div>
-                    <div class="text-xs text-gray-500">
-                        Widocznych: <strong>{{ visibleCount }}</strong>
-                        / Wszystkich kodów: <strong>{{ totalCount }}</strong>
-                    </div>
+
+                    <!-- Barometr liczy z CALEGO zbioru, nie z widocznego po filtrze — ma mowic
+                         ile calosci jest zrobione, niezaleznie od tego czego akurat szukasz. -->
+                    <ProgressGauge class="flex-none" :done="doneCount" :total="totalCount" />
                 </div>
 
                 <div class="mb-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
