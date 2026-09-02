@@ -49,8 +49,10 @@
                 </div>
 
                 <!-- Pasek etapow i podsumowanie po lewej, barometr po prawej —
-                     jeden rzad, zeby nie rozpychac karty w pionie. -->
-                <div class="mb-4 flex items-center gap-6">
+                     jeden rzad, zeby nie rozpychac karty w pionie.
+                     items-end, nie items-center: tarcza ma siadac na tej samej linii
+                     co podsumowanie sprzedanych, zamiast wystawac ponad pasek. -->
+                <div class="mb-4 flex items-end gap-6">
                     <div class="min-w-0 flex-1">
                         <!-- Proporcja etapow na oko. Bez liczb — te sa juz przy zakladkach,
                              a legenda pod paskiem powtarzalaby je slowo w slowo. -->
