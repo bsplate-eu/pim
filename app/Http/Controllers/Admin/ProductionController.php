@@ -13,9 +13,9 @@ use Inertia\Inertia;
 use Inertia\Response;
 
 /**
- * Argo PIM → Produkcja.
+ * Produkcja — wlasny dzial w menu (miedzy Argo HQ a Argo PIM).
  *
- * Ekran startowy modulu: lista kodow produkcyjnych. Jeden kod = jeden wiersz,
+ * Ekran glowny: lista kodow produkcyjnych. Jeden kod = jeden wiersz,
  * bo w PIM ten sam `product_code` powtarza sie dla kazdego auta, do ktorego
  * czesc pasuje (np. 18.201 to 21 wpisow) — z punktu widzenia produkcji to
  * ciagle jedna sztuka do zrobienia.
@@ -99,6 +99,23 @@ class ProductionController extends Controller
         return Inertia::render('Production/Index', [
             'rows' => $rows,
         ]);
+    }
+
+    /**
+     * Raporty produkcyjne — na razie pusty ekran, zeby pozycja w menu prowadzila
+     * gdziekolwiek zamiast wywalac 404.
+     */
+    public function reports(Request $request): Response
+    {
+        return Inertia::render('Production/Reports');
+    }
+
+    /**
+     * Ustawienia modulu — jak wyzej, placeholder.
+     */
+    public function settings(Request $request): Response
+    {
+        return Inertia::render('Production/Settings');
     }
 
     /**

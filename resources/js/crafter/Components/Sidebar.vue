@@ -54,6 +54,25 @@
                 </SidebarGroup>
             </SidebarGroup>
 
+            <!-- Produkcja -->
+            <SidebarGroup
+                title="Produkcja"
+                :toggable="true"
+                :open="false"
+                :icon="WrenchScrewdriverIcon"
+                v-can="'crafter.module.production'"
+            >
+                <SidebarItem :href="route('crafter.production.index')">
+                    Produkcja
+                </SidebarItem>
+                <SidebarItem :href="route('crafter.production.reports')">
+                    Raporty
+                </SidebarItem>
+                <SidebarItem :href="route('crafter.production.settings')">
+                    Ustawienia
+                </SidebarItem>
+            </SidebarGroup>
+
             <!-- Argo PIM -->
             <SidebarGroup
                 title="Argo PIM"
@@ -69,7 +88,6 @@
                     'crafter.attribute.index',
                     'crafter.template.index',
                     'crafter.media.index',
-                    'crafter.module.production',
                 ]"
             >
                 <SidebarSubGroup title="Integracje" v-can="'crafter.integration.index'">
@@ -107,13 +125,6 @@
                         {{ $t("crafter", "Sources") }}
                     </SidebarItem>
                 </SidebarSubGroup>
-
-                <SidebarItem
-                    :href="route('crafter.production.index')"
-                    v-can="'crafter.module.production'"
-                >
-                    Produkcja
-                </SidebarItem>
 
                 <SidebarSubGroup title="Opcje">
                     <SidebarItem
@@ -410,7 +421,8 @@ import {
     CubeIcon,
     ClipboardDocumentCheckIcon,
     EnvelopeIcon,
-    MagnifyingGlassIcon
+    MagnifyingGlassIcon,
+    WrenchScrewdriverIcon
 } from "@heroicons/vue/24/outline";
 import {SidebarItem, SidebarGroup, SidebarSubGroup} from "crafter/Components";
 

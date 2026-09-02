@@ -854,4 +854,8 @@ Route::middleware(['crafter.base', 'auth', 'crafter.verified'])->prefix('admin')
         ->name('production.index');
     Route::post('production/flag', [App\Http\Controllers\Admin\ProductionController::class, 'setFlag'])
         ->name('production.flag');
+    Route::get('production/reports', [App\Http\Controllers\Admin\ProductionController::class, 'reports'])
+        ->name('production.reports');
+    Route::get('production/settings', [App\Http\Controllers\Admin\ProductionController::class, 'settings'])
+        ->name('production.settings');
 });
