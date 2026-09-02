@@ -59,7 +59,7 @@
                 title="Produkcja"
                 :toggable="true"
                 :open="false"
-                :icon="WrenchScrewdriverIcon"
+                :icon="FactoryIcon"
                 v-can="'crafter.module.production'"
             >
                 <SidebarItem :href="route('crafter.production.index')">
@@ -421,10 +421,10 @@ import {
     CubeIcon,
     ClipboardDocumentCheckIcon,
     EnvelopeIcon,
-    MagnifyingGlassIcon,
-    WrenchScrewdriverIcon
+    MagnifyingGlassIcon
 } from "@heroicons/vue/24/outline";
 import {SidebarItem, SidebarGroup, SidebarSubGroup} from "crafter/Components";
+import FactoryIcon from "./Icons/FactoryIcon.vue";
 
 interface ArgoProjectItem {
     id: number;
