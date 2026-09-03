@@ -45,9 +45,42 @@
             </nav>
         </div>
 
+        <!-- Pasek operacji masowych — pojawia sie dopiero gdy cos zaznaczone,
+             zeby nie zajmowal miejsca przy zwyklym przegladaniu. -->
+        <div
+            v-if="selected.size"
+            class="mb-3 flex flex-wrap items-center gap-3 rounded-md border border-indigo-200 bg-indigo-50 px-4 py-2"
+        >
+            <span class="text-sm text-indigo-900">
+                Zaznaczonych: <strong>{{ selected.size }}</strong>
+            </span>
+            <div class="ml-auto flex items-center gap-2">
+                <Button v-if="active !== 'approved'" size="sm" @click="bulk('approve')">
+                    Zatwierdź zaznaczone
+                </Button>
+                <Button v-if="active === 'approved'" size="sm" color="gray" variant="outline" @click="bulk('revoke')">
+                    Cofnij zaznaczone
+                </Button>
+                <Button v-if="active === 'proposed'" size="sm" color="gray" variant="outline" @click="bulk('reject')">
+                    Odrzuć zaznaczone
+                </Button>
+                <Button size="sm" color="gray" variant="ghost" @click="selected = new Set()">
+                    Wyczyść
+                </Button>
+            </div>
+        </div>
+
         <table class="w-full text-sm">
             <thead>
                 <tr class="border-b border-gray-200 text-left text-xs uppercase tracking-wide text-gray-500">
+                    <th class="w-10 py-2 pr-2">
+                        <input
+                            type="checkbox"
+                            :checked="allSelected"
+                            :indeterminate.prop="selected.size > 0 && !allSelected"
+                            @change="toggleAll(($event.target as HTMLInputElement).checked)"
+                        />
+                    </th>
                     <th class="w-40 py-2 pr-3">Trzon</th>
                     <th class="py-2 pr-3">Warianty — odznacz te, które mają zostać osobno</th>
                     <th class="w-32 py-2 pr-3 text-right">Sprzedaż wiersza</th>
@@ -55,7 +88,19 @@
                 </tr>
             </thead>
             <tbody>
-                <tr v-for="group in visible" :key="group.id" class="border-b border-gray-100 align-top">
+                <tr
+                    v-for="group in visible"
+                    :key="group.id"
+                    class="border-b border-gray-100 align-top"
+                    :class="selected.has(group.id) ? 'bg-indigo-50/50' : ''"
+                >
+                    <td class="py-3 pr-2">
+                        <input
+                            type="checkbox"
+                            :checked="selected.has(group.id)"
+                            @change="toggleOne(group.id, ($event.target as HTMLInputElement).checked)"
+                        />
+                    </td>
                     <td class="py-3 pr-3">
                         <div class="font-mono font-semibold text-gray-900">{{ group.trunk }}</div>
                         <div class="text-xs text-gray-400">{{ group.trunk_sales }} szt. własne</div>
@@ -113,7 +158,7 @@
                 </tr>
 
                 <tr v-if="!visible.length">
-                    <td colspan="4" class="py-8 text-center text-sm text-gray-500">
+                    <td colspan="5" class="py-8 text-center text-sm text-gray-500">
                         Nic tutaj. Kliknij <strong>Szukaj propozycji</strong>, żeby przeskanować katalog.
                     </td>
                 </tr>
@@ -129,7 +174,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, ref, watch } from "vue";
 import { router } from "@inertiajs/vue3";
 import axios from "axios";
 import { useToast } from "@brackets/vue-toastification";
@@ -171,6 +216,47 @@ const innerTabs = computed(() => [
 
 const visible = computed<Group[]>(() => props.groups[active.value] ?? []);
 
+// === ZAZNACZANIE ===
+// Czyscimy przy zmianie zakladki: zaznaczenie z „Do zatwierdzenia" nie ma sensu
+// na „Grupujacych", a operacja masowa dziala na tym, co widac.
+const selected = ref<Set<number>>(new Set());
+watch(active, () => {
+    selected.value = new Set();
+});
+
+const allSelected = computed<boolean>(
+    () => visible.value.length > 0 && visible.value.every((g) => selected.value.has(g.id))
+);
+
+function toggleOne(id: number, on: boolean): void {
+    const next = new Set(selected.value);
+    on ? next.add(id) : next.delete(id);
+    selected.value = next;
+}
+
+function toggleAll(on: boolean): void {
+    selected.value = on ? new Set(visible.value.map((g) => g.id)) : new Set();
+}
+
+function bulk(action: "approve" | "reject" | "revoke"): void {
+    const ids = Array.from(selected.value);
+    if (!ids.length) return;
+
+    const slowo = action === "approve" ? "Zatwierdzić" : action === "reject" ? "Odrzucić" : "Cofnąć";
+    if (!window.confirm(`${slowo} ${ids.length} grup?`)) return;
+
+    router.post(
+        route("crafter.production.groups.bulk"),
+        { ids, action },
+        {
+            ...visitOptions,
+            onSuccess: () => {
+                selected.value = new Set();
+            },
+        }
+    );
+}
+
 function tabClass(on: boolean): string {
     return [
         "border-b-2 px-1 py-2 text-sm font-medium whitespace-nowrap",
@@ -180,20 +266,18 @@ function tabClass(on: boolean): string {
     ].join(" ");
 }
 
+// preserveState: true jest tu istotne. Bez niego Inertia odtwarza komponent od
+// zera, a wtedy gina lokalne refy — czyli ktora zakladka Ustawien jest otwarta
+// i ktory stan grup ogladasz. Klikniecie checkboxa wyrzucalo z powrotem na Etapy.
+// Propsy i tak przychodza swieze z serwera, wiec liczby sie odswiezaja.
+const visitOptions = { preserveScroll: true, preserveState: true };
+
 function toggle(member: Member, included: boolean): void {
-    router.put(
-        route("crafter.production.groups.member", member.id),
-        { included },
-        { preserveScroll: true, preserveState: false }
-    );
+    router.put(route("crafter.production.groups.member", member.id), { included }, visitOptions);
 }
 
 function post(action: "approve" | "revoke" | "reject", group: Group): void {
-    router.post(
-        route(`crafter.production.groups.${action}`, group.id),
-        {},
-        { preserveScroll: true, preserveState: false }
-    );
+    router.post(route(`crafter.production.groups.${action}`, group.id), {}, visitOptions);
 }
 
 const scanning = ref(false);

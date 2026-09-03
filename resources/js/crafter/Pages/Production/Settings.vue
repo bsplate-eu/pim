@@ -264,9 +264,12 @@ const payload = (stage: { name: string; color: string; sales_from: unknown; sale
     sales_to: asNumber(stage.sales_to),
 });
 
+// preserveState: true — bez niego Inertia odtwarza komponent i gubi lokalne refy,
+// czyli otwarta zakladke Ustawien. Propsy i tak przychodza swieze z serwera.
 function save(stage: Stage): void {
     router.put(route("crafter.production.stages.update", stage.id), payload(stage), {
         preserveScroll: true,
+        preserveState: true,
     });
 }
 
@@ -278,6 +281,7 @@ function create(): void {
 
     router.post(route("crafter.production.stages.store"), payload(fresh.value), {
         preserveScroll: true,
+        preserveState: true,
         onSuccess: () => {
             fresh.value = { name: "", color: "#6b7280", sales_from: null, sales_to: null };
         },
@@ -289,7 +293,7 @@ function remove(stage: Stage): void {
         return;
     }
 
-    router.delete(route("crafter.production.stages.destroy", stage.id), { preserveScroll: true });
+    router.delete(route("crafter.production.stages.destroy", stage.id), { preserveScroll: true, preserveState: true });
 }
 
 /** Kolejnosc decyduje, ktory etap wygrywa przy nachodzacych przedzialach. */
@@ -304,7 +308,7 @@ function move(index: number, direction: number): void {
     router.post(
         route("crafter.production.stages.reorder"),
         { order: next.map((s) => s.id) },
-        { preserveScroll: true }
+        { preserveScroll: true, preserveState: true }
     );
 }
 

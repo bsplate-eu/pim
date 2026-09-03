@@ -45,7 +45,51 @@ class ProductionGroupController extends Controller
      */
     public function approve(ProductionGroup $group): RedirectResponse
     {
-        $group->load('members');
+        $this->applyApproval($group);
+
+        return back()->with(['message' => 'Grupa zatwierdzona']);
+    }
+
+    /**
+     * Masowe zatwierdzanie/odrzucanie zaznaczonych propozycji.
+     *
+     * Przy 100+ propozycjach klikanie po jednej to droga przez meke, a wiekszosc
+     * z nich to oczywiste pary kod + kodALU.
+     */
+    public function bulk(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'ids' => ['required', 'array', 'min:1'],
+            'ids.*' => ['integer', 'exists:production_groups,id'],
+            'action' => ['required', 'string', 'in:approve,reject,revoke'],
+        ]);
+
+        $groups = ProductionGroup::with('members')->whereIn('id', $data['ids'])->get();
+
+        foreach ($groups as $group) {
+            match ($data['action']) {
+                'approve' => $this->applyApproval($group),
+                'reject' => $group->update(['status' => ProductionGroup::REJECTED, 'approved_at' => null]),
+                'revoke' => $group->update(['status' => ProductionGroup::PROPOSED, 'approved_at' => null]),
+            };
+        }
+
+        $slowo = match ($data['action']) {
+            'approve' => 'zatwierdzonych',
+            'reject' => 'odrzuconych',
+            'revoke' => 'cofnietych',
+        };
+
+        return back()->with(['message' => $groups->count() . ' grup ' . $slowo]);
+    }
+
+    /**
+     * Wlacza grupe i przenosi znaczniki z wciaganych wariantow na trzon.
+     * Wspolne dla pojedynczego zatwierdzenia i operacji masowej.
+     */
+    private function applyApproval(ProductionGroup $group): void
+    {
+        $group->loadMissing('members');
 
         $codes = $group->members->where('included', true)->pluck('product_code');
 
@@ -73,8 +117,6 @@ class ProductionGroupController extends Controller
         }
 
         $group->update(['status' => ProductionGroup::APPROVED, 'approved_at' => now()]);
-
-        return back()->with(['message' => 'Grupa zatwierdzona']);
     }
 
     /** Cofa zatwierdzenie — wiersze wracaja do osobnych kodow. */

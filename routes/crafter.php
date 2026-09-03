@@ -870,6 +870,8 @@ Route::middleware(['crafter.base', 'auth', 'crafter.verified'])->prefix('admin')
         ->name('production.stages.recalculate');
     Route::post('production/groups/scan', [App\Http\Controllers\Admin\ProductionGroupController::class, 'scan'])
         ->name('production.groups.scan');
+    Route::post('production/groups/bulk', [App\Http\Controllers\Admin\ProductionGroupController::class, 'bulk'])
+        ->name('production.groups.bulk');
     Route::put('production/group-members/{member}', [App\Http\Controllers\Admin\ProductionGroupController::class, 'toggleMember'])
         ->name('production.groups.member');
     Route::post('production/groups/{group}/approve', [App\Http\Controllers\Admin\ProductionGroupController::class, 'approve'])
