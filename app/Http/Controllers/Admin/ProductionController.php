@@ -84,6 +84,11 @@ class ProductionController extends Controller
                     'material' => $slug === null ? '' : ($materialLabels[$slug] ?? $slug),
                     // Ile produktow (aut) kryje sie pod tym kodem — sygnal, ze nazwa to jeden z wielu wariantow.
                     'variants' => $group->count(),
+                    // Nazwy wszystkich aut pod tym kodem — do ramki po najechaniu na „+N".
+                    'variant_names' => $group
+                        ->map(fn ($p) => htmlspecialchars_decode((string) $p->name))
+                        ->values()
+                        ->all(),
                     // Sprzedaz 12M z raportu Subiekta. Kod bez wiersza w raporcie = 0.
                     'sales_12m' => (int) ($item?->sales_12m ?? 0),
                     'stage_id' => $item?->stage_id,
@@ -114,6 +119,11 @@ class ProductionController extends Controller
                 'code' => $variant,
                 'sales_12m' => $variantRow['sales_12m'],
             ];
+
+            // Wiersz pokrywa teraz takze auta wciagnietego wariantu — licznik przy
+            // nazwie i lista w ramce musza to odzwierciedlac.
+            $trunkRow['variants'] += $variantRow['variants'];
+            $trunkRow['variant_names'] = array_merge($trunkRow['variant_names'], $variantRow['variant_names']);
 
             $rows[$trunk] = $trunkRow;
             $rows->forget($variant);

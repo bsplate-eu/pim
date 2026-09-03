@@ -123,26 +123,24 @@
             </Card>
         </div>
 
-        <!-- Ramka z kodami grupy. Poza karta i na fixed, zeby nie ciac jej
-             o overflow komorki gridu. -->
+        <!-- Ramka po najechaniu na „+N". Poza karta i na fixed, zeby nie ciac jej
+             o overflow komorki gridu. Obsluguje oba plusiki: kody grupy i auta. -->
         <div
-            v-if="groupBox.show"
-            class="fixed z-50 rounded-md border border-gray-200 bg-white px-3 py-2 shadow-lg"
-            :style="{ left: groupBox.x + 'px', top: groupBox.y + 'px' }"
+            v-if="hoverBox.show"
+            class="fixed z-50 max-h-80 max-w-lg overflow-auto rounded-md border border-gray-200 bg-white px-3 py-2 shadow-lg"
+            :style="{ left: hoverBox.x + 'px', top: hoverBox.y + 'px' }"
         >
-            <div class="mb-1 text-xs font-semibold text-gray-500">
-                Kody w grupie {{ groupBox.code }}
-            </div>
+            <div class="mb-1 text-xs font-semibold text-gray-500">{{ hoverBox.title }}</div>
             <div
-                v-for="item in groupBox.items"
-                :key="item.code"
+                v-for="(line, i) in hoverBox.lines"
+                :key="i"
                 class="flex items-center justify-between gap-6 py-0.5 text-sm"
             >
-                <span class="font-mono text-gray-900">{{ item.code }}</span>
-                <span class="text-gray-500">{{ item.sales_12m }} szt.</span>
+                <span class="text-gray-900">{{ line.left }}</span>
+                <span v-if="line.right" class="whitespace-nowrap text-gray-500">{{ line.right }}</span>
             </div>
-            <div class="mt-1 border-t border-gray-100 pt-1 text-xs text-gray-400">
-                Sprzedaż wiersza to suma tych kodów i {{ groupBox.code }}.
+            <div v-if="hoverBox.note" class="mt-1 border-t border-gray-100 pt-1 text-xs text-gray-400">
+                {{ hoverBox.note }}
             </div>
         </div>
     </PageContent>
@@ -174,6 +172,8 @@ interface ProductionRow {
     name: string;
     material: string;
     variants: number;
+    // Nazwy wszystkich aut pod tym wierszem — do ramki przy „+N" w kolumnie Nazwa.
+    variant_names: string[];
     sales_12m: number;
     stage_id: number | null;
     // Warianty wciagniete do tego wiersza przez zatwierdzona grupe.
@@ -204,32 +204,34 @@ const stageById = computed<Map<number, Stage>>(
     () => new Map(props.stages.map((s) => [s.id, s]))
 );
 
-// === RAMKA Z KODAMI GRUPY ===
+// === RAMKA PO NAJECHANIU NA „+N" ===
 // Trzymana poza gridem i pozycjonowana na sztywno wzgledem okna: komorki
 // RevoGrida maja overflow: hidden, wiec popover w srodku komorki bylby uciety.
-const groupBox = ref<{
+// Jedna ramka obsluguje oba plusiki — przy kodzie (kody grupy) i przy nazwie
+// (auta pod kodem) — bo roznia sie tylko trescia.
+interface BoxLine {
+    left: string;
+    right?: string;
+}
+
+const hoverBox = ref<{
     show: boolean;
     x: number;
     y: number;
-    code: string;
-    items: Array<{ code: string; sales_12m: number }>;
-}>({ show: false, x: 0, y: 0, code: "", items: [] });
+    title: string;
+    lines: BoxLine[];
+    note: string;
+}>({ show: false, x: 0, y: 0, title: "", lines: [], note: "" });
 
-function showGroupBox(event: MouseEvent, code: string, items: any[]): void {
+function showBox(event: MouseEvent, title: string, lines: BoxLine[], note = ""): void {
     const rect = (event.currentTarget as HTMLElement)?.getBoundingClientRect();
     if (!rect) return;
 
-    groupBox.value = {
-        show: true,
-        x: rect.left,
-        y: rect.bottom + 6,
-        code,
-        items,
-    };
+    hoverBox.value = { show: true, x: rect.left, y: rect.bottom + 6, title, lines, note };
 }
 
-function hideGroupBox(): void {
-    groupBox.value = { ...groupBox.value, show: false };
+function hideBox(): void {
+    hoverBox.value = { ...hoverBox.value, show: false };
 }
 
 // RevoGrid nie sledzi mutacji pol wiersza — podmiana referencji zrodla wymusza
@@ -351,8 +353,14 @@ const columns = computed(() => [
                         // RevoGrida maja overflow: hidden i kazdy popover w srodku bylby
                         // przyciety. Natywny `title` odpada — w komorkach gridu bywa
                         // zjadany i tak nie daje sie go ostylowac.
-                        onMouseenter: (e: any) => showGroupBox(e, code, group),
-                        onMouseleave: hideGroupBox,
+                        onMouseenter: (e: any) =>
+                            showBox(
+                                e,
+                                `Kody w grupie ${code}`,
+                                group.map((g: any) => ({ left: g.code, right: `${g.sales_12m} szt.` })),
+                                `Sprzedaż wiersza to suma tych kodów i ${code}.`
+                            ),
+                        onMouseleave: hideBox,
                     },
                     `+${group.length}`
                 ),
@@ -366,14 +374,33 @@ const columns = computed(() => [
         size: 420,
         sortable: true,
         // Pod jednym kodem siedzi zwykle kilkanascie aut — nazwa to nazwa pierwszego z nich.
-        // Znacznik "+N" mowi, ze wariantow jest wiecej, zeby nikt nie wzial jej za jedyna.
+        // Znacznik "+N" mowi, ze reszta istnieje; najechanie pokazuje ich liste,
+        // zeby nie trzeba bylo szukac po katalogu, co ten wiersz w ogole pokrywa.
         cellTemplate: (h: any, p: any) => {
             const name = String(p.model?.name ?? "");
+            const names: string[] = Array.isArray(p.model?.variant_names)
+                ? p.model.variant_names
+                : [];
             const extra = Number(p.model?.variants ?? 1) - 1;
+
             if (extra <= 0) return h("span", {}, name);
-            return h("span", { title: `Kod obejmuje ${extra + 1} produktow (aut)` }, [
-                name,
-                h("span", { style: { color: "#9ca3af", marginLeft: "6px" } }, `+${extra}`),
+
+            return h("span", { class: "revo-code-cell" }, [
+                h("span", { class: "revo-name-text" }, name),
+                h(
+                    "span",
+                    {
+                        class: "revo-name-chip",
+                        onMouseenter: (e: any) =>
+                            showBox(
+                                e,
+                                `Produkty pod tym wierszem (${names.length})`,
+                                names.map((n) => ({ left: n }))
+                            ),
+                        onMouseleave: hideBox,
+                    },
+                    `+${extra}`
+                ),
             ]);
         },
     },
@@ -700,6 +727,19 @@ const formatQty = (value: number): string => qtyFormatter.format(value);
     font-size: 11px;
     font-weight: 600;
     line-height: 16px;
+    cursor: help;
+}
+
+:deep(.revo-name-text) {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+:deep(.revo-name-chip) {
+    flex: none;
+    color: #9ca3af;
+    font-size: 12px;
     cursor: help;
 }
 
