@@ -54,6 +54,7 @@ class ProductionStageController extends Controller
                 ->values(),
             'histogram' => $this->histogram(),
             'groups' => ProductionGroupController::settingsPayload(),
+            'exclusions' => ProductionExclusionController::settingsPayload(),
         ]);
     }
 

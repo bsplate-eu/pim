@@ -34,7 +34,11 @@ class StageAssigner
         $codes = Product::query()->distinct()->pluck('product_code');
 
         // Jeden odczyt zamiast zapytania na kod.
-        $items = ProductionItem::get(['product_code', 'sales_12m', 'stage_id'])->keyBy('product_code');
+        $items = ProductionItem::get(['product_code', 'sales_12m', 'stage_id', 'excluded'])->keyBy('product_code');
+
+        // Kod wykluczony nie jest wierszem, wiec nie ma etapu i nie doklada
+        // sprzedazy do grupy — tak samo jakby go w katalogu nie bylo.
+        $codes = $codes->reject(fn ($code) => (bool) ($items[$code]?->excluded ?? false));
 
         // Etap liczy sie z tego, co widac w tabeli, a tam wariant jest wciagniety
         // w trzon. Wariant nie dostaje wlasnego etapu, a trzon dostaje go od SUMY —
@@ -43,6 +47,9 @@ class StageAssigner
         $groupMap = (new CodeGrouper())->activeMap();
         $groupedSales = [];
         foreach ($groupMap as $variant => $trunk) {
+            if ((bool) ($items[$variant]?->excluded ?? false)) {
+                continue;
+            }
             $groupedSales[$trunk] = ($groupedSales[$trunk] ?? 0) + (int) ($items[$variant]?->sales_12m ?? 0);
         }
 

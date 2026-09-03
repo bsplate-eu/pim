@@ -13,11 +13,19 @@
                         Grupowanie
                         <span class="ml-1 text-xs text-gray-400">{{ groups.proposed.length }}</span>
                     </button>
+                    <button type="button" :class="tabClass(tab === 'exclusions')" @click="tab = 'exclusions'">
+                        Wykluczenia
+                        <span class="ml-1 text-xs text-gray-400">{{ exclusions.excluded_count }}</span>
+                    </button>
                 </nav>
             </div>
 
             <Card v-if="tab === 'groups'">
                 <GroupsTab :groups="groups" />
+            </Card>
+
+            <Card v-else-if="tab === 'exclusions'">
+                <ExclusionsTab :exclusions="exclusions" />
             </Card>
 
             <Card v-else>
@@ -205,6 +213,7 @@ import {
 } from "@heroicons/vue/24/outline";
 import { Button, Card, IconButton, PageContent, PageHeader } from "crafter/Components";
 import GroupsTab from "./GroupsTab.vue";
+import ExclusionsTab from "./ExclusionsTab.vue";
 
 interface Stage {
     id: number;
@@ -226,12 +235,13 @@ interface Props {
     stages: Stage[];
     histogram: Bucket[];
     groups: { proposed: any[]; approved: any[]; rejected: any[] };
+    exclusions: { codes: any[]; excluded_count: number };
 }
 
 const props = defineProps<Props>();
 const toast = useToast();
 
-const tab = ref<"stages" | "groups">("stages");
+const tab = ref<"stages" | "groups" | "exclusions">("stages");
 
 // Kopia do edycji — inertiowe propsy sa zamrozone, a pola sa edytowalne w miejscu.
 const draft = ref<Stage[]>(props.stages.map((s) => ({ ...s })));

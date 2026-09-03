@@ -55,13 +55,17 @@ class ProductionController extends Controller
 
         // Dane produkcyjne — tylko dla kodow, na ktorych cos ustawiono albo wgrano.
         $items = ProductionItem::get(array_merge(
-            ['product_code', 'sales_12m', 'stage_id'],
+            ['product_code', 'sales_12m', 'stage_id', 'excluded'],
             array_values(self::FLAGS)
         ))->keyBy('product_code');
 
         // Kod wariantu => trzon. Tylko grupy zatwierdzone i tylko zaznaczone
         // warianty — odpiete zostaja osobnymi wierszami.
         $groupMap = $grouper->activeMap();
+
+        // Kody wykluczone w Ustawieniach wypadaja PRZED grupowaniem — nie sa
+        // wierszem i nie doliczaja sie do sumy zadnej grupy.
+        $excluded = $items->filter(fn ($item) => (bool) $item->excluded)->keys()->flip();
 
         $rows = Product::query()
             ->select('id', 'product_code', 'name')
@@ -70,6 +74,7 @@ class ProductionController extends Controller
             ->orderBy('id')
             ->get()
             ->groupBy('product_code')
+            ->reject(fn ($group, $code) => $excluded->has($code))
             ->map(function ($group) use ($materialLabels, $items) {
                 // Reprezentant kodu = najstarszy produkt (najnizsze id) — po nim bierzemy nazwe.
                 $product = $group->first();

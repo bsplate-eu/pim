@@ -17,6 +17,7 @@ class ProductionItem extends Model
     protected $fillable = [
         'product_code',
         'stage_id',
+        'excluded',
         'has_project',
         'team_steel',
         'brak_zestawu',
@@ -25,6 +26,7 @@ class ProductionItem extends Model
     ];
 
     protected $casts = [
+        'excluded' => 'boolean',
         'has_project' => 'boolean',
         'team_steel' => 'boolean',
         'brak_zestawu' => 'boolean',

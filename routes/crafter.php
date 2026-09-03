@@ -876,6 +876,10 @@ Route::middleware(['crafter.base', 'auth', 'crafter.verified'])->prefix('admin')
         ->name('production.suffixes.store');
     Route::delete('production/suffixes/{suffix}', [App\Http\Controllers\Admin\ProductionGroupController::class, 'removeSuffix'])
         ->name('production.suffixes.destroy');
+    Route::post('production/exclusions', [App\Http\Controllers\Admin\ProductionExclusionController::class, 'toggle'])
+        ->name('production.exclusions.toggle');
+    Route::post('production/exclusions/bulk', [App\Http\Controllers\Admin\ProductionExclusionController::class, 'bulk'])
+        ->name('production.exclusions.bulk');
     Route::put('production/group-members/{member}', [App\Http\Controllers\Admin\ProductionGroupController::class, 'toggleMember'])
         ->name('production.groups.member');
     Route::post('production/groups/{group}/approve', [App\Http\Controllers\Admin\ProductionGroupController::class, 'approve'])
