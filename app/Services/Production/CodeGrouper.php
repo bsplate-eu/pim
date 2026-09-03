@@ -85,6 +85,17 @@ class CodeGrouper
             ProductionGroup::whereIn('id', $stale)->delete();
         }
 
+        // Uwalniamy odpiete warianty, ktore po zmianie reguly naleza gdzie indziej.
+        // Przyklad: 30.144W odpiety recznie od 30.144 blokowalby sam siebie —
+        // wiersz czlonka zajmuje kod (unikat), wiec 30.144W nie moglby zalozyc
+        // wlasnej grupy z 30.144WALU. Decyzji nie tracimy: przy poprawnej regule
+        // ten wariant nigdy juz nie zostanie zaproponowany do tamtego trzonu.
+        foreach (ProductionGroupMember::with('group')->where('included', false)->get() as $member) {
+            if ($member->group !== null && $this->trunk($member->product_code) !== $member->group->trunk) {
+                $member->delete();
+            }
+        }
+
         // trzon => lista wariantow (bez samego trzonu)
         $families = [];
         foreach ($codes as $code) {
