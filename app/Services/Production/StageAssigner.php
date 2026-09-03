@@ -36,6 +36,16 @@ class StageAssigner
         // Jeden odczyt zamiast zapytania na kod.
         $items = ProductionItem::get(['product_code', 'sales_12m', 'stage_id'])->keyBy('product_code');
 
+        // Etap liczy sie z tego, co widac w tabeli, a tam wariant jest wciagniety
+        // w trzon. Wariant nie dostaje wlasnego etapu, a trzon dostaje go od SUMY —
+        // inaczej 26.174 (0 szt. na trzonie, 36 na wariancie) siedzialby w
+        // „Pominiete", mimo ze wiersz pokazuje 36.
+        $groupMap = (new CodeGrouper())->activeMap();
+        $groupedSales = [];
+        foreach ($groupMap as $variant => $trunk) {
+            $groupedSales[$trunk] = ($groupedSales[$trunk] ?? 0) + (int) ($items[$variant]?->sales_12m ?? 0);
+        }
+
         $now = Carbon::now();
         $perStage = [];
         $assigned = 0;
@@ -44,7 +54,19 @@ class StageAssigner
 
         foreach ($codes as $code) {
             $item = $items[$code] ?? null;
-            $sales = (int) ($item?->sales_12m ?? 0);
+
+            // Wariant wciagniety w grupe nie ma wlasnego wiersza — zdejmujemy mu etap.
+            if ($groupMap->has($code)) {
+                if ($item !== null && $item->stage_id !== null) {
+                    DB::table('production_items')->where('product_code', $code)
+                        ->update(['stage_id' => null, 'updated_at' => $now]);
+                    $changed++;
+                }
+
+                continue;
+            }
+
+            $sales = (int) ($item?->sales_12m ?? 0) + ($groupedSales[$code] ?? 0);
             $stage = $withRange->first(fn (ProductionStage $s) => $s->matches($sales));
 
             if ($stage === null) {

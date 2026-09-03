@@ -153,6 +153,8 @@ interface ProductionRow {
     variants: number;
     sales_12m: number;
     stage_id: number | null;
+    // Warianty wciagniete do tego wiersza przez zatwierdzona grupe.
+    group_codes: Array<{ code: string; sales_12m: number }>;
     project: boolean;
     team_steel: boolean;
     brak_zestawu: boolean;
@@ -272,7 +274,37 @@ const columns = computed(() => [
             ]);
         },
     },
-    { prop: "product_code", name: "Kod", readonly: true, size: 160, sortable: true },
+    {
+        prop: "product_code",
+        name: "Kod",
+        readonly: true,
+        size: 170,
+        sortable: true,
+        // Przy kodzie z zatwierdzona grupa staje „+N". Najechanie pokazuje ramke
+        // z wciagnietymi wariantami i ich sprzedaza — sprzedaz wiersza to ich suma.
+        cellTemplate: (h: any, p: any) => {
+            const code = String(p.model?.product_code ?? "");
+            const group = Array.isArray(p.model?.group_codes) ? p.model.group_codes : [];
+
+            if (!group.length) {
+                return h("span", {}, code);
+            }
+
+            const lines = group.map((g: any) => `${g.code} — ${g.sales_12m} szt.`).join("\n");
+
+            return h("span", { class: "revo-code-cell" }, [
+                code,
+                h(
+                    "span",
+                    {
+                        class: "revo-group-chip",
+                        title: `Kody w grupie:\n${lines}\n\nSprzedaż wiersza to suma tych kodów i ${code}.`,
+                    },
+                    `+${group.length}`
+                ),
+            ]);
+        },
+    },
     {
         prop: "name",
         name: "Nazwa",
@@ -595,6 +627,26 @@ const formatQty = (value: number): string => qtyFormatter.format(value);
     height: 16px;
     border-radius: 2px;
     flex: none;
+}
+
+:deep(.revo-code-cell) {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 100%;
+}
+
+:deep(.revo-group-chip) {
+    display: inline-block;
+    padding: 0 6px;
+    border: 1px solid #c7d2fe;
+    border-radius: 9px;
+    background: #eef2ff;
+    color: #4338ca;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 16px;
+    cursor: help;
 }
 
 :deep(.revo-stage-badge) {

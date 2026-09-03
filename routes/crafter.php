@@ -868,4 +868,14 @@ Route::middleware(['crafter.base', 'auth', 'crafter.verified'])->prefix('admin')
         ->name('production.stages.reorder');
     Route::post('production/stages/recalculate', [App\Http\Controllers\Admin\ProductionStageController::class, 'recalculate'])
         ->name('production.stages.recalculate');
+    Route::post('production/groups/scan', [App\Http\Controllers\Admin\ProductionGroupController::class, 'scan'])
+        ->name('production.groups.scan');
+    Route::put('production/group-members/{member}', [App\Http\Controllers\Admin\ProductionGroupController::class, 'toggleMember'])
+        ->name('production.groups.member');
+    Route::post('production/groups/{group}/approve', [App\Http\Controllers\Admin\ProductionGroupController::class, 'approve'])
+        ->name('production.groups.approve');
+    Route::post('production/groups/{group}/revoke', [App\Http\Controllers\Admin\ProductionGroupController::class, 'revoke'])
+        ->name('production.groups.revoke');
+    Route::post('production/groups/{group}/reject', [App\Http\Controllers\Admin\ProductionGroupController::class, 'reject'])
+        ->name('production.groups.reject');
 });

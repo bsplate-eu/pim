@@ -6,11 +6,21 @@
             <!-- Jedna zakladka na razie; pasek zostaje, bo dojda kolejne ustawienia. -->
             <div class="mb-4 border-b border-gray-200">
                 <nav class="-mb-px flex gap-6">
-                    <button type="button" :class="tabClass(true)">Etapy</button>
+                    <button type="button" :class="tabClass(tab === 'stages')" @click="tab = 'stages'">
+                        Etapy
+                    </button>
+                    <button type="button" :class="tabClass(tab === 'groups')" @click="tab = 'groups'">
+                        Grupowanie
+                        <span class="ml-1 text-xs text-gray-400">{{ groups.proposed.length }}</span>
+                    </button>
                 </nav>
             </div>
 
-            <Card>
+            <Card v-if="tab === 'groups'">
+                <GroupsTab :groups="groups" />
+            </Card>
+
+            <Card v-else>
                 <div class="mb-4 flex flex-wrap items-start justify-between gap-4">
                     <div>
                         <h3 class="text-base font-medium text-gray-900">Etapy produkcji</h3>
@@ -194,6 +204,7 @@ import {
     TrashIcon,
 } from "@heroicons/vue/24/outline";
 import { Button, Card, IconButton, PageContent, PageHeader } from "crafter/Components";
+import GroupsTab from "./GroupsTab.vue";
 
 interface Stage {
     id: number;
@@ -214,10 +225,13 @@ interface Bucket {
 interface Props {
     stages: Stage[];
     histogram: Bucket[];
+    groups: { proposed: any[]; approved: any[]; rejected: any[] };
 }
 
 const props = defineProps<Props>();
 const toast = useToast();
+
+const tab = ref<"stages" | "groups">("stages");
 
 // Kopia do edycji — inertiowe propsy sa zamrozone, a pola sa edytowalne w miejscu.
 const draft = ref<Stage[]>(props.stages.map((s) => ({ ...s })));

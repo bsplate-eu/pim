@@ -7,6 +7,7 @@ use App\Models\Attribute;
 use App\Models\Product;
 use App\Models\ProductionItem;
 use App\Models\ProductionStage;
+use App\Services\Production\CodeGrouper;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -43,7 +44,7 @@ class ProductionController extends Controller
     /**
      * Lista kodow produkcyjnych (bez powtorzen) do gridu produkcji.
      */
-    public function index(Request $request): Response
+    public function index(Request $request, CodeGrouper $grouper): Response
     {
         // Atrybut „Materiał" (Stal/Aluminium) — dociagany tak samo jak na liscie produktow.
         $materialValues = Attribute::with('values')->where('slug', 'material')->first()?->values ?? collect();
@@ -57,6 +58,10 @@ class ProductionController extends Controller
             ['product_code', 'sales_12m', 'stage_id'],
             array_values(self::FLAGS)
         ))->keyBy('product_code');
+
+        // Kod wariantu => trzon. Tylko grupy zatwierdzone i tylko zaznaczone
+        // warianty — odpiete zostaja osobnymi wierszami.
+        $groupMap = $grouper->activeMap();
 
         $rows = Product::query()
             ->select('id', 'product_code', 'name')
@@ -82,6 +87,8 @@ class ProductionController extends Controller
                     // Sprzedaz 12M z raportu Subiekta. Kod bez wiersza w raporcie = 0.
                     'sales_12m' => (int) ($item?->sales_12m ?? 0),
                     'stage_id' => $item?->stage_id,
+                    // Warianty wciagniete do tego wiersza (wypelniane nizej).
+                    'group_codes' => [],
                 ];
 
                 // Znaczniki lecą pod nazwami z frontu — dodanie kolejnego to jeden wpis w FLAGS.
@@ -91,7 +98,28 @@ class ProductionController extends Controller
 
                 return $row;
             })
-            ->values();
+            ->keyBy('product_code');
+
+        // Skladamy warianty w trzony: sprzedaz sie sumuje, wiersz wariantu znika.
+        foreach ($groupMap as $variant => $trunk) {
+            if (! $rows->has($variant) || ! $rows->has($trunk) || $variant === $trunk) {
+                continue;
+            }
+
+            $variantRow = $rows[$variant];
+            $trunkRow = $rows[$trunk];
+
+            $trunkRow['sales_12m'] += $variantRow['sales_12m'];
+            $trunkRow['group_codes'][] = [
+                'code' => $variant,
+                'sales_12m' => $variantRow['sales_12m'],
+            ];
+
+            $rows[$trunk] = $trunkRow;
+            $rows->forget($variant);
+        }
+
+        $rows = $rows->values();
 
         return Inertia::render('Production/Index', [
             'rows' => $rows,
