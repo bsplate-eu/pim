@@ -7,6 +7,7 @@ use App\Models\Product;
 use App\Models\ProductionGroup;
 use App\Models\ProductionGroupMember;
 use App\Models\ProductionItem;
+use App\Models\ProductionVariantSuffix;
 use App\Services\Production\CodeGrouper;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -136,6 +137,36 @@ class ProductionGroupController extends Controller
     }
 
     /**
+     * Dodaje sufiks materialowy. Lista jest w rekach uzytkownika, bo tylko on
+     * wie, ktora koncowka oznacza material, a ktora osobny wyrob.
+     */
+    public function addSuffix(Request $request, CodeGrouper $grouper): RedirectResponse
+    {
+        $data = $request->validate([
+            'suffix' => ['required', 'string', 'max:20', 'regex:/^[A-Za-z]+$/'],
+        ], ['suffix.regex' => 'Sufiks moze zawierac tylko litery.']);
+
+        $suffix = strtoupper(trim($data['suffix']));
+
+        if (! ProductionVariantSuffix::where('suffix', $suffix)->exists()) {
+            ProductionVariantSuffix::create(['suffix' => $suffix]);
+            // Zmiana listy zmienia trzony, wiec propozycje musza byc policzone od nowa.
+            $grouper->refreshProposals();
+        }
+
+        return back()->with(['message' => 'Sufiks dodany']);
+    }
+
+    /** Usuwa sufiks — kody z ta koncowka przestaja sie laczyc z baza. */
+    public function removeSuffix(ProductionVariantSuffix $suffix, CodeGrouper $grouper): RedirectResponse
+    {
+        $suffix->delete();
+        $grouper->refreshProposals();
+
+        return back()->with(['message' => 'Sufiks usuniety']);
+    }
+
+    /**
      * Dane zakladki „Grupowanie" — wolane z ekranu Ustawien.
      *
      * @return array<string,mixed>
@@ -177,6 +208,7 @@ class ProductionGroupController extends Controller
             });
 
         return [
+            'suffixes' => ProductionVariantSuffix::orderBy('suffix')->get(['id', 'suffix']),
             'proposed' => $groups->where('status', ProductionGroup::PROPOSED)->values(),
             'approved' => $groups->where('status', ProductionGroup::APPROVED)->values(),
             'rejected' => $groups->where('status', ProductionGroup::REJECTED)->values(),

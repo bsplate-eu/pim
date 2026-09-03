@@ -122,6 +122,29 @@
                 />
             </Card>
         </div>
+
+        <!-- Ramka z kodami grupy. Poza karta i na fixed, zeby nie ciac jej
+             o overflow komorki gridu. -->
+        <div
+            v-if="groupBox.show"
+            class="fixed z-50 rounded-md border border-gray-200 bg-white px-3 py-2 shadow-lg"
+            :style="{ left: groupBox.x + 'px', top: groupBox.y + 'px' }"
+        >
+            <div class="mb-1 text-xs font-semibold text-gray-500">
+                Kody w grupie {{ groupBox.code }}
+            </div>
+            <div
+                v-for="item in groupBox.items"
+                :key="item.code"
+                class="flex items-center justify-between gap-6 py-0.5 text-sm"
+            >
+                <span class="font-mono text-gray-900">{{ item.code }}</span>
+                <span class="text-gray-500">{{ item.sales_12m }} szt.</span>
+            </div>
+            <div class="mt-1 border-t border-gray-100 pt-1 text-xs text-gray-400">
+                Sprzedaż wiersza to suma tych kodów i {{ groupBox.code }}.
+            </div>
+        </div>
     </PageContent>
 </template>
 
@@ -180,6 +203,34 @@ const gridRef = ref<any>(null);
 const stageById = computed<Map<number, Stage>>(
     () => new Map(props.stages.map((s) => [s.id, s]))
 );
+
+// === RAMKA Z KODAMI GRUPY ===
+// Trzymana poza gridem i pozycjonowana na sztywno wzgledem okna: komorki
+// RevoGrida maja overflow: hidden, wiec popover w srodku komorki bylby uciety.
+const groupBox = ref<{
+    show: boolean;
+    x: number;
+    y: number;
+    code: string;
+    items: Array<{ code: string; sales_12m: number }>;
+}>({ show: false, x: 0, y: 0, code: "", items: [] });
+
+function showGroupBox(event: MouseEvent, code: string, items: any[]): void {
+    const rect = (event.currentTarget as HTMLElement)?.getBoundingClientRect();
+    if (!rect) return;
+
+    groupBox.value = {
+        show: true,
+        x: rect.left,
+        y: rect.bottom + 6,
+        code,
+        items,
+    };
+}
+
+function hideGroupBox(): void {
+    groupBox.value = { ...groupBox.value, show: false };
+}
 
 // RevoGrid nie sledzi mutacji pol wiersza — podmiana referencji zrodla wymusza
 // przerysowanie (i przelicza liczniki zakladek, procenty oraz filtr).
@@ -290,15 +341,18 @@ const columns = computed(() => [
                 return h("span", {}, code);
             }
 
-            const lines = group.map((g: any) => `${g.code} — ${g.sales_12m} szt.`).join("\n");
-
             return h("span", { class: "revo-code-cell" }, [
                 code,
                 h(
                     "span",
                     {
                         class: "revo-group-chip",
-                        title: `Kody w grupie:\n${lines}\n\nSprzedaż wiersza to suma tych kodów i ${code}.`,
+                        // Ramka renderuje sie POZA gridem (position: fixed), bo komorki
+                        // RevoGrida maja overflow: hidden i kazdy popover w srodku bylby
+                        // przyciety. Natywny `title` odpada — w komorkach gridu bywa
+                        // zjadany i tak nie daje sie go ostylowac.
+                        onMouseenter: (e: any) => showGroupBox(e, code, group),
+                        onMouseleave: hideGroupBox,
                     },
                     `+${group.length}`
                 ),

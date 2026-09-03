@@ -5,30 +5,62 @@ namespace App\Services\Production;
 use App\Models\Product;
 use App\Models\ProductionGroup;
 use App\Models\ProductionGroupMember;
+use App\Models\ProductionVariantSuffix;
 use Illuminate\Support\Collection;
 
 /**
  * Grupowanie wariantow kodu produkcyjnego.
  *
- * Trzon = kod bez KONCOWYCH LITER. Cyfra zostaje czescia kodu, bo 00.179
- * i 00.1791 to rozne oslony — laczy sie tylko 00.1791 z 00.1791ALU.
+ * Trzon = kod bez sufiksu MATERIALOWEGO (ALU/GAL/INOX — lista w Ustawieniach).
+ * Cyfra i pozostale litery zostaja czescia kodu, bo oznaczaja inna oslone:
+ * 00.1791 nie laczy sie z 00.1792, a 30.144W ma wlasna wersje aluminiowa
+ * 30.144WALU i jest wlasnym trzonem.
  *
  * Automat wylicza propozycje, ale niczego nie wlacza: grupa dziala dopiero
  * po zatwierdzeniu, a w propozycji mozna odpiac pojedyncze warianty.
  */
 class CodeGrouper
 {
-    /** Kod bez koncowych liter; null gdy kod nie ma ksztaltu NN.NNN. */
-    public static function trunk(string $code): ?string
+    /** @var list<string>|null lista sufiksow materialowych, czytana raz na instancje */
+    private ?array $suffixes = null;
+
+    /**
+     * Trzon kodu: kod bez JEDNEGO sufiksu materialowego z konca.
+     *
+     * Ucinamy wylacznie ALU/GAL/INOX (albo cokolwiek jest na liscie), a nie
+     * dowolne litery. Koncowki typu „W" czy „A" oznaczaja INNA oslone: 30.144W
+     * ma wlasna wersje aluminiowa 30.144WALU, wiec jest wlasnym trzonem.
+     * Zwraca null, gdy kod nie ma ksztaltu NN.NNN.
+     */
+    public function trunk(string $code): ?string
     {
         if (! preg_match('/^\d+\.\d{3}/', $code)) {
             return null;
         }
 
-        $clean = str_replace([' ', '-'], '', $code);
-        $trunk = rtrim($clean, 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz');
+        $clean = strtoupper(str_replace([' ', '-'], '', $code));
 
-        return $trunk === '' ? null : $trunk;
+        // Najdluzszy pasujacy sufiks pierwszy — inaczej „WALU" ucieloby sie do „W".
+        foreach ($this->suffixes() as $suffix) {
+            if (str_ends_with($clean, $suffix) && strlen($clean) > strlen($suffix)) {
+                return substr($clean, 0, -strlen($suffix));
+            }
+        }
+
+        return $clean;
+    }
+
+    /** @return list<string> */
+    private function suffixes(): array
+    {
+        if ($this->suffixes === null) {
+            $this->suffixes = ProductionVariantSuffix::pluck('suffix')
+                ->sortByDesc(fn (string $s) => strlen($s))
+                ->values()
+                ->all();
+        }
+
+        return $this->suffixes;
     }
 
     /**
@@ -43,11 +75,21 @@ class CodeGrouper
     {
         $codes = Product::query()->distinct()->pluck('product_code');
 
+        // Propozycje liczymy od zera: po zmianie listy sufiksow trzony sie
+        // zmieniaja, wiec stare propozycje sa nieaktualne. Decyzje juz podjete
+        // (zatwierdzone i odrzucone) zostaja nietkniete.
+        $stale = ProductionGroup::where('status', ProductionGroup::PROPOSED)->pluck('id');
+
+        if ($stale->isNotEmpty()) {
+            ProductionGroupMember::whereIn('group_id', $stale)->delete();
+            ProductionGroup::whereIn('id', $stale)->delete();
+        }
+
         // trzon => lista wariantow (bez samego trzonu)
         $families = [];
         foreach ($codes as $code) {
-            $trunk = self::trunk($code);
-            if ($trunk === null || $trunk === $code) {
+            $trunk = $this->trunk($code);
+            if ($trunk === null || $trunk === strtoupper(str_replace([' ', '-'], '', $code))) {
                 continue;
             }
             $families[$trunk][] = $code;
@@ -61,22 +103,28 @@ class CodeGrouper
             ARRAY_FILTER_USE_BOTH
         );
 
-        $groups = ProductionGroup::with('members')->get()->keyBy('trunk');
+        // Kody i trzony zajete przez decyzje, ktorych nie ruszamy.
+        $takenTrunks = ProductionGroup::pluck('trunk')->flip();
+        $takenCodes = ProductionGroupMember::pluck('product_code')->flip();
+
         $newGroups = 0;
         $newMembers = 0;
 
         foreach ($families as $trunk => $variants) {
-            $group = $groups[$trunk] ?? null;
-
-            if ($group === null) {
-                $group = ProductionGroup::create(['trunk' => $trunk, 'status' => ProductionGroup::PROPOSED]);
-                $newGroups++;
-                $known = [];
-            } else {
-                $known = $group->members->pluck('product_code')->all();
+            if ($takenTrunks->has($trunk)) {
+                continue;
             }
 
-            foreach (array_diff($variants, $known) as $code) {
+            $free = array_values(array_filter($variants, fn ($c) => ! $takenCodes->has($c)));
+
+            if ($free === []) {
+                continue;
+            }
+
+            $group = ProductionGroup::create(['trunk' => $trunk, 'status' => ProductionGroup::PROPOSED]);
+            $newGroups++;
+
+            foreach ($free as $code) {
                 ProductionGroupMember::create([
                     'group_id' => $group->id,
                     'product_code' => $code,

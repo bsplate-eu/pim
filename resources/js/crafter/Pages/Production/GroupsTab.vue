@@ -24,6 +24,45 @@
             </Button>
         </div>
 
+        <!-- Lista sufiksow materialowych. To ona decyduje, co jest wariantem:
+             ALU laczy sie z baza, a „W" czy „A" zostaja osobnym trzonem. -->
+        <div class="mb-5 rounded-md border border-gray-200 bg-gray-50 p-4">
+            <div class="mb-2 text-xs font-medium uppercase tracking-wide text-gray-500">
+                Sufiksy materiałowe — tylko te końcówki łączą się z kodem bazowym
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+                <span
+                    v-for="s in suffixes"
+                    :key="s.id"
+                    class="inline-flex items-center gap-2 rounded-full border border-gray-300 bg-white px-3 py-1 text-sm"
+                >
+                    <span class="font-mono font-semibold">{{ s.suffix }}</span>
+                    <button
+                        type="button"
+                        class="text-gray-400 hover:text-red-600"
+                        title="Usuń sufiks"
+                        @click="removeSuffix(s)"
+                    >×</button>
+                </span>
+
+                <input
+                    v-model="newSuffix"
+                    type="text"
+                    placeholder="np. INOX"
+                    class="w-28 rounded border-gray-300 text-sm uppercase"
+                    @keyup.enter="addSuffix"
+                />
+                <Button size="sm" color="gray" variant="outline" @click="addSuffix">Dodaj</Button>
+            </div>
+            <p class="mt-2 text-xs text-gray-500">
+                <code>30.144</code> + <code>30.144ALU</code> to jedna osłona w dwóch materiałach.
+                Ale <code>30.144W</code> to <strong>inna</strong> osłona — ma własną wersję
+                <code>30.144WALU</code>, więc jest osobnym trzonem.
+                <strong>Zmiana listy przelicza propozycje od nowa</strong>; zatwierdzone
+                i odrzucone grupy zostają.
+            </p>
+        </div>
+
         <div v-if="scanResult" class="mb-5 rounded-md border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900">
             Nowych grup: <strong>{{ scanResult.nowych_grup }}</strong>,
             nowych wariantów: <strong>{{ scanResult.nowych_wariantow }}</strong>,
@@ -198,8 +237,18 @@ interface Group {
     sales_after: number;
 }
 
+interface Suffix {
+    id: number;
+    suffix: string;
+}
+
 interface Props {
-    groups: { proposed: Group[]; approved: Group[]; rejected: Group[] };
+    groups: {
+        suffixes: Suffix[];
+        proposed: Group[];
+        approved: Group[];
+        rejected: Group[];
+    };
 }
 
 const props = defineProps<Props>();
@@ -215,6 +264,29 @@ const innerTabs = computed(() => [
 ]);
 
 const visible = computed<Group[]>(() => props.groups[active.value] ?? []);
+
+// === SUFIKSY MATERIALOWE ===
+const suffixes = computed<Suffix[]>(() => props.groups.suffixes ?? []);
+const newSuffix = ref("");
+
+function addSuffix(): void {
+    const value = newSuffix.value.trim().toUpperCase();
+    if (!value) return;
+
+    router.post(
+        route("crafter.production.suffixes.store"),
+        { suffix: value },
+        { ...visitOptions, onSuccess: () => { newSuffix.value = ""; } }
+    );
+}
+
+function removeSuffix(s: Suffix): void {
+    if (!window.confirm(`Usunąć sufiks „${s.suffix}"? Kody z tą końcówką przestaną łączyć się z bazą.`)) {
+        return;
+    }
+
+    router.delete(route("crafter.production.suffixes.destroy", s.id), visitOptions);
+}
 
 // === ZAZNACZANIE ===
 // Czyscimy przy zmianie zakladki: zaznaczenie z „Do zatwierdzenia" nie ma sensu

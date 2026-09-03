@@ -1,1 +1,0 @@
-import{aA as r,aC as i}from"./vendor-673b1367.js";function b(u,e,a="put",c){const o=r(),n={onSuccess:s=>{s.props.message&&o.success(s.props.message)},onError:s=>{s&&o.error(Object.values(s)[0])},...c},t=i(u);return{form:t,submit:()=>{t==null||t.submit(a,e,n)}}}export{b as u};
