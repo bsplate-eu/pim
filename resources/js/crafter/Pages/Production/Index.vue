@@ -84,9 +84,27 @@
                         </div>
                     </div>
 
-                    <!-- Barometr liczy z CALEGO zbioru, nie z widocznego po filtrze — ma mowic
-                         ile calosci jest zrobione, niezaleznie od tego czego akurat szukasz. -->
-                    <ProgressGauge class="flex-none" :done="doneCount" :total="totalCount" />
+                    <!-- Dwa barometry licza z CALEGO zbioru, nie z widocznego po filtrze —
+                         maja mowic ile calosci jest zrobione, niezaleznie od tego czego
+                         akurat szukasz w tabeli.
+
+                         Pierwszy liczy KODY, drugi SZTUKI — i te liczby potrafia sie mocno
+                         rozjechac, bo jeden kod potrafi sprzedac 154 sztuki, a inny zero.
+                         Dlatego oba, a nie jeden. -->
+                    <ProgressGauge
+                        class="flex-none"
+                        label="Procent wykonania indexów"
+                        :done="doneCount"
+                        :total="totalCount"
+                        :caption="`${formatQty(doneCount)} / ${formatQty(totalCount)} gotowych`"
+                    />
+                    <ProgressGauge
+                        class="flex-none"
+                        label="Procent pokrycia sprzedaży"
+                        :done="doneSales"
+                        :total="totalSales"
+                        :caption="`${formatQty(doneSales)} / ${formatQty(totalSales)} szt.`"
+                    />
                 </div>
 
                 <div class="mb-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -678,6 +696,10 @@ const sumSales = (list: any[]): number =>
 
 const visibleSales = computed<number>(() => sumSales(visibleRows.value));
 const totalSales = computed<number>(() => sumSales(allRows.value));
+
+// Sprzedaz kodow juz zrobionych. Osobno od doneCount, bo to inna miara:
+// 17% wykonanych kodow moze pokrywac zupelnie inny procent realnej sprzedazy.
+const doneSales = computed<number>(() => sumSales(allRows.value.filter(isDone)));
 
 // Widok zawezony = zakladka inna niz „Wszystkie" albo cokolwiek w filtrach.
 const isNarrowed = computed<boolean>(() => filterFn.value !== null);

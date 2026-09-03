@@ -1,8 +1,9 @@
 <!--
-  Barometr wykonania projektow — polokrag w naglowku Produkcji.
+  Barometr postepu — polokrag w karcie Produkcji.
 
-  100% = wszystkie kody, domyslnie czerwone. Zielony wycinek to kody, ktore
-  weszly do „Gotowe". Wskazowka pokazuje biezacy stan.
+  Czerwony to calosc, zielony wycinek to wykonane, wskazowka pokazuje stan.
+  Komponent nie wie CO liczy — dostaje gotowe liczby i podpisy, wiec ten sam
+  rysunek obsluguje i procent wykonanych kodow, i procent pokrytej sprzedazy.
 
   Liczby stoja OBOK tarczy, a nie pod nia: naglowek jest przyklejony do gory,
   wiec kazdy piksel jego wysokosci placi sie przez cale przewijanie 700 wierszy.
@@ -47,8 +48,11 @@
         </svg>
 
         <div class="leading-tight">
+            <div class="mb-0.5 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+                {{ label }}
+            </div>
             <div class="text-xl font-semibold text-gray-900">{{ percentLabel }}</div>
-            <div class="text-xs text-gray-500">{{ done }} / {{ total }} gotowych</div>
+            <div class="text-xs text-gray-500">{{ caption }}</div>
         </div>
     </div>
 </template>
@@ -59,6 +63,10 @@ import { computed } from "vue";
 interface Props {
     done: number;
     total: number;
+    /** Naglowek nad liczba — mowi CO ten barometr mierzy. */
+    label: string;
+    /** Podpis pod procentem, np. „104 / 593 gotowych". */
+    caption: string;
 }
 
 const props = defineProps<Props>();
