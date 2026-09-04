@@ -1,8 +1,9 @@
 <template>
   <Head title="Poczta — ARGO" />
 
-  <!-- Pasek: skrzynka + katalogi + filtry -->
-  <div class="sticky top-0 z-10 bg-white border-b border-gray-200">
+  <!-- Pasek: skrzynka + katalogi + filtry. `top-14` = pod naglowkiem layoutu;
+       przy `top-0` wjezdzalby pod niego przy scrollu (naglowek ma wyzszy z-index). -->
+  <div class="sticky top-14 z-10 bg-white border-b border-gray-200">
     <div class="grid grid-cols-3 divide-x divide-gray-100">
       <button
         type="button"

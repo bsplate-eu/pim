@@ -11,8 +11,17 @@
       </div>
     </header>
 
-    <!-- Tresc strony -->
-    <main class="flex-1 overflow-y-auto pb-24">
+    <!-- Tresc strony.
+         BEZ `overflow-y-auto`: main i tak nigdy sam nie scrollowal (wrapper ma
+         min-h-screen, wiec rosnie z trescia i scrolluje dokument), ale samo
+         `overflow` robilo z main kontener dla `position: sticky`. Efekt byl
+         podwojnie zly: paski stron liczyly swoj `top` od gornej krawedzi main
+         — czyli juz PONIZEJ naglowka — wiec offset stawal sie martwym pasem
+         zaslaniajacym pierwsza pozycje listy, a przy scrollu przestawaly sie
+         kleic i po prostu odjezdzaly w gore.
+         Paski stron kleja sie teraz do `top-14`, czyli pod 56-pikselowy
+         naglowek ponizej. -->
+    <main class="flex-1 pb-24">
       <slot />
     </main>
 
