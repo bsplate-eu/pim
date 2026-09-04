@@ -1,13 +1,13 @@
 <template>
   <div class="min-h-screen flex flex-col bg-gray-50 text-gray-900">
-    <!-- Gorny pasek w granacie sidebara — apka ma wygladac jak PIM, a nie jak
-         osobny produkt. Czerwien zostaje na akcenty (badge, akcja). -->
-    <header class="sticky top-0 z-20 bg-sidebar-600 text-white shadow-sm">
+    <!-- Bialy pasek z logo BSPLATE — to samo, co widac na logowaniu do panelu,
+         wiec apka od pierwszego ekranu wyglada jak ta sama firma. -->
+    <header class="sticky top-0 z-20 bg-white border-b border-gray-200">
       <div class="flex items-center justify-between px-4 h-14">
         <Link href="/admin/m" class="flex items-center">
-          <img src="/icons/argo-logo.png?v=1" alt="argo" class="h-7 w-auto brightness-0 invert" />
+          <img src="/logo.png?v=1" alt="BSPLATE" class="h-7 w-auto" />
         </Link>
-        <span class="text-sm font-semibold text-sidebar-100">{{ currentLabel }}</span>
+        <span class="text-sm font-semibold text-gray-500">{{ currentLabel }}</span>
       </div>
     </header>
 
