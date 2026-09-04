@@ -19,6 +19,10 @@
 param(
     [string] $Server = 'SERWER\INSERTGT',
     [string] $Database = '',
+    # Puste = logowanie zintegrowane Windows (skrypt chodzi NA maszynie z Subiektem).
+    # Z innego komputera spoza tej domeny podaj konto SQL, a haslo wklej do pliku.
+    [string] $SqlUser = '',
+    [string] $SqlPasswordFile = "$PSScriptRoot\sql-haslo.txt",
     [string] $Warehouse = '',
     [string] $Url = 'https://pim.bsplate.eu/api/argo-bridge',
     [string] $TokenFile = "$PSScriptRoot\token.txt",
@@ -72,8 +76,22 @@ if ([string]::IsNullOrWhiteSpace($Warehouse)) {
 Write-Log "Magazyn do odczytu: $Warehouse"
 
 # --- 2. Odczyt stanu z Subiekta ---
+$auth = 'Integrated Security=SSPI'
+if (-not [string]::IsNullOrWhiteSpace($SqlUser)) {
+    if (-not (Test-Path $SqlPasswordFile)) {
+        Write-Log "BLAD: podano -SqlUser, ale brak pliku z haslem ($SqlPasswordFile)."
+        exit 1
+    }
+    $sqlPassword = (Get-Content -Path $SqlPasswordFile -Raw).Trim()
+    if ([string]::IsNullOrWhiteSpace($sqlPassword)) {
+        Write-Log "BLAD: plik z haslem SQL jest pusty."
+        exit 1
+    }
+    $auth = "User ID=$SqlUser;Password=$sqlPassword"
+}
+
 $conn = New-Object System.Data.SqlClient.SqlConnection
-$conn.ConnectionString = "Server=$Server;Database=$Database;Integrated Security=SSPI;ApplicationIntent=ReadOnly;Connect Timeout=15"
+$conn.ConnectionString = "Server=$Server;Database=$Database;$auth;ApplicationIntent=ReadOnly;Connect Timeout=15"
 
 if ([string]::IsNullOrWhiteSpace($Database)) {
     Write-Log "BLAD: podaj baze parametrem -Database (nazwe znajdziesz skryptem sprawdz-magazyny.ps1)."

@@ -16,16 +16,39 @@
 
 param(
     [string] $Server = 'SERWER\INSERTGT',
-    [string] $Database = ''
+    [string] $Database = '',
+    # Puste = logowanie zintegrowane Windows. Dziala, gdy skrypt chodzi NA maszynie
+    # z Subiektem. Z innego komputera, spoza tej samej domeny, SQL odrzuci takie
+    # logowanie ("login is from an untrusted domain") - wtedy podaj konto SQL
+    # przez -SqlUser, a haslo wpisz do pliku obok skryptu.
+    [string] $SqlUser = '',
+    [string] $SqlPasswordFile = "$PSScriptRoot\sql-haslo.txt"
 )
 
 $ErrorActionPreference = 'Stop'
+
+function Get-AuthPart {
+    if ([string]::IsNullOrWhiteSpace($SqlUser)) {
+        return 'Integrated Security=SSPI'
+    }
+
+    if (-not (Test-Path $SqlPasswordFile)) {
+        throw "Podales -SqlUser, ale brak pliku z haslem ($SqlPasswordFile). Utworz go i wklej tam samo haslo."
+    }
+
+    $password = (Get-Content -Path $SqlPasswordFile -Raw).Trim()
+    if ([string]::IsNullOrWhiteSpace($password)) {
+        throw "Plik z haslem jest pusty ($SqlPasswordFile)."
+    }
+
+    return "User ID=$SqlUser;Password=$password"
+}
 
 function New-ReadOnlyConnection([string] $server, [string] $database) {
     # ApplicationIntent=ReadOnly + READ UNCOMMITTED: nie blokujemy nikomu pracy
     # w Subiekcie i sami niczego nie zapisujemy.
     $conn = New-Object System.Data.SqlClient.SqlConnection
-    $conn.ConnectionString = "Server=$server;Database=$database;Integrated Security=SSPI;ApplicationIntent=ReadOnly;Connect Timeout=15"
+    $conn.ConnectionString = "Server=$server;Database=$database;$(Get-AuthPart);ApplicationIntent=ReadOnly;Connect Timeout=15"
     $conn.Open()
     return $conn
 }
