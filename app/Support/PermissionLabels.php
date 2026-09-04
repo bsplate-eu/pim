@@ -78,6 +78,10 @@ class PermissionLabels
         'crafter.module.task'         => 'Argo Task (projekty i zadania)',
         'crafter.module.mail'         => 'Argo Mail (skrzynka, konta, administrator AI)',
         'crafter.module.translations' => 'Tłumaczenia (matryca, review, logi, ustawienia)',
+        // Jedno uprawnienie na oba działy — trasy `production.*` obejmują i listę
+        // kodów, i cztery ekrany Magazynu, i Magazyn w Argo App na telefonie.
+        // Bez tego opisu pozycja wyświetlała się jako gołe „Production".
+        'crafter.module.production'   => 'Produkcja i Magazyn (kody, etapy, stany, Argo App)',
 
         'crafter.mail-account'        => 'Argo Mail · skrzynki',
         'crafter.mail-account.all'    => 'Dostęp do WSZYSTKICH skrzynek (bez tego — tylko przypisane imiennie)',
