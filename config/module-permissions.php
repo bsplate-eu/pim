@@ -55,6 +55,8 @@ return [
 
         // ——— Argo PIM ———
         'production.'                => 'crafter.module.production',
+        // Magazyn w Argo App to ten sam magazyn co na desktopie — jedno uprawnienie.
+        'mobile.warehouse'           => 'crafter.module.production',
 
         // ——— Matryca tłumaczeń (v2) ———
         'translation-phrases.'       => 'crafter.module.translations',

@@ -1,16 +1,17 @@
 <template>
   <div class="min-h-screen flex flex-col bg-gray-50 text-gray-900">
-    <!-- Górny pasek -->
-    <header class="sticky top-0 z-20 bg-white border-b border-gray-200">
+    <!-- Gorny pasek w granacie sidebara — apka ma wygladac jak PIM, a nie jak
+         osobny produkt. Czerwien zostaje na akcenty (badge, akcja). -->
+    <header class="sticky top-0 z-20 bg-sidebar-600 text-white shadow-sm">
       <div class="flex items-center justify-between px-4 h-14">
         <Link href="/admin/m" class="flex items-center">
-          <img src="/icons/argo-logo.png?v=1" alt="argo" class="h-7 w-auto" />
+          <img src="/icons/argo-logo.png?v=1" alt="argo" class="h-7 w-auto brightness-0 invert" />
         </Link>
-        <span class="text-sm font-medium text-gray-500">{{ currentLabel }}</span>
+        <span class="text-sm font-semibold text-sidebar-100">{{ currentLabel }}</span>
       </div>
     </header>
 
-    <!-- Treść strony -->
+    <!-- Tresc strony -->
     <main class="flex-1 overflow-y-auto pb-24">
       <slot />
     </main>
@@ -23,14 +24,19 @@
           v-for="tab in tabs"
           :key="tab.name"
           :href="tab.href"
-          class="flex flex-col items-center justify-center py-2.5 text-[11px] font-medium transition-colors"
-          :class="isActive(tab) ? 'text-primary-600' : 'text-gray-400'"
+          class="relative flex flex-col items-center justify-center py-2.5 text-[11px] font-semibold transition-colors"
+          :class="isActive(tab) ? 'text-sidebar-600' : 'text-gray-400'"
         >
+          <!-- Kreska nad aktywna zakladka: czytelniejsza na sloncu niz sam kolor -->
+          <span
+            v-if="isActive(tab)"
+            class="absolute top-0 h-0.5 w-10 rounded-full bg-primary-500"
+          />
           <span class="relative">
             <component :is="tab.icon" class="h-6 w-6" />
             <span
               v-if="tab.badge"
-              class="absolute -top-1.5 -right-2.5 min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[10px] leading-4 text-center"
+              class="absolute -top-1.5 -right-2.5 min-w-[16px] h-4 px-1 rounded-full bg-primary-500 text-white text-[10px] leading-4 text-center"
             >
               {{ tab.badge > 99 ? '99+' : tab.badge }}
             </span>
@@ -48,17 +54,20 @@ import { Link, usePage } from "@inertiajs/vue3";
 import {
   HomeIcon,
   EnvelopeIcon,
-  RectangleStackIcon,
+  ArchiveBoxIcon,
   BellIcon,
 } from "@heroicons/vue/24/outline";
 
 const page = usePage();
 const unread = computed(() => Number(page.props?.auth?.unreadNotifications ?? 0));
 
+/* Apka ma dwa moduly — Magazyn i Poczta. Start i Alerty to nie moduly, tylko
+   obsluga samej apki (kafelki + skrzynka powiadomien push), stad w pasku, ale
+   nie na liscie kafelkow. */
 const tabs = computed(() => [
   { name: "home", label: "Start", icon: HomeIcon, href: "/admin/m" },
+  { name: "warehouse", label: "Magazyn", icon: ArchiveBoxIcon, href: "/admin/m/magazyn" },
   { name: "mail", label: "Poczta", icon: EnvelopeIcon, href: "/admin/m/mail" },
-  { name: "tasks", label: "Zadania", icon: RectangleStackIcon, href: "/admin/m/tasks" },
   { name: "notifications", label: "Alerty", icon: BellIcon, href: "/admin/m/notifications", badge: unread.value },
 ]);
 

@@ -389,6 +389,10 @@ Route::middleware(['crafter.base', 'auth', 'crafter.verified'])->prefix('admin')
     Route::post('connect/chatbot/sales/test', [App\Http\Controllers\Admin\Connect\ChatbotController::class, 'testSales'])
         ->name('connect.chatbot.sales.test');
 
+    // Connect → Argo App — apka na telefon (Magazyn + Poczta), ostatnia pozycja grupy
+    Route::get('connect/argo-app', [App\Http\Controllers\Admin\Connect\ArgoAppController::class, 'index'])
+        ->name('connect.argo-app.index');
+
     // Klienci
     Route::get('connect/customers', [App\Http\Controllers\Admin\Connect\CustomerController::class, 'index'])
         ->name('connect.customers.index');
@@ -654,6 +658,7 @@ Route::middleware(['crafter.base', 'auth', 'crafter.verified', 'mail.account'])-
 Route::middleware(['crafter.base', 'auth', 'crafter.verified'])->prefix('admin')->name('crafter.')->group(function () {
     Route::get('m', [App\Http\Controllers\Admin\MobileController::class, 'home'])->name('mobile.home');
     Route::get('m/mail', [App\Http\Controllers\Admin\MobileController::class, 'mail'])->name('mobile.mail');
+    Route::get('m/magazyn', [App\Http\Controllers\Admin\MobileController::class, 'warehouse'])->name('mobile.warehouse');
     Route::get('m/tasks', [App\Http\Controllers\Admin\MobileController::class, 'tasks'])->name('mobile.tasks');
     Route::get('m/notifications', [App\Http\Controllers\Admin\MobileController::class, 'notifications'])->name('mobile.notifications');
 

@@ -242,6 +242,14 @@
                         </SidebarItem>
                     </SidebarSubGroup>
                 </SidebarSubGroup>
+
+                <!-- Argo App — ostatnia pozycja grupy, poza podgrupami. -->
+                <SidebarItem
+                    :href="route('crafter.connect.argo-app.index')"
+                    v-can="'crafter.module.connect'"
+                >
+                    Argo App
+                </SidebarItem>
             </SidebarGroup>
 
             <!-- Argo Scope -->

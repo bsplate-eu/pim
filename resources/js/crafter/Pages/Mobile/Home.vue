@@ -2,57 +2,45 @@
   <Head title="ARGO" />
 
   <div class="p-4 space-y-4">
-    <div>
-      <h1 class="text-2xl font-extrabold text-gray-900">
+    <!-- Hero w granacie PIM, z czerwoną kreską akcentu pod nagłówkiem -->
+    <div class="rounded-2xl bg-sidebar-600 px-5 py-5 text-white shadow-sm">
+      <h1 class="text-2xl font-extrabold">
         Cześć{{ firstName ? ', ' + firstName : '' }} 👋
       </h1>
-      <p class="text-sm text-gray-500">Twoje centrum: poczta i zadania.</p>
+      <div class="mt-2 h-0.5 w-10 rounded-full bg-primary-500"></div>
+      <p class="mt-2 text-sm text-sidebar-100">Twoje centrum: magazyn i poczta.</p>
     </div>
 
+    <!-- Dwa kafelki = dwa moduly apki. Alerty siedza w dolnym pasku, bo to
+         skrzynka powiadomien push, a nie osobny modul. -->
     <div class="grid grid-cols-1 gap-3">
+      <Link href="/admin/m/magazyn" class="block rounded-2xl bg-white shadow-sm border border-gray-100 p-4 active:scale-[.99] transition">
+        <div class="flex items-center gap-4">
+          <div class="h-12 w-12 rounded-xl bg-sidebar-50 flex items-center justify-center">
+            <ArchiveBoxIcon class="h-6 w-6 text-sidebar-600" />
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="font-semibold text-gray-900">Magazyn</div>
+            <div class="text-sm text-gray-500">Gdzie leży kod i ile jest</div>
+          </div>
+          <span v-if="counts.warehouse > 0" class="rounded-full bg-gray-100 text-gray-600 text-sm font-semibold px-2.5 py-0.5">
+            {{ counts.warehouse }}
+          </span>
+          <ChevronRightIcon class="h-5 w-5 text-gray-300 shrink-0" />
+        </div>
+      </Link>
+
       <Link href="/admin/m/mail" class="block rounded-2xl bg-white shadow-sm border border-gray-100 p-4 active:scale-[.99] transition">
         <div class="flex items-center gap-4">
-          <div class="h-12 w-12 rounded-xl bg-primary-50 flex items-center justify-center">
-            <EnvelopeIcon class="h-6 w-6 text-primary-600" />
+          <div class="h-12 w-12 rounded-xl bg-sidebar-50 flex items-center justify-center">
+            <EnvelopeIcon class="h-6 w-6 text-sidebar-600" />
           </div>
           <div class="flex-1 min-w-0">
-            <div class="font-semibold text-gray-900">ARGO Mail</div>
+            <div class="font-semibold text-gray-900">Poczta</div>
             <div class="text-sm text-gray-500">Wspólna skrzynka firmowa</div>
           </div>
-          <span v-if="counts.mailUnread > 0" class="rounded-full bg-red-500 text-white text-sm font-semibold px-2.5 py-0.5">
+          <span v-if="counts.mailUnread > 0" class="rounded-full bg-primary-500 text-white text-sm font-semibold px-2.5 py-0.5">
             {{ counts.mailUnread }}
-          </span>
-          <ChevronRightIcon class="h-5 w-5 text-gray-300 shrink-0" />
-        </div>
-      </Link>
-
-      <Link href="/admin/m/tasks" class="block rounded-2xl bg-white shadow-sm border border-gray-100 p-4 active:scale-[.99] transition">
-        <div class="flex items-center gap-4">
-          <div class="h-12 w-12 rounded-xl bg-primary-50 flex items-center justify-center">
-            <RectangleStackIcon class="h-6 w-6 text-primary-600" />
-          </div>
-          <div class="flex-1 min-w-0">
-            <div class="font-semibold text-gray-900">ARGO Task</div>
-            <div class="text-sm text-gray-500">Twoje zadania</div>
-          </div>
-          <span v-if="counts.tasksOpen > 0" class="rounded-full bg-primary-600 text-white text-sm font-semibold px-2.5 py-0.5">
-            {{ counts.tasksOpen }}
-          </span>
-          <ChevronRightIcon class="h-5 w-5 text-gray-300 shrink-0" />
-        </div>
-      </Link>
-
-      <Link href="/admin/m/notifications" class="block rounded-2xl bg-white shadow-sm border border-gray-100 p-4 active:scale-[.99] transition">
-        <div class="flex items-center gap-4">
-          <div class="h-12 w-12 rounded-xl bg-primary-50 flex items-center justify-center">
-            <BellIcon class="h-6 w-6 text-primary-600" />
-          </div>
-          <div class="flex-1 min-w-0">
-            <div class="font-semibold text-gray-900">Powiadomienia</div>
-            <div class="text-sm text-gray-500">Co się wydarzyło</div>
-          </div>
-          <span v-if="counts.notifications > 0" class="rounded-full bg-red-500 text-white text-sm font-semibold px-2.5 py-0.5">
-            {{ counts.notifications }}
           </span>
           <ChevronRightIcon class="h-5 w-5 text-gray-300 shrink-0" />
         </div>
@@ -62,11 +50,11 @@
     <!-- Powiadomienia push -->
     <div class="rounded-2xl border bg-white p-4" :class="pushState === 'subscribed' ? 'border-green-200' : 'border-gray-200'">
       <div class="flex items-start gap-3">
-        <BellAlertIcon class="h-6 w-6 text-primary-600 shrink-0" />
+        <BellAlertIcon class="h-6 w-6 text-sidebar-600 shrink-0" />
         <div class="flex-1 min-w-0">
           <div class="font-semibold text-gray-900">Powiadomienia push</div>
           <p class="text-sm text-gray-500">
-            Telefon zadzwoni przy nowym mailu, przypisaniu zadania i wzmiance.
+            Telefon zadzwoni przy nowym mailu i wzmiance.
           </p>
 
           <p v-if="pushState === 'unsupported'" class="mt-2 text-xs text-amber-600">
@@ -110,14 +98,13 @@ import { Head, Link, usePage } from "@inertiajs/vue3";
 import axios from "axios";
 import {
   EnvelopeIcon,
-  RectangleStackIcon,
-  BellIcon,
+  ArchiveBoxIcon,
   BellAlertIcon,
   ChevronRightIcon,
 } from "@heroicons/vue/24/outline";
 
 const props = defineProps({
-  counts: { type: Object, default: () => ({ mailUnread: 0, tasksOpen: 0, notifications: 0 }) },
+  counts: { type: Object, default: () => ({ mailUnread: 0, warehouse: 0, notifications: 0 }) },
   userName: { type: String, default: "" },
 });
 

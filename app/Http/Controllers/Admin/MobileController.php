@@ -6,6 +6,7 @@ use App\Models\Mail\Account;
 use App\Models\Mail\Catalog;
 use App\Models\Mail\Category;
 use App\Models\Mail\Message;
+use App\Models\WarehouseSheetRow;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -23,10 +24,44 @@ class MobileController extends Controller
         return Inertia::render('Mobile/Home', [
             'counts' => [
                 'mailUnread'    => (int) $this->inboxQuery()->where('is_read', false)->count(),
-                'tasksOpen'     => $user ? (int) $user->assignedTasks()->count() : 0,
+                'warehouse'     => (int) WarehouseSheetRow::where('sheet', WarehouseSheetRow::DEFAULT_SHEET)->count(),
                 'notifications' => $user ? (int) $user->unreadNotifications()->count() : 0,
             ],
             'userName' => $user ? trim($user->first_name . ' ' . $user->last_name) : '',
+        ]);
+    }
+
+    /**
+     * Magazyn na telefonie — wyszukiwarka po kodzie, jeden ekran.
+     *
+     * Cala inwentura leci na telefon od razu i filtruje sie lokalnie: w hali
+     * zasieg potrafi znikac, a szukanie kodu bez rundy do serwera dziala tez
+     * wtedy. Wiersz jest plaski i bez pustych par Miejsce/ilosc, wiec to
+     * kilkadziesiat kilobajtow, nie megabajty.
+     *
+     * Zrodlem jest arkusz inwentury (komenda `warehouse:import-sheet`), a nie
+     * zywy stan z Subiekta — stad `importedAt` na ekranie: lepiej pokazac date
+     * danych, niz udawac, ze sa biezace.
+     */
+    public function warehouse(Request $request)
+    {
+        $rows = WarehouseSheetRow::where('sheet', WarehouseSheetRow::DEFAULT_SHEET)
+            ->orderBy('product_code')
+            ->get();
+
+        return Inertia::render('Mobile/Warehouse', [
+            'sheet'      => WarehouseSheetRow::DEFAULT_SHEET,
+            'importedAt' => $rows->max('updated_at')?->format('Y-m-d H:i'),
+            'rows'       => $rows->map(fn (WarehouseSheetRow $row) => [
+                'id'     => $row->id,
+                'code'   => $row->product_code,
+                'total'  => $row->quantity_total,
+                'places' => $row->places(),
+                'wymiar' => $row->wymiar,
+                'waga'   => $row->waga,
+                'uwagi'  => $row->uwagi,
+                'team'   => $row->steel_team,
+            ])->values(),
         ]);
     }
 
