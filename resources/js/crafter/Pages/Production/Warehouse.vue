@@ -30,7 +30,7 @@
                 <template v-if="activeTab === 'mapped'">
                     <!-- Dopoki zadne zrodlo nie plynie, obie kolumny ilosci sa puste —
                          bez tego paska czytalyby sie jak „zero sztuk na stanie". -->
-                    <div class="mb-4 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm">
+                    <div v-if="!anySourceData" class="mb-4 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm">
                         <div class="font-medium text-amber-900">
                             Ilości jeszcze nie są zaciągane
                         </div>
@@ -99,11 +99,14 @@
                         <h3 class="mt-3 text-base font-medium text-gray-900">
                             Nic nie czeka na zmapowanie
                         </h3>
-                        <p class="mx-auto mt-2 max-w-lg text-sm text-gray-500">
+                        <p v-if="anySourceData" class="mx-auto mt-2 max-w-lg text-sm text-gray-500">
+                            Każdy kod z ostatniej paczki znalazł swój odpowiednik w PIM —
+                            albo sam, bo kody są identyczne, albo przez ręczne przypisanie.
+                        </p>
+                        <p v-else class="mx-auto mt-2 max-w-lg text-sm text-gray-500">
                             Trafią tu wiersze z arkusza i z Subiekta GT, których kod nie
-                            ma pary w PIM albo pasuje do więcej niż jednego produktu.
-                            Pusto, bo żadne ze źródeł jeszcze nie zostało zaciągnięte —
-                            nie dlatego, że wszystko się zgadza.
+                            ma pary w PIM. Pusto, bo żadne ze źródeł jeszcze nie zostało
+                            zaciągnięte — nie dlatego, że wszystko się zgadza.
                         </p>
                     </div>
 
@@ -155,16 +158,25 @@
 
                 <div v-if="mapModal.codes.length" class="mt-4 space-y-2">
                     <div
-                        v-for="code in mapModal.codes"
-                        :key="code"
+                        v-for="entry in mapModal.codes"
+                        :key="entry.code"
                         class="flex items-center justify-between rounded border border-gray-200 px-3 py-2"
                     >
-                        <code class="text-sm text-gray-900">{{ code }}</code>
+                        <span class="flex items-center gap-2">
+                            <code class="text-sm text-gray-900">{{ entry.code }}</code>
+                            <span v-if="entry.auto" class="text-xs text-gray-400">
+                                dopasowane po kodzie
+                            </span>
+                        </span>
+                        <!-- Automat nie ma czego odpinac: dopasowanie wynika z tego, ze
+                             kody sa identyczne. Zniknie samo, gdy zniknie po tamtej stronie. -->
+                        <span v-if="entry.auto" class="text-sm text-gray-300">—</span>
                         <button
+                            v-else
                             type="button"
                             class="text-sm text-gray-400 hover:text-red-600"
                             :disabled="mapModal.busy"
-                            @click="removeMap(code)"
+                            @click="removeMap(entry.code)"
                         >
                             Odepnij
                         </button>
@@ -211,6 +223,15 @@ import {
     TextInput,
 } from "crafter/Components";
 
+/**
+ * Kod zrodlowy przypiety do kodu PIM. `auto` = dopasowal sie sam, bo kody sa
+ * identyczne — takiego nie da sie odpiac, bo nie ma czego usunac.
+ */
+interface MapEntry {
+    code: string;
+    auto: boolean;
+}
+
 interface WarehouseRow {
     product_id: number;
     product_code: string;
@@ -219,8 +240,10 @@ interface WarehouseRow {
     variants: number;
     variant_names: string[];
     // Kody zrodlowe przypiete do tego kodu PIM — po jednej liscie na zrodlo.
-    map_gt?: string[];
-    map_sheet?: string[];
+    map_gt?: MapEntry[];
+    map_sheet?: MapEntry[];
+    stock?: number | null;
+    sheet_qty?: number | null;
 }
 
 /**
@@ -231,6 +254,7 @@ interface WarehouseRow {
 interface UnmappedRow {
     key: string;
     source_code: string;
+    name: string | null;
     source: string;
     quantity: number | null;
     reason: string;
@@ -240,9 +264,17 @@ interface Props {
     rows: WarehouseRow[];
     unmapped?: UnmappedRow[];
     sources: Record<string, string>;
+    // Czy z danego zrodla przyszla juz jakakolwiek migawka. Bez tego nie da sie
+    // odroznic „nic nie przyszlo" od „przyszlo i sa zera".
+    has_stock?: Record<string, boolean>;
 }
 
-const props = withDefaults(defineProps<Props>(), { unmapped: () => [] });
+const props = withDefaults(defineProps<Props>(), {
+    unmapped: () => [],
+    has_stock: () => ({}),
+});
+
+const anySourceData = computed<boolean>(() => Object.values(props.has_stock ?? {}).some(Boolean));
 const toast = useToast();
 
 // Kopie lokalne — DataGrid pracuje na v-model, a props Inertii sa zamrozone.
@@ -312,7 +344,7 @@ function rowByCode(code: string): any {
     return source.find((r) => r.product_code === code);
 }
 
-function mappedCodes(row: any, source: string): string[] {
+function mappedCodes(row: any, source: string): MapEntry[] {
     const value = row?.["map_" + source];
     return Array.isArray(value) ? value : [];
 }
@@ -327,7 +359,7 @@ const mapModal = reactive<{
     show: boolean;
     product_code: string;
     source: string;
-    codes: string[];
+    codes: MapEntry[];
     input: string;
     busy: boolean;
 }>({ show: false, product_code: "", source: "gt", codes: [], input: "", busy: false });
@@ -480,7 +512,9 @@ const columns = computed(() => [
                             showBox(
                                 e,
                                 `${label} → ${code}`,
-                                codes,
+                                codes.map((entry: MapEntry) =>
+                                    entry.auto ? `${entry.code} — dopasowane po kodzie` : entry.code
+                                ),
                                 "Kliknij, żeby zmienić przypisanie."
                             ),
                         onMouseleave: hideBox,
@@ -540,7 +574,10 @@ const columns = computed(() => [
 // w PIM, wiec nazwy nie ma skad wziac; jest kod ze zrodla i powod odrzucenia.
 const unmappedColumns = computed(() => [
     { prop: "source_code", name: "Kod ze źródła", readonly: true, size: 200, sortable: true },
-    { prop: "source", name: "Źródło", readonly: true, size: 160, sortable: true },
+    // Nazwa PO STRONIE ZRODLA — jedyny trop, po ktorym da sie rozpoznac, czym
+    // ten wiersz w ogole jest, skoro w PIM go nie ma.
+    { prop: "name", name: "Nazwa w źródle", readonly: true, size: 380, sortable: true },
+    { prop: "source", name: "Źródło", readonly: true, size: 140, sortable: true },
     {
         prop: "quantity",
         name: "Ilość",

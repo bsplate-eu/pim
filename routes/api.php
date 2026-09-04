@@ -22,3 +22,5 @@ Route::any('/selly/{integration_id}', [\App\Http\Controllers\Api\SellyController
 
 // ARGO Bridge melduje sie sam z LAN-u klienta — token w naglowku X-Argo-Token.
 Route::post('/argo-bridge/ping', [\App\Http\Controllers\Api\ArgoBridgeController::class, 'ping'])->name('api.argo-bridge.ping');
+// Pelny stan wskazanego magazynu — paczka jest migawka, nie roznica.
+Route::post('/argo-bridge/stock', [\App\Http\Controllers\Api\ArgoBridgeController::class, 'stock'])->name('api.argo-bridge.stock');

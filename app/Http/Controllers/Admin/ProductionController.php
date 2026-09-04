@@ -10,11 +10,13 @@ use App\Models\ProductionStage;
 use App\Models\WarehouseBridge;
 use App\Models\WarehouseCodeMap;
 use App\Models\WarehouseSheetRow;
+use App\Models\WarehouseSourceStock;
 use App\Services\Production\CodeGrouper;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -39,6 +41,19 @@ class ProductionController extends Controller
      * Etapow tu nie ma: od czasu slownika `production_stages` etap wynika
      * wylacznie ze sprzedazy i przelicza go StageAssigner, a nie klikniecie.
      */
+    /**
+     * Kolumny arkusza, ktore wolno poprawic recznie z gridu Magazyn → Tabela.
+     * Bialalista, nie „wszystko poza kilkoma": bez niej edycja pozwalalaby
+     * pisac po `product_code` i `row_no`, czyli po tozsamosci wiersza.
+     *
+     * `quantity_total` tu nie ma swiadomie — to suma, liczy ja serwer.
+     */
+    private const SHEET_EDITABLE = [
+        'place_1', 'place_2', 'place_3', 'place_4', 'place_5', 'place_6',
+        'qty_1', 'qty_2', 'qty_3', 'qty_4', 'qty_5', 'qty_6',
+        'steel_team', 'uwagi', 'wymiar', 'waga',
+    ];
+
     private const FLAGS = [
         'project' => 'has_project',
         'team_steel' => 'team_steel',
@@ -193,20 +208,99 @@ class ProductionController extends Controller
      */
     public function warehouse(Request $request): Response
     {
-        // Mapa kodow zrodlowych, zwinieta do listy per kod PIM i per zrodlo.
-        // Jeden kod PIM moze miec kilka kodow zrodlowych — stad tablice, nie stringi.
-        $maps = WarehouseCodeMap::orderBy('source_code')->get()
-            ->groupBy('product_code')
-            ->map(fn ($group) => $group->groupBy('source')
-                ->map(fn ($rows) => $rows->pluck('source_code')->values()->all()));
+        $catalog = $this->codeCatalog();
 
-        $rows = $this->codeCatalog()
-            ->map(function (array $row) use ($maps) {
-                $forCode = $maps[$row['product_code']] ?? collect();
+        // Dopasowanie po kodzie idzie bez wzgledu na wielkosc liter — w Subiekcie
+        // i w arkuszu te same symbole bywaja pisane roznie.
+        $byUpperCode = $catalog->keys()->mapWithKeys(fn ($code) => [mb_strtoupper($code) => $code]);
+
+        // Reczne mapowania. Wygrywaja z dopasowaniem po kodzie: jesli ktos przypial
+        // kod swiadomie, automat nie ma prawa go przebic.
+        $manual = WarehouseCodeMap::get(['product_code', 'source', 'source_code'])
+            ->keyBy(fn ($row) => $row->source.'|'.mb_strtoupper($row->source_code));
+
+        // Oba zrodla sprowadzone do jednego ksztaltu: kod, nazwa, ilosc. Dalej
+        // traktujemy je identycznie, wiec regula dopasowania jest jedna i te same
+        // wiersze nie moga rozejsc sie miedzy ekranem Tabeli a lista M3R.
+        $sourceRows = collect();
+
+        foreach (WarehouseSourceStock::where('source', 'gt')->orderBy('source_code')->get() as $item) {
+            $sourceRows->push([
+                'source' => 'gt',
+                'code' => $item->source_code,
+                'name' => $item->name,
+                'qty' => (float) $item->quantity,
+            ]);
+        }
+
+        // Arkusz inwentury — ten sam, ktory pokazuje ekran „Tabela".
+        foreach (WarehouseSheetRow::where('sheet', WarehouseSheetRow::DEFAULT_SHEET)->orderBy('product_code')->get() as $row) {
+            $sourceRows->push([
+                'source' => 'sheet',
+                'code' => $row->product_code,
+                'name' => null,
+                'qty' => (float) $row->quantity_total,
+            ]);
+        }
+
+        // Ilosci i kody zrodlowe zwiniete per kod PIM; osobno to, co nie trafilo nigdzie.
+        $sums = [];      // [product_code][source] => suma ilosci
+        $attached = [];  // [product_code][source] => [['code' =>, 'auto' =>], ...]
+        $unmapped = [];
+        $hasSnapshot = [];
+
+        foreach ($sourceRows as $item) {
+            $hasSnapshot[$item['source']] = true;
+
+            $key = $item['source'].'|'.mb_strtoupper($item['code']);
+            $target = $manual[$key]->product_code ?? ($byUpperCode[mb_strtoupper($item['code'])] ?? null);
+
+            if ($target === null || ! $catalog->has($target)) {
+                $unmapped[] = [
+                    'key' => $item['source'].':'.$item['code'],
+                    'source_code' => $item['code'],
+                    'source' => WarehouseCodeMap::SOURCES[$item['source']] ?? $item['source'],
+                    'name' => $item['name'],
+                    'quantity' => $item['qty'],
+                    'reason' => $target === null
+                        ? 'Nie ma takiego kodu w PIM'
+                        : "Przypisany do {$target}, ale takiego kodu nie ma w katalogu",
+                ];
+                continue;
+            }
+
+            $sums[$target][$item['source']] = ($sums[$target][$item['source']] ?? 0) + $item['qty'];
+            $attached[$target][$item['source']][] = [
+                'code' => $item['code'],
+                // Reczne przypisanie zaznaczamy, bo tylko takie da sie odpiac.
+                'auto' => ! isset($manual[$key]),
+            ];
+        }
+
+        // Reczne przypisania bez wiersza w stanie tez maja byc widoczne — inaczej
+        // dopiecie kodu wygladaloby jak klikniecie w prozne, dopoki nie przyjdzie paczka.
+        foreach ($manual as $row) {
+            $seen = collect($attached[$row->product_code][$row->source] ?? [])
+                ->contains(fn ($entry) => mb_strtoupper($entry['code']) === mb_strtoupper($row->source_code));
+
+            if (! $seen) {
+                $attached[$row->product_code][$row->source][] = ['code' => $row->source_code, 'auto' => false];
+            }
+        }
+
+        $rows = $catalog
+            ->map(function (array $row) use ($sums, $attached, $hasSnapshot) {
+                $code = $row['product_code'];
 
                 foreach (array_keys(WarehouseCodeMap::SOURCES) as $source) {
-                    $row['map_'.$source] = $forCode[$source] ?? [];
+                    $row['map_'.$source] = $attached[$code][$source] ?? [];
                 }
+
+                // Zero pokazujemy TYLKO wtedy, gdy migawka zrodla w ogole przyszla:
+                // paczka jest pelnym stanem magazynu, wiec brak pozycji znaczy „nie ma
+                // na stanie". Bez migawki zostaje kreska — „nie wiem" nie moze udawac zera.
+                $row['stock'] = $sums[$code]['gt'] ?? (isset($hasSnapshot['gt']) ? 0 : null);
+                $row['sheet_qty'] = $sums[$code]['sheet'] ?? (isset($hasSnapshot['sheet']) ? 0 : null);
 
                 return $row;
             })
@@ -214,8 +308,13 @@ class ProductionController extends Controller
 
         return Inertia::render('Production/Warehouse', [
             'rows' => $rows,
-            'unmapped' => [],
+            'unmapped' => $unmapped,
             'sources' => WarehouseCodeMap::SOURCES,
+            // Bez tego front nie odroznilby „jeszcze nic nie przyszlo" od „przyszlo i sa zera".
+            'has_stock' => [
+                'gt' => isset($hasSnapshot['gt']),
+                'sheet' => isset($hasSnapshot['sheet']),
+            ],
         ]);
     }
 
@@ -278,17 +377,44 @@ class ProductionController extends Controller
      */
     private function mapPayload(string $productCode): array
     {
-        $rows = WarehouseCodeMap::where('product_code', $productCode)
+        $manual = WarehouseCodeMap::where('product_code', $productCode)
             ->orderBy('source_code')
             ->get();
+
+        // Wiersze stanu o kodzie identycznym z kodem PIM — te dopinaja sie same.
+        // Pomijamy takie, ktore ktos przypial recznie (gdziekolwiek), bo reczne
+        // przypisanie zawsze przebija automat.
+        $upper = mb_strtoupper($productCode);
+        $autoCandidates = collect();
+
+        foreach (WarehouseSourceStock::where('source', 'gt')->whereRaw('UPPER(source_code) = ?', [$upper])->get() as $row) {
+            $autoCandidates->push(['source' => 'gt', 'code' => $row->source_code]);
+        }
+
+        foreach (WarehouseSheetRow::where('sheet', WarehouseSheetRow::DEFAULT_SHEET)
+            ->whereRaw('UPPER(product_code) = ?', [$upper])->get() as $row) {
+            $autoCandidates->push(['source' => 'sheet', 'code' => $row->product_code]);
+        }
+
+        $claimed = WarehouseCodeMap::whereIn('source_code', $autoCandidates->pluck('code')->all())
+            ->get()
+            ->keyBy(fn ($row) => $row->source.'|'.mb_strtoupper($row->source_code));
 
         $payload = ['product_code' => $productCode];
 
         foreach (array_keys(WarehouseCodeMap::SOURCES) as $source) {
-            $payload['map_'.$source] = $rows->where('source', $source)
-                ->pluck('source_code')
+            $entries = $manual->where('source', $source)
+                ->map(fn ($row) => ['code' => $row->source_code, 'auto' => false])
                 ->values()
                 ->all();
+
+            foreach ($autoCandidates->where('source', $source) as $candidate) {
+                if (! $claimed->has($source.'|'.mb_strtoupper($candidate['code']))) {
+                    $entries[] = ['code' => $candidate['code'], 'auto' => true];
+                }
+            }
+
+            $payload['map_'.$source] = $entries;
         }
 
         return $payload;
@@ -348,7 +474,104 @@ class ProductionController extends Controller
                 'mapped_to' => $maps[$row->product_code] ?? null,
             ])->values(),
             'source' => 'sheet',
+            'editable' => self::SHEET_EDITABLE,
         ]);
+    }
+
+    /**
+     * Reczna poprawka komorek arkusza wprost z gridu.
+     *
+     * Zmiany ida PACZKA, bo RevoGrid pozwala wkleic zakres — jedno wklejenie
+     * to kilkadziesiat komorek, a nie kilkadziesiat zapytan.
+     *
+     * `quantity_total` liczy serwer i oddaje z powrotem: suma szesciu pol nie
+     * moze zalezec od tego, czy przegladarka ja doliczyla po swojemu.
+     *
+     * UWAGA: to sa poprawki NA WIERZCHU importu. Kolejny `warehouse:import-sheet`
+     * podmienia cala zakladke, wiec reczne zmiany maja sens jako korekta miedzy
+     * inwenturami, a nie jako druga, rownolegla ewidencja.
+     */
+    public function updateWarehouseSheetCells(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'changes' => ['required', 'array', 'min:1', 'max:500'],
+            'changes.*.id' => ['required', 'integer'],
+            'changes.*.field' => ['required', 'string', Rule::in(self::SHEET_EDITABLE)],
+            'changes.*.value' => ['nullable'],
+        ]);
+
+        // Liczby sprawdzamy PRZED zapisem czegokolwiek — jedna literowka w
+        // ilosci nie moze zostawic polowy wklejonego zakresu zapisanej.
+        foreach ($data['changes'] as $change) {
+            if (! str_starts_with($change['field'], 'qty_')) {
+                continue;
+            }
+
+            $raw = $this->sheetRawNumber($change['value']);
+
+            if ($raw !== null && ! is_numeric($raw)) {
+                return response()->json([
+                    'message' => "„{$change['value']}” to nie liczba — ilość zostaje bez zmian.",
+                ], 422);
+            }
+        }
+
+        $rows = WarehouseSheetRow::whereIn('id', array_column($data['changes'], 'id'))->get()->keyBy('id');
+
+        foreach ($data['changes'] as $change) {
+            $row = $rows[$change['id']] ?? null;
+
+            if ($row !== null) {
+                $row->{$change['field']} = $this->sheetCellValue($change['field'], $change['value']);
+            }
+        }
+
+        DB::transaction(function () use ($rows) {
+            foreach ($rows as $row) {
+                $total = 0;
+
+                foreach (range(1, 6) as $i) {
+                    $total += (int) $row->{"qty_$i"};
+                }
+
+                $row->quantity_total = $total;
+                $row->save();
+            }
+        });
+
+        // Oddajemy przeliczone sumy — grid podmienia kolumne „Razem" bez
+        // przeladowania calej listy.
+        return response()->json([
+            'rows' => $rows->map(fn (WarehouseSheetRow $row) => [
+                'id' => $row->id,
+                'quantity_total' => $row->quantity_total,
+            ])->values(),
+        ]);
+    }
+
+    /** Surowa liczba z komorki: pusto to NULL, przecinek dziesietny na kropke. */
+    private function sheetRawNumber(mixed $value): ?string
+    {
+        $value = is_string($value) ? trim(str_replace(',', '.', $value)) : $value;
+
+        return ($value === null || $value === '') ? null : (string) $value;
+    }
+
+    /**
+     * Wartosc do zapisu. Pusta komorka to NULL, a nie pusty string ani zero —
+     * na tym ekranie „nikt nie liczyl" i „policzone, nie ma" to dwie rozne rzeczy.
+     */
+    private function sheetCellValue(string $field, mixed $value): string|int|null
+    {
+        if (str_starts_with($field, 'qty_')) {
+            $raw = $this->sheetRawNumber($value);
+
+            return $raw === null ? null : (int) round((float) $raw);
+        }
+
+        $value = is_string($value) ? trim($value) : $value;
+
+        return ($value === null || $value === '') ? null : mb_substr((string) $value, 0, 255);
     }
 
     /**
