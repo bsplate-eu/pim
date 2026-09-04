@@ -239,6 +239,53 @@
             </div>
         </div>
 
+        <!-- === MAPOWANIE Z LISTY „DO ZMAPOWANIA" === -->
+        <Modal :open="assign.show" externalOpen size="md" alignButtons="right" @toggleOpen="closeAssign">
+            <template #title>Zmapuj {{ assign.source_code }}</template>
+
+            <template #content>
+                <div class="rounded border border-gray-200 bg-gray-50 px-3 py-2 text-sm">
+                    <div class="text-gray-500">{{ assign.source_label }}</div>
+                    <div class="mt-0.5 font-medium text-gray-900">{{ assign.source_code }}</div>
+                    <div v-if="assign.name" class="text-gray-600">{{ assign.name }}</div>
+                </div>
+
+                <div class="mt-4">
+                    <TextInput
+                        v-model="assign.input"
+                        name="assign_target"
+                        label="Kod w PIM"
+                        placeholder="np. 27.311"
+                        @keyup.enter="saveAssign"
+                    />
+                    <p class="mt-1 text-sm text-gray-500">
+                        Wpisz kod z naszego katalogu, do którego ta pozycja należy.
+                        Ilości z obu źródeł zsumują się na tym kodzie.
+                    </p>
+                </div>
+
+                <!-- Podpowiedzi z katalogu: kod źródłowy różni się zwykle jednym
+                     sufiksem, więc szukanie po nazwie bywa szybsze niż po kodzie. -->
+                <div v-if="assignSuggestions.length" class="mt-3 max-h-52 overflow-auto rounded border border-gray-200">
+                    <button
+                        v-for="hint in assignSuggestions"
+                        :key="hint.code"
+                        type="button"
+                        class="flex w-full items-baseline gap-3 border-b border-gray-100 px-3 py-2 text-left text-sm last:border-0 hover:bg-gray-50"
+                        @click="assign.input = hint.code"
+                    >
+                        <code class="font-medium text-gray-900">{{ hint.code }}</code>
+                        <span class="truncate text-gray-500">{{ hint.name }}</span>
+                    </button>
+                </div>
+            </template>
+
+            <template #buttons>
+                <Button :loading="assign.busy" @click="saveAssign">Zmapuj</Button>
+                <Button variant="outline" color="gray" @click="closeAssign">Anuluj</Button>
+            </template>
+        </Modal>
+
         <!-- === MAPOWANIE RECZNE === -->
         <Modal :open="mapModal.show" externalOpen size="md" alignButtons="right" @toggleOpen="closeMap">
             <template #title>
@@ -752,6 +799,79 @@ function selectColumn(name = "") {
     };
 }
 
+// === MAPOWANIE Z LISTY „DO ZMAPOWANIA" ===
+// Kierunek odwrotny niz w oknie przy chipie: tam wskazujesz kod zrodlowy do
+// kodu PIM, tu kod PIM do wiersza zrodla. Zapis leci tym samym endpointem,
+// wiec obie drogi koncza sie w tej samej tabeli.
+const assign = reactive<{
+    show: boolean;
+    source: string;
+    source_label: string;
+    source_code: string;
+    name: string;
+    input: string;
+    busy: boolean;
+}>({ show: false, source: "gt", source_label: "", source_code: "", name: "", input: "", busy: false });
+
+function openAssign(row: any): void {
+    assign.show = true;
+    assign.source = row?.source_key ?? "gt";
+    assign.source_label = row?.source ?? "";
+    assign.source_code = String(row?.source_code ?? "");
+    assign.name = String(row?.name ?? "");
+    // Podpowiedz startowa: sam kod. Zwykle rozni sie od kodu PIM jednym sufiksem,
+    // wiec latwiej skasowac koncowke niz wpisywac calosc od zera.
+    assign.input = assign.source_code;
+    assign.busy = false;
+}
+
+function closeAssign(): void {
+    assign.show = false;
+}
+
+/** Podpowiedzi z katalogu PIM — po kodzie i po nazwie, maksymalnie osiem. */
+const assignSuggestions = computed<Array<{ code: string; name: string }>>(() => {
+    const query = assign.input.trim().toLowerCase();
+    if (query.length < 2) return [];
+
+    return rows.value
+        .filter(
+            (row) =>
+                row.product_code.toLowerCase().includes(query) ||
+                String(row.name ?? "").toLowerCase().includes(query)
+        )
+        .slice(0, 8)
+        .map((row) => ({ code: row.product_code, name: row.name }));
+});
+
+async function saveAssign(): Promise<void> {
+    const target = assign.input.trim();
+    if (!target || assign.busy) return;
+
+    assign.busy = true;
+    try {
+        await axios.post(route("crafter.production.warehouse.map.store"), {
+            product_code: target,
+            source: assign.source,
+            source_code: assign.source_code,
+        });
+
+        toast.success(`${assign.source_code} → ${target}`);
+        closeAssign();
+        router.reload({ only: ["rows", "unmapped", "excluded", "has_stock"] });
+    } catch (e: any) {
+        // 422 leci albo z walidacji (nie ma takiego kodu w PIM), albo gdy ten kod
+        // zrodlowy wisi juz na innym produkcie — serwer mowi na ktorym.
+        toast.error(
+            e?.response?.data?.message ??
+                e?.response?.data?.errors?.product_code?.[0] ??
+                "Nie udało się zapisać mapowania"
+        );
+    } finally {
+        assign.busy = false;
+    }
+}
+
 async function bulkExclude(excludedFlag: boolean): Promise<void> {
     // Zakladka decyduje, co wykluczamy: na liscie M3R kod PIM, na pozostalych
     // wiersz zrodla. Przywracanie zawsze leci z zakladki „Wykluczone".
@@ -824,7 +944,28 @@ const unmappedColumns = computed(() => [
         cellCompare: (key: string, a: any, b: any): number =>
             (Number(a?.[key]) || 0) - (Number(b?.[key]) || 0),
     },
-    { prop: "reason", name: "Dlaczego", readonly: true, size: 380, sortable: true },
+    { prop: "reason", name: "Dlaczego", readonly: true, size: 300, sortable: true },
+    {
+        // Mapowanie wprost z tej listy — to jest jej jedyny sens, wiec akcja
+        // musi byc w wierszu, a nie po przejsciu na inna zakladke i szukaniu kodu.
+        prop: "__assign__",
+        name: "",
+        readonly: true,
+        sortable: false,
+        size: 120,
+        cellTemplate: (h: any, p: any) =>
+            h(
+                "button",
+                {
+                    class: "revo-map-chip revo-map-empty",
+                    onClick: (e: any) => {
+                        e.stopPropagation();
+                        openAssign(p.model);
+                    },
+                },
+                "Zmapuj →"
+            ),
+    },
 ]);
 
 // Wykluczone: to samo bez kolumny „Dlaczego" — powod jest jeden i wynika z zakladki.
