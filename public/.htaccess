@@ -19,3 +19,14 @@
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteRule ^ index.php [L]
 </IfModule>
+
+# PWA: Apache nie zna rozszerzenia .webmanifest i podaje go jako
+# application/octet-stream. Chrome wymaga application/manifest+json, inaczej
+# strona nie liczy sie jako instalowalna i w menu zostaje samo „Dodaj skrot".
+#
+# UWAGA: docroot na produkcji (public_html/) NIE jest dowiazaniem do tego
+# katalogu i ma wlasna kopie .htaccess — ta sama regula zostala tam dopisana
+# recznie (backup: ~/htaccess.bak-20260904-przed-webmanifest).
+<IfModule mod_mime.c>
+    AddType application/manifest+json .webmanifest
+</IfModule>
