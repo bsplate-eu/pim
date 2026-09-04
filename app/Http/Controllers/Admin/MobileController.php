@@ -67,7 +67,17 @@ class MobileController extends Controller
 
     public function mail(Request $request)
     {
+        // Widok mobilny czytał maile ze WSZYSTKICH skrzynek — zawężamy do
+        // przypisanych użytkownikowi, tak samo jak desktopowy Argo Mail.
+        $visibleAccountIds = Account::visibleIdsFor($request->user());
+
         $filters = [
+            // Wybór skrzynki sprawdzamy o widoczność, a nie tylko o istnienie konta:
+            // parametr w URL-u to wejście od użytkownika, więc cudza skrzynka ma się
+            // tu odbić od ściany, a nie zostać po cichu odfiltrowana niżej.
+            'account_id'  => ($id = $request->integer('account_id')) && Account::isVisibleTo($request->user(), $id)
+                ? $id
+                : null,
             'catalog_id'  => $request->integer('catalog_id') ?: null,
             'category_id' => $request->integer('category_id') ?: null,
             'unread'      => $request->boolean('unread'),
@@ -75,15 +85,15 @@ class MobileController extends Controller
             'q'           => trim((string) $request->get('q')) ?: null,
         ];
 
-        // Widok mobilny czytał maile ze WSZYSTKICH skrzynek — zawężamy do
-        // przypisanych użytkownikowi, tak samo jak desktopowy Argo Mail.
-        $visibleAccountIds = Account::visibleIdsFor($request->user());
-
         $query = Message::query()
             ->whereIn('account_id', $visibleAccountIds)
             ->where('is_spam', false)
             ->where('is_trashed', false)
             ->with(['catalog:id,name,color', 'category:id,name,color']);
+
+        if ($filters['account_id']) {
+            $query->where('account_id', $filters['account_id']);
+        }
 
         // wysłane pokazujemy tylko gdy wybrano katalog (np. SEND/…)
         if (! $filters['catalog_id']) {
@@ -134,7 +144,7 @@ class MobileController extends Controller
             'categories'  => Category::query()->orderBy('sort')->orderBy('name')->get(['id', 'name', 'color']),
             'colorCounts' => (object) $colorCounts->toArray(),
             'filters'     => $filters,
-            'accounts'    => Account::query()->visibleTo($request->user())->where('is_active', true)->orderBy('id')->get(['id', 'email', 'label']),
+            'accounts'    => $this->mailAccountsWithUnread($visibleAccountIds, $request->user()),
         ]);
     }
 
@@ -203,6 +213,37 @@ class MobileController extends Controller
         $request->user()->unreadNotifications->markAsRead();
 
         return back();
+    }
+
+    /**
+     * Skrzynki widoczne dla użytkownika + licznik nieprzeczytanych na każdej.
+     *
+     * Licznik jest liczony w tym samym zakresie co lista („odbiorcza": bez kosza,
+     * spamu i wysłanych) i CELOWO nie uwzględnia pozostałych filtrów — ma
+     * odpowiadać na „gdzie mam coś nowego", więc musi być widoczny także wtedy,
+     * gdy patrzysz akurat na inną skrzynkę.
+     */
+    private function mailAccountsWithUnread(array $visibleAccountIds, $user)
+    {
+        $unread = Message::query()
+            ->whereIn('account_id', $visibleAccountIds)
+            ->where('is_read', false)
+            ->where('is_spam', false)
+            ->where('is_trashed', false)
+            ->where('is_sent', false)
+            ->selectRaw('account_id, COUNT(*) as c')
+            ->groupBy('account_id')
+            ->pluck('c', 'account_id');
+
+        return Account::query()->visibleTo($user)->where('is_active', true)
+            ->orderBy('id')->get(['id', 'email', 'label'])
+            ->map(fn (Account $a) => [
+                'id'     => $a->id,
+                'email'  => $a->email,
+                'label'  => $a->label,
+                'unread' => (int) ($unread[$a->id] ?? 0),
+            ])
+            ->values();
     }
 
     /** Bazowe zapytanie skrzynki odbiorczej (bez kosza, spamu i wysłanych). */

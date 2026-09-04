@@ -1,9 +1,19 @@
 <template>
   <Head title="Poczta — ARGO" />
 
-  <!-- Pasek: katalogi + filtry -->
+  <!-- Pasek: skrzynka + katalogi + filtry -->
   <div class="sticky top-0 z-10 bg-white border-b border-gray-200">
-    <div class="grid grid-cols-2 divide-x divide-gray-100">
+    <div class="grid grid-cols-3 divide-x divide-gray-100">
+      <button
+        type="button"
+        class="flex items-center justify-center gap-1.5 py-2.5 text-sm active:bg-gray-50"
+        :class="(drawer === 'accounts' || filters.account_id) ? 'text-primary-700 font-medium' : 'text-gray-600'"
+        @click="toggleDrawer('accounts')"
+      >
+        <InboxIcon class="h-5 w-5 shrink-0" />
+        <span class="truncate max-w-[22vw]">{{ currentAccountName }}</span>
+        <ChevronDownIcon class="h-4 w-4 shrink-0 transition-transform" :class="drawer === 'accounts' ? 'rotate-180' : ''" />
+      </button>
       <button
         type="button"
         class="flex items-center justify-center gap-1.5 py-2.5 text-sm active:bg-gray-50"
@@ -11,7 +21,7 @@
         @click="toggleDrawer('catalogs')"
       >
         <FolderIcon class="h-5 w-5 shrink-0" />
-        <span class="truncate max-w-[38vw]">{{ currentCatalogName || 'Wszystkie' }}</span>
+        <span class="truncate max-w-[22vw]">{{ currentCatalogName || 'Wszystkie' }}</span>
         <ChevronDownIcon class="h-4 w-4 shrink-0 transition-transform" :class="drawer === 'catalogs' ? 'rotate-180' : ''" />
       </button>
       <button
@@ -23,6 +33,36 @@
         <FunnelIcon class="h-5 w-5 shrink-0" />
         Filtry
         <span v-if="activeFilterCount" class="ml-0.5 rounded-full bg-primary-600 text-white text-[11px] min-w-[18px] h-[18px] px-1 leading-[18px] text-center">{{ activeFilterCount }}</span>
+      </button>
+    </div>
+
+    <!-- Drawer: skrzynki. Licznik pokazujemy przy każdej, także nieaktywnej —
+         inaczej nie da się zauważyć, że coś przyszło na drugą skrzynkę. -->
+    <div v-if="drawer === 'accounts'" class="max-h-[55vh] overflow-y-auto border-t border-gray-100">
+      <button
+        type="button"
+        class="w-full text-left px-4 py-2.5 flex items-center justify-between active:bg-gray-50"
+        :class="!filters.account_id ? 'bg-primary-50 text-primary-700 font-medium' : 'text-gray-700'"
+        @click="selectAccount(null)"
+      >
+        <span>Wszystkie skrzynki</span>
+        <span v-if="totalUnread" class="ml-2 shrink-0 rounded-full bg-primary-600 text-white text-[11px] px-2 py-0.5">{{ totalUnread }}</span>
+      </button>
+      <button
+        v-for="a in accounts"
+        :key="a.id"
+        type="button"
+        class="w-full text-left px-4 py-2.5 flex items-center justify-between gap-2 active:bg-gray-50"
+        :class="filters.account_id === a.id ? 'bg-primary-50' : ''"
+        @click="selectAccount(a.id)"
+      >
+        <span class="min-w-0">
+          <span class="block truncate" :class="filters.account_id === a.id ? 'text-primary-700 font-medium' : 'text-gray-700'">
+            {{ a.label || a.email }}
+          </span>
+          <span v-if="a.label" class="block truncate text-xs text-gray-400">{{ a.email }}</span>
+        </span>
+        <span v-if="a.unread" class="shrink-0 rounded-full bg-primary-600 text-white text-[11px] px-2 py-0.5">{{ a.unread }}</span>
       </button>
     </div>
 
@@ -102,7 +142,7 @@
         </div>
       </div>
 
-      <button v-if="activeFilterCount || filters.catalog_id" type="button" class="text-sm text-gray-500 underline" @click="clearAll">
+      <button v-if="activeFilterCount || filters.catalog_id || filters.account_id" type="button" class="text-sm text-gray-500 underline" @click="clearAll">
         Wyczyść wszystko
       </button>
     </div>
@@ -112,7 +152,7 @@
   <div class="divide-y divide-gray-100">
     <div v-if="messages.length === 0" class="p-10 text-center text-gray-400">
       <EnvelopeIcon class="mx-auto h-10 w-10 text-gray-300" />
-      <p class="mt-3 text-sm">Brak wiadomości{{ (activeFilterCount || filters.catalog_id) ? ' dla tych filtrów' : '' }}.</p>
+      <p class="mt-3 text-sm">Brak wiadomości{{ (activeFilterCount || filters.catalog_id || filters.account_id) ? ' dla tych filtrów' : '' }}.</p>
     </div>
 
     <button v-for="m in messages" :key="m.id" type="button" class="w-full text-left px-4 py-3 flex gap-3 active:bg-gray-50" @click="openMessage(m)">
@@ -300,7 +340,7 @@ export default { layout: MobileLayout };
 import { ref, computed, watch } from "vue";
 import { Head, router } from "@inertiajs/vue3";
 import axios from "axios";
-import { EnvelopeIcon, ArrowLeftIcon, PaperClipIcon, FolderIcon, FunnelIcon, ChevronDownIcon, ArrowUturnLeftIcon, XMarkIcon, PaperAirplaneIcon, PencilSquareIcon } from "@heroicons/vue/24/outline";
+import { EnvelopeIcon, InboxIcon, ArrowLeftIcon, PaperClipIcon, FolderIcon, FunnelIcon, ChevronDownIcon, ArrowUturnLeftIcon, XMarkIcon, PaperAirplaneIcon, PencilSquareIcon } from "@heroicons/vue/24/outline";
 
 const props = defineProps({
   messages: { type: Array, default: () => [] },
@@ -313,7 +353,7 @@ const props = defineProps({
 
 const COLOR_DOT = { red: "bg-red-500", green: "bg-green-500", blue: "bg-blue-500", orange: "bg-orange-500" };
 
-const drawer = ref(null); // null | 'catalogs' | 'filters'
+const drawer = ref(null); // null | 'accounts' | 'catalogs' | 'filters'
 const toggleDrawer = (name) => { drawer.value = drawer.value === name ? null : name; };
 
 const q = ref(props.filters.q || "");
@@ -321,6 +361,16 @@ watch(() => props.filters.q, (v) => { q.value = v || ""; });
 
 const availableColors = computed(() => Object.keys(props.colorCounts || {}));
 const currentCatalogName = computed(() => (props.catalogs.find((c) => c.id === props.filters.catalog_id) || {}).name || "");
+
+/* Na przycisku mieści się kilka znaków, więc etykieta skrzynki, a jak jej nie ma
+   — sama część przed „@". Pełny adres jest w rozwijanej liście. */
+const currentAccount = computed(() => props.accounts.find((a) => a.id === props.filters.account_id) || null);
+const currentAccountName = computed(() => {
+  const a = currentAccount.value;
+  if (!a) return "Wszystkie";
+  return a.label || String(a.email || "").split("@")[0];
+});
+const totalUnread = computed(() => props.accounts.reduce((n, a) => n + (a.unread || 0), 0));
 const activeFilterCount = computed(() => {
   let n = 0;
   if (props.filters.category_id) n++;
@@ -332,6 +382,7 @@ const activeFilterCount = computed(() => {
 
 const navigate = (overrides) => {
   const base = {
+    account_id: props.filters.account_id || "",
     catalog_id: props.filters.catalog_id || "",
     category_id: props.filters.category_id || "",
     unread: props.filters.unread ? 1 : "",
@@ -343,6 +394,9 @@ const navigate = (overrides) => {
   router.get("/admin/m/mail", params, { preserveScroll: true, preserveState: true });
 };
 
+/* Katalogi są wspólne dla wszystkich skrzynek (tabela nie ma account_id), więc
+   przy zmianie skrzynki wybrany katalog zostaje — nie ma czego resetować. */
+const selectAccount = (id) => { drawer.value = null; navigate({ account_id: id || "" }); };
 const selectCatalog = (id) => { drawer.value = null; navigate({ catalog_id: id || "" }); };
 const selectCategory = (id) => navigate({ category_id: props.filters.category_id === id ? "" : id });
 const selectColor = (col) => navigate({ color: props.filters.color === col ? "" : col });
@@ -470,7 +524,9 @@ const openReply = (all) => {
 const openNew = () => {
   compose.value = {
     mode: "new",
-    account_id: props.accounts[0]?.id || null,
+    // Patrzysz na jedną skrzynkę → z niej piszesz. Wybór i tak zostaje do zmiany
+    // w polu „Od", ale domyślnie ma nie strzelać w pierwsze konto z listy.
+    account_id: props.filters.account_id || props.accounts[0]?.id || null,
     to: "", cc: "", subject: "", body: "",
     in_reply_to: null, quote: "", includeQuote: false, showCc: false, files: [],
   };
