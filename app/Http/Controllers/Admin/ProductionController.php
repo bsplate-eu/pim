@@ -437,42 +437,55 @@ class ProductionController extends Controller
         $sheet = WarehouseSheetRow::DEFAULT_SHEET;
         $rows = WarehouseSheetRow::where('sheet', $sheet)->orderBy('row_no')->get();
 
-        // Mapowanie czytamy z tej samej tabeli, do ktorej pisze lista M3R —
-        // dlatego dziala w obie strony bez zadnej synchronizacji. Kluczem jest
-        // kod ZRODLOWY, bo tutaj kazdy wiersz jest wierszem arkusza.
-        $maps = WarehouseCodeMap::where('source', 'sheet')->pluck('product_code', 'source_code');
+        // Regula dopasowania musi byc DOKLADNIE ta sama co na liscie M3R,
+        // inaczej ten sam wiersz jest tam zmapowany, a tu nie. Stad ten sam
+        // katalog kodow i to samo porownanie — wielkosc liter bez znaczenia,
+        // reszta znakow (spacje!) juz nie.
+        $byUpperCode = $this->codeCatalog()->keys()
+            ->mapWithKeys(fn ($code) => [mb_strtoupper($code) => $code]);
 
-        // Porownanie po znormalizowanym kodzie zdejmuje rozjazdy typu
-        // „25.159 ALU" vs „25.159ALU", ktore nie sa realnym brakiem produktu.
-        $normalize = fn (?string $code) => strtoupper(str_replace(' ', '', trim((string) $code)));
-        $known = Product::query()->pluck('product_code')
-            ->filter()
-            ->mapWithKeys(fn ($code) => [$normalize($code) => true]);
+        // Reczne przypisania wygrywaja z automatem: jesli ktos przypial kod
+        // swiadomie, dopasowanie po nazwie nie ma prawa go przebic.
+        $manual = WarehouseCodeMap::where('source', 'sheet')
+            ->get(['product_code', 'source_code'])
+            ->keyBy(fn ($row) => mb_strtoupper($row->source_code));
 
         return Inertia::render('Production/WarehouseTable', [
             'sheet' => $sheet,
             'importedAt' => $rows->max('updated_at')?->format('Y-m-d H:i'),
-            'rows' => $rows->map(fn (WarehouseSheetRow $row) => [
-                'id' => $row->id,
-                'row_no' => $row->row_no,
-                'product_code' => $row->product_code,
-                'place_1' => $row->place_1, 'qty_1' => $row->qty_1,
-                'place_2' => $row->place_2, 'qty_2' => $row->qty_2,
-                'place_3' => $row->place_3, 'qty_3' => $row->qty_3,
-                'place_4' => $row->place_4, 'qty_4' => $row->qty_4,
-                'place_5' => $row->place_5, 'qty_5' => $row->qty_5,
-                'place_6' => $row->place_6, 'qty_6' => $row->qty_6,
-                'quantity_total' => $row->quantity_total,
-                'steel_team' => $row->steel_team,
-                'uwagi' => $row->uwagi,
-                'wymiar' => $row->wymiar,
-                'waga' => $row->waga,
-                'in_pim' => $known->has($normalize($row->product_code)),
-                // Kod PIM, na ktory ten wiersz arkusza zostal recznie wskazany.
-                // NULL nie znaczy „brak pary" — kod moze sie zgadzac 1:1
-                // (`in_pim`), a wtedy mapowanie jest po prostu niepotrzebne.
-                'mapped_to' => $maps[$row->product_code] ?? null,
-            ])->values(),
+            'rows' => $rows->map(function (WarehouseSheetRow $row) use ($manual, $byUpperCode) {
+                $upper = mb_strtoupper($row->product_code);
+                $manualTarget = $manual[$upper]->product_code ?? null;
+                $autoTarget = $byUpperCode[$upper] ?? null;
+
+                return [
+                    'id' => $row->id,
+                    'row_no' => $row->row_no,
+                    'product_code' => $row->product_code,
+                    'place_1' => $row->place_1, 'qty_1' => $row->qty_1,
+                    'place_2' => $row->place_2, 'qty_2' => $row->qty_2,
+                    'place_3' => $row->place_3, 'qty_3' => $row->qty_3,
+                    'place_4' => $row->place_4, 'qty_4' => $row->qty_4,
+                    'place_5' => $row->place_5, 'qty_5' => $row->qty_5,
+                    'place_6' => $row->place_6, 'qty_6' => $row->qty_6,
+                    'quantity_total' => $row->quantity_total,
+                    'steel_team' => $row->steel_team,
+                    'uwagi' => $row->uwagi,
+                    'wymiar' => $row->wymiar,
+                    'waga' => $row->waga,
+                    // Kod PIM, na ktory ten wiersz arkusza faktycznie wchodzi —
+                    // recznie wskazany albo dopasowany po kodzie. NULL znaczy
+                    // „nigdzie nie wchodzi", czyli kubelek „Do zmapowania".
+                    'mapped_to' => $manualTarget ?? $autoTarget,
+                    // Rozroznienie, ktore widac na ekranie: automatu nie da sie
+                    // odpiac, bo nie ma czego — nie ma wpisu w bazie.
+                    'mapped_auto' => $manualTarget === null && $autoTarget !== null,
+                    // Do czego wiersz wroci po odpieciu recznego przypisania —
+                    // bez tego ekran po „Odepnij" pokazywalby „do zmapowania"
+                    // tam, gdzie automat i tak zaraz dopasuje kod.
+                    'auto_to' => $autoTarget,
+                ];
+            })->values(),
             'source' => 'sheet',
             'editable' => self::SHEET_EDITABLE,
         ]);

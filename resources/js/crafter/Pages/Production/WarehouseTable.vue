@@ -198,9 +198,12 @@ interface SheetRow {
     uwagi: string | null;
     wymiar: string | null;
     waga: string | null;
-    in_pim: boolean;
-    /** Kod PIM wskazany ręcznie. NULL nie znaczy „brak pary" — patrz `in_pim`. */
+    /** Kod PIM, na który wiersz wchodzi: ręcznie wskazany albo dopasowany po kodzie. */
     mapped_to: string | null;
+    /** true = dopasowane automatem po kodzie, nie ma czego odpinać. */
+    mapped_auto: boolean;
+    /** Do czego wiersz wróci po odpięciu ręcznego przypisania. */
+    auto_to: string | null;
 }
 
 interface Props {
@@ -262,7 +265,7 @@ const visibleCount = computed(() => rows.value.filter(filterFn).length);
 
 /** Bez pary = ani kodu 1:1 w PIM, ani ręcznego mapowania. Liczone z żywych
  *  wierszy, nie z propsów, żeby licznik spadał od razu po zmapowaniu. */
-const isUnmatched = (row: SheetRow): boolean => !row.in_pim && !row.mapped_to;
+const isUnmatched = (row: SheetRow): boolean => !row.mapped_to;
 const unmatchedCount = computed(() => rows.value.filter(isUnmatched).length);
 
 const tabs = computed(() => [
@@ -425,10 +428,11 @@ const mapModal = reactive({
 function openMap(row: SheetRow): void {
     mapModal.show = true;
     mapModal.source_code = row.product_code;
-    mapModal.current = row.mapped_to;
-    // Kod zgodny 1:1 podpowiadamy jako punkt wyjscia — najczesciej mapowanie
-    // sluzy do wskazania czegos INNEGO, wiec pole zostaje edytowalne.
-    mapModal.input = row.mapped_to ?? (row.in_pim ? row.product_code : "");
+    // „Odepnij" dotyczy tylko przypisania recznego — automatu nie ma czego odpiac.
+    mapModal.current = row.mapped_auto ? null : row.mapped_to;
+    // Aktualne dopasowanie podpowiadamy jako punkt wyjscia; pole zostaje
+    // edytowalne, bo mapowanie sluzy zwykle wskazaniu czegos INNEGO.
+    mapModal.input = row.mapped_to ?? "";
 }
 
 function closeMap(): void {
@@ -438,7 +442,19 @@ function closeMap(): void {
 /** RevoGrid nie sledzi mutacji pol wiersza — podmiana zrodla wymusza przerysowanie. */
 function applyMapping(sourceCode: string, productCode: string | null): void {
     const row = rows.value.find((r) => r.product_code === sourceCode);
-    if (row) row.mapped_to = productCode;
+
+    if (row) {
+        if (productCode !== null) {
+            row.mapped_to = productCode;
+            row.mapped_auto = false;
+        } else {
+            // Po odpieciu wiersz wraca pod automat, jesli ten ma co dopasowac —
+            // inaczej ekran pokazywalby „do zmapowania" tam, gdzie kod i tak
+            // zgadza sie z PIM.
+            row.mapped_to = row.auto_to;
+            row.mapped_auto = row.auto_to !== null;
+        }
+    }
 
     const grid = gridRef.value;
     if (grid?.getSource) grid.setSource([...grid.getSource()]);
@@ -526,7 +542,7 @@ const columns = computed(() => [
         // zakladki „Do zmapowania", a nie blad w arkuszu.
         cellTemplate: (h: any, p: any) => {
             const code = String(p.model?.product_code ?? "");
-            if (p.model?.in_pim) return h("span", {}, code);
+            if (p.model?.mapped_to) return h("span", {}, code);
 
             return h("span", { class: "revo-code-cell", title: "Brak pary w PIM" }, [
                 h("span", {
@@ -558,29 +574,30 @@ const columns = computed(() => [
                 openMap(row);
             };
 
-            if (row?.mapped_to) {
+            // Reczne przypisanie — zielone, bo ktos podjal decyzje i da sie ja cofnac.
+            if (row?.mapped_to && !row.mapped_auto) {
                 return h(
                     "button",
                     {
                         class: "revo-map-chip revo-map-set",
-                        title: `Zmapowane na ${row.mapped_to} — kliknij, żeby zmienić`,
+                        title: `Przypisane ręcznie do ${row.mapped_to} — kliknij, żeby zmienić`,
                         onClick: open,
                     },
                     row.mapped_to
                 );
             }
 
-            // Kod zgadza sie 1:1 z PIM — mapowanie jest zbedne, ale zostawiamy
-            // wejscie, bo czasem trzeba wskazac świadomie co innego.
-            if (row?.in_pim) {
+            // Dopasowanie po kodzie — pokazujemy ten sam kod PIM co lista M3R,
+            // tylko szaro: nie ma czego odpinac, bo nie ma wpisu w bazie.
+            if (row?.mapped_to) {
                 return h(
                     "button",
                     {
                         class: "revo-map-chip revo-map-empty",
-                        title: "Kod zgodny z PIM — mapowanie niepotrzebne",
+                        title: `Dopasowane automatycznie po kodzie do ${row.mapped_to} — kliknij, żeby wskazać inny`,
                         onClick: open,
                     },
-                    "1:1"
+                    row.mapped_to
                 );
             }
 
