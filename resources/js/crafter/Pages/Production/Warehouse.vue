@@ -1,15 +1,16 @@
 <template>
     <PageHeader
         sticky
-        title="Magazyn"
-        subtitle="Stany magazynowe kodów — źródłem będzie Subiekt GT"
+        title="Magazyn M3R"
+        subtitle="Kody i ilości — Subiekt GT przez ARGO Bridge oraz arkusz Google"
     />
 
     <PageContent>
         <div class="w-full">
             <Card>
-                <!-- Magazyny z lewej, funkcje z prawej strony paska. Drugi magazyn
-                     dokłada się przed „Ustawieniami", a nie na koniec listy. -->
+                <!-- Kody, ktore maja pare w PIM, i wiersze ze zrodel, ktore pary nie
+                     maja. Kolizje kodow miedzy arkuszem a Subiektem sa pewne, wiec
+                     „do zmapowania" to staly kubelek roboczy, a nie lista bledow. -->
                 <div class="mb-4 border-b border-gray-200">
                     <nav class="-mb-px flex gap-6">
                         <button
@@ -20,15 +21,13 @@
                             @click="activeTab = tab.key"
                         >
                             {{ tab.label }}
-                            <span v-if="tab.count !== null" class="ml-1 text-xs text-gray-400">
-                                {{ tab.count }}
-                            </span>
+                            <span class="ml-1 text-xs text-gray-400">{{ tab.count }}</span>
                         </button>
                     </nav>
                 </div>
 
-                <!-- === MAGAZYN M3R === -->
-                <template v-if="activeTab === 'm3r'">
+                <!-- === ZMAPOWANE === -->
+                <template v-if="activeTab === 'mapped'">
                     <!-- Dopoki zadne zrodlo nie plynie, obie kolumny ilosci sa puste —
                          bez tego paska czytalyby sie jak „zero sztuk na stanie". -->
                     <div class="mb-4 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm">
@@ -87,26 +86,35 @@
                     />
                 </template>
 
-                <!-- === USTAWIENIA === -->
-                <div v-else-if="activeTab === 'settings'" class="py-10 text-center">
-                    <Cog6ToothIcon class="mx-auto h-10 w-10 text-gray-300" />
-                    <h3 class="mt-3 text-base font-medium text-gray-900">Ustawienia magazynu</h3>
-                    <p class="mx-auto mt-2 max-w-md text-sm text-gray-500">
-                        Jeszcze pusto. Tu wskażemy, który magazyn Subiekta GT jest
-                        czytany jako M3R, jak często leci odczyt i co robić z kodami,
-                        których w Subiekcie nie ma.
-                    </p>
-                </div>
+                <!-- === DO ZMAPOWANIA === -->
+                <template v-else>
+                    <div v-if="!unmapped.length" class="py-10 text-center">
+                        <LinkSlashIcon class="mx-auto h-10 w-10 text-gray-300" />
+                        <h3 class="mt-3 text-base font-medium text-gray-900">
+                            Nic nie czeka na zmapowanie
+                        </h3>
+                        <p class="mx-auto mt-2 max-w-lg text-sm text-gray-500">
+                            Trafią tu wiersze z arkusza i z Subiekta GT, których kod nie
+                            ma pary w PIM albo pasuje do więcej niż jednego produktu.
+                            Pusto, bo żadne ze źródeł jeszcze nie zostało zaciągnięte —
+                            nie dlatego, że wszystko się zgadza.
+                        </p>
+                    </div>
 
-                <!-- === LOGI === -->
-                <div v-else class="py-10 text-center">
-                    <ClipboardDocumentListIcon class="mx-auto h-10 w-10 text-gray-300" />
-                    <h3 class="mt-3 text-base font-medium text-gray-900">Logi odczytów</h3>
-                    <p class="mx-auto mt-2 max-w-md text-sm text-gray-500">
-                        Jeszcze pusto. Tu wyląduje dziennik pobrań stanu z Subiekta GT
-                        przez ARGO Bridge — kiedy, ile kodów, co się nie zgodziło.
-                    </p>
-                </div>
+                    <template v-else>
+                        <div class="mb-3 text-xs text-gray-500">
+                            Wierszy do zmapowania: <strong>{{ unmapped.length }}</strong>
+                        </div>
+
+                        <DataGrid
+                            ref="unmappedGridRef"
+                            v-model="unmapped"
+                            :columns="unmappedColumns"
+                            keyField="key"
+                            height="auto"
+                        />
+                    </template>
+                </template>
             </Card>
         </div>
 
@@ -128,7 +136,7 @@
 
 <script setup lang="ts">
 import { computed, reactive, ref } from "vue";
-import { ClipboardDocumentListIcon, Cog6ToothIcon } from "@heroicons/vue/24/outline";
+import { LinkSlashIcon } from "@heroicons/vue/24/outline";
 import {
     Card,
     DataGrid,
@@ -147,26 +155,42 @@ interface WarehouseRow {
     variant_names: string[];
 }
 
-interface Props {
-    rows: WarehouseRow[];
+/**
+ * Wiersz ze zrodla, ktory nie ma pary w PIM. Kod jest tu SUROWY — taki, jaki
+ * przyszedl z arkusza albo z Subiekta — bo wlasnie o to, ze nie pasuje do
+ * zadnego `product_code`, w tej zakladce chodzi.
+ */
+interface UnmappedRow {
+    key: string;
+    source_code: string;
+    source: string;
+    quantity: number | null;
+    reason: string;
 }
 
-const props = defineProps<Props>();
+interface Props {
+    rows: WarehouseRow[];
+    unmapped?: UnmappedRow[];
+}
 
-// Kopia lokalna — DataGrid pracuje na v-model, a props Inertii sa zamrozone.
+const props = withDefaults(defineProps<Props>(), { unmapped: () => [] });
+
+// Kopie lokalne — DataGrid pracuje na v-model, a props Inertii sa zamrozone.
 const rows = ref<WarehouseRow[]>([...props.rows]);
+const unmapped = ref<UnmappedRow[]>([...props.unmapped]);
 const gridRef = ref<any>(null);
+const unmappedGridRef = ref<any>(null);
 
-// === ZAKLADKI ===
-// Kazdy magazyn = jedna zakladka; kolejny to jeden wpis w `tabs` plus kolumna
-// stanu po stronie serwera. Ustawienia i Logi stoja na koncu paska.
-type TabKey = "m3r" | "settings" | "logs";
-const activeTab = ref<TabKey>("m3r");
+// === ZAKLADKI: STAN ZMAPOWANIA ===
+// „Zmapowane" to kody PIM — jedyna lista, na ktorej ilosc da sie do czegokolwiek
+// przypiac. „Do zmapowania" to wiersze ze zrodel bez pary: kod z arkusza albo z
+// Subiekta, ktorego w PIM nie ma, albo ktory pasuje do wiecej niz jednego.
+type TabKey = "mapped" | "unmapped";
+const activeTab = ref<TabKey>("mapped");
 
 const tabs = computed(() => [
-    { key: "m3r" as TabKey, label: "Magazyn M3R", count: rows.value.length as number | null },
-    { key: "settings" as TabKey, label: "Ustawienia", count: null },
-    { key: "logs" as TabKey, label: "Logi", count: null },
+    { key: "mapped" as TabKey, label: "Zmapowane", count: rows.value.length },
+    { key: "unmapped" as TabKey, label: "Do zmapowania", count: unmapped.value.length },
 ]);
 
 function tabClass(active: boolean): string {
@@ -275,6 +299,23 @@ const columns = computed(() => [
     // Rozjazd ma byc widoczny jednym spojrzeniem, bez przewijania w bok.
     qtyColumn("stock", "Stan M3R"),
     qtyColumn("sheet_qty", "Tabela"),
+]);
+
+// Kolumny zakladki „Do zmapowania". Bez nazwy produktu — tych wierszy nie ma
+// w PIM, wiec nazwy nie ma skad wziac; jest kod ze zrodla i powod odrzucenia.
+const unmappedColumns = computed(() => [
+    { prop: "source_code", name: "Kod ze źródła", readonly: true, size: 200, sortable: true },
+    { prop: "source", name: "Źródło", readonly: true, size: 160, sortable: true },
+    {
+        prop: "quantity",
+        name: "Ilość",
+        readonly: true,
+        size: 120,
+        sortable: true,
+        cellCompare: (key: string, a: any, b: any): number =>
+            (Number(a?.[key]) || 0) - (Number(b?.[key]) || 0),
+    },
+    { prop: "reason", name: "Dlaczego", readonly: true, size: 380, sortable: true },
 ]);
 
 // === WYSZUKIWARKA ===

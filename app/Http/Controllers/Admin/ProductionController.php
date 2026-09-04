@@ -177,14 +177,49 @@ class ProductionController extends Controller
      * co trzeba zaprojektowac, a tu o to, co fizycznie lezy na polce — kod
      * wykluczony z produkcji dalej moze miec stan.
      *
-     * Kolumna stanu jest pusta do czasu, az poleci do niej odczyt ze wskazanego
-     * magazynu Subiekta GT przez ARGO Bridge.
+     * Kolumny ilosci sa puste do czasu, az poleca do nich odczyty: „Stan M3R"
+     * ze wskazanego magazynu Subiekta GT przez ARGO Bridge, „Tabela" z arkusza
+     * Google prowadzonego recznie.
+     *
+     * `unmapped` to drugi kubelek: wiersze ZE ZRODEL, ktore nie maja pary w PIM
+     * — kod z arkusza albo z Subiekta, ktorego tu nie ma, albo pasujacy do
+     * wiecej niz jednego produktu. Kolizje kodow miedzy arkuszem a Subiektem sa
+     * pewne, wiec to staly kubelek roboczy, a nie lista bledow. Pusta tablica,
+     * dopoki nie ma czego zaciagac.
      */
     public function warehouse(Request $request): Response
     {
         return Inertia::render('Production/Warehouse', [
             'rows' => $this->codeCatalog()->values(),
+            'unmapped' => [],
         ]);
+    }
+
+    /**
+     * Magazyn → Tabela: widok arkusza Google, w ktorym gospodarka magazynowa
+     * prowadzona jest recznie. Na razie sam ekran — brakuje linku do arkusza
+     * i wskazania kolumn (kod, ilosc).
+     */
+    public function warehouseTable(Request $request): Response
+    {
+        return Inertia::render('Production/WarehouseTable');
+    }
+
+    /**
+     * Magazyn → Ustawienia: wskazanie magazynu w Subiekcie GT, zrodla arkusza
+     * i kadencji odswiezania. Na razie pusty ekran.
+     */
+    public function warehouseSettings(Request $request): Response
+    {
+        return Inertia::render('Production/WarehouseSettings');
+    }
+
+    /**
+     * Magazyn → Logi: dziennik pobran z ARGO Bridge i z arkusza. Na razie pusty.
+     */
+    public function warehouseLogs(Request $request): Response
+    {
+        return Inertia::render('Production/WarehouseLogs');
     }
 
     /**

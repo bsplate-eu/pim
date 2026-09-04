@@ -74,13 +74,26 @@
             </SidebarGroup>
 
             <!-- Magazyn -->
-            <SidebarItem
-                :href="route('crafter.production.warehouse')"
+            <SidebarGroup
+                title="Magazyn"
+                :toggable="true"
+                :open="false"
                 :icon="WarehouseIcon"
                 v-can="'crafter.module.production'"
             >
-                Magazyn
-            </SidebarItem>
+                <SidebarItem :href="route('crafter.production.warehouse')">
+                    Magazyn M3R
+                </SidebarItem>
+                <SidebarItem :href="route('crafter.production.warehouse.table')">
+                    Tabela
+                </SidebarItem>
+                <SidebarItem :href="route('crafter.production.warehouse.settings')">
+                    Ustawienia
+                </SidebarItem>
+                <SidebarItem :href="route('crafter.production.warehouse.logs')">
+                    Logi
+                </SidebarItem>
+            </SidebarGroup>
 
             <!-- Argo PIM -->
             <SidebarGroup

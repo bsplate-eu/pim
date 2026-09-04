@@ -858,6 +858,12 @@ Route::middleware(['crafter.base', 'auth', 'crafter.verified'])->prefix('admin')
         ->name('production.reports');
     Route::get('production/magazyn', [App\Http\Controllers\Admin\ProductionController::class, 'warehouse'])
         ->name('production.warehouse');
+    Route::get('production/magazyn/tabela', [App\Http\Controllers\Admin\ProductionController::class, 'warehouseTable'])
+        ->name('production.warehouse.table');
+    Route::get('production/magazyn/ustawienia', [App\Http\Controllers\Admin\ProductionController::class, 'warehouseSettings'])
+        ->name('production.warehouse.settings');
+    Route::get('production/magazyn/logi', [App\Http\Controllers\Admin\ProductionController::class, 'warehouseLogs'])
+        ->name('production.warehouse.logs');
     Route::get('production/settings', [App\Http\Controllers\Admin\ProductionStageController::class, 'index'])
         ->name('production.settings');
     Route::post('production/stages', [App\Http\Controllers\Admin\ProductionStageController::class, 'store'])
