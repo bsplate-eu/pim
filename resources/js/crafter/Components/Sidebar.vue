@@ -73,6 +73,15 @@
                 </SidebarItem>
             </SidebarGroup>
 
+            <!-- Magazyn -->
+            <SidebarItem
+                :href="route('crafter.production.warehouse')"
+                :icon="WarehouseIcon"
+                v-can="'crafter.module.production'"
+            >
+                Magazyn
+            </SidebarItem>
+
             <!-- Argo PIM -->
             <SidebarGroup
                 title="Argo PIM"
@@ -425,6 +434,7 @@ import {
 } from "@heroicons/vue/24/outline";
 import {SidebarItem, SidebarGroup, SidebarSubGroup} from "crafter/Components";
 import LaserCutIcon from "./Icons/LaserCutIcon.vue";
+import WarehouseIcon from "./Icons/WarehouseIcon.vue";
 
 interface ArgoProjectItem {
     id: number;

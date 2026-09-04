@@ -156,6 +156,15 @@ class ProductionController extends Controller
     }
 
     /**
+     * Magazyn — osobny ekran dzialu produkcji. Na razie pusty: PIM nie trzyma
+     * jeszcze stanow magazynowych, wiec jest tu miejsce, a nie dane.
+     */
+    public function warehouse(Request $request): Response
+    {
+        return Inertia::render('Production/Warehouse');
+    }
+
+    /**
      * Przestawia jeden znacznik na jednym kodzie. Wolane axiosem z gridu.
      */
     public function setFlag(Request $request): JsonResponse
