@@ -184,6 +184,12 @@
                             {{ item.user_name ?? "nieznany" }}
                             <strong class="ml-1">{{ item.quantity }} szt.</strong>
                             <span v-if="item.note" class="ml-2 text-gray-400">{{ item.note }}</span>
+                            <span
+                                v-if="item.created_by_name && item.created_by_name !== item.user_name"
+                                class="ml-2 text-gray-400"
+                            >
+                                dodał: {{ item.created_by_name }}
+                            </span>
                         </span>
                         <button
                             type="button"
@@ -202,16 +208,23 @@
                     Nic nie jest zarezerwowane
                 </div>
 
-                <div class="mt-4 flex items-end gap-2">
-                    <div class="w-28">
-                        <TextInput
-                            v-model="resModal.quantity"
-                            name="reservation_quantity"
-                            label="Ilość"
-                            type="number"
-                            inputClass="bg-white"
-                        />
-                    </div>
+                <div class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <SelectInput
+                        v-model="resModal.forUser"
+                        name="reservation_for"
+                        label="Rezerwujący"
+                        :options="people"
+                    />
+                    <TextInput
+                        v-model="resModal.quantity"
+                        name="reservation_quantity"
+                        label="Ilość"
+                        type="number"
+                        inputClass="bg-white"
+                    />
+                </div>
+
+                <div class="mt-3 flex items-end gap-2">
                     <div class="flex-1">
                         <TextInput
                             v-model="resModal.note"
@@ -226,8 +239,9 @@
                 </div>
 
                 <p class="mt-2 text-sm text-gray-500">
-                    Rezerwacja pójdzie na Ciebie — nazwisko bierze się z zalogowanego
-                    konta, żeby w logach było widać, kto co odłożył.
+                    Jedną pozycję może trzymać kilka osób naraz — każda dostaje własny
+                    wpis. Rezerwację wolno założyć komuś innemu; w dzienniku i tak
+                    zostaje, kto ją wpisał.
                 </p>
             </template>
 
@@ -290,6 +304,8 @@ interface Reservation {
     user_name: string | null;
     quantity: number;
     note: string | null;
+    /** Kto wpisał rezerwację, jeśli to ktoś inny niż rezerwujący. */
+    created_by_name: string | null;
     /** „Maciej Zając 1" — gotowa etykieta, ta sama co w aplikacji mobilnej. */
     label: string;
 }
@@ -302,6 +318,10 @@ interface Props {
     source: string;
     /** Pola, które wolno poprawić ręcznie. Białą listę trzyma serwer. */
     editable: string[];
+    /** Osoby, na które wolno zapisać rezerwację. */
+    people: { value: number; label: string }[];
+    /** Id zalogowanego — domyślny rezerwujący. */
+    me: number | null;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -309,6 +329,8 @@ const props = withDefaults(defineProps<Props>(), {
     importedAt: null,
     source: "sheet",
     editable: () => [],
+    people: () => [],
+    me: null,
 });
 
 const toast = useToast();
@@ -511,6 +533,7 @@ const resModal = reactive({
     list: [] as Reservation[],
     quantity: "1",
     note: "",
+    forUser: null as number | null,
     busy: false,
 });
 
@@ -520,6 +543,9 @@ function openRes(row: SheetRow): void {
     resModal.list = [...(row.reservations ?? [])];
     resModal.quantity = "1";
     resModal.note = "";
+    // Domyślnie rezerwuje się na siebie — wybranie kogoś innego ma być
+    // świadomą decyzją, a nie skutkiem tego, że pole zostało po poprzedniku.
+    resModal.forUser = props.me;
 }
 
 function closeRes(): void {
@@ -555,6 +581,7 @@ async function saveRes(): Promise<void> {
             source_code: resModal.source_code,
             quantity: Math.round(quantity),
             note: resModal.note || null,
+            for_user_id: resModal.forUser,
             area: "tabela",
         });
 

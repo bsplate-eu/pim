@@ -78,6 +78,10 @@ class MobileController extends Controller
                         'label'     => $item->label(),
                     ])->values(),
             ])->values(),
+            // Ta sama lista osob co na ekranie Tabeli — przy terminalu stoi
+            // jeden czlowiek, a odklada dla calej zmiany.
+            'people' => ProductionController::reservationPeople(),
+            'me' => $request->user()?->id,
         ]);
     }
 

@@ -137,12 +137,23 @@
             <div v-else class="mt-1 text-sm text-blue-900/60">Nic nie jest odłożone</div>
 
             <div class="mt-2 flex items-center gap-2">
+              <!-- Rezerwować można dla kogoś innego: przy terminalu stoi jedna
+                   osoba, a odkłada dla całej zmiany. -->
+              <select
+                v-model="forUser[row.id]"
+                class="min-w-0 flex-1 rounded-lg border border-blue-200 bg-white px-2 py-1.5 text-sm"
+                @click.stop
+              >
+                <option v-for="person in people" :key="person.value" :value="person.value">
+                  {{ person.label }}
+                </option>
+              </select>
               <input
                 v-model="qty[row.id]"
                 type="number"
                 min="1"
                 inputmode="numeric"
-                class="w-20 rounded-lg border border-blue-200 bg-white px-2 py-1.5 text-sm"
+                class="w-16 rounded-lg border border-blue-200 bg-white px-2 py-1.5 text-sm"
                 placeholder="1"
                 @click.stop
               />
@@ -191,6 +202,8 @@ const props = defineProps({
   rows: { type: Array, default: () => [] },
   sheet: { type: String, default: "" },
   importedAt: { type: String, default: null },
+  people: { type: Array, default: () => [] },
+  me: { type: Number, default: null },
 });
 
 const PAGE = 40;
@@ -229,6 +242,7 @@ watch(q, () => {
    a po zapisie ma sie odswiezyc jedna karta, nie caly ekran. */
 const overrides = ref({});
 const qty = ref({});
+const forUser = ref({});
 const busy = ref(false);
 
 const reservationsOf = (row) => overrides.value[row.id] ?? row.reservations ?? [];
@@ -246,6 +260,7 @@ const reserve = async (row) => {
       {
         source_code: row.code,
         quantity: Math.round(value),
+        for_user_id: forUser.value[row.id] ?? props.me,
         area: "mobile",
       }
     );
@@ -277,6 +292,11 @@ const release = async (row, id) => {
 
 const toggle = (id) => {
   open.value = open.value === id ? null : id;
+
+  // Domyslnie rezerwuje sie na siebie; wybor kogos innego ma byc swiadomy.
+  if (open.value === id && forUser.value[id] === undefined) {
+    forUser.value = { ...forUser.value, [id]: props.me };
+  }
 };
 
 const clearSearch = () => {

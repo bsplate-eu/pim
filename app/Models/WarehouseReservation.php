@@ -20,6 +20,7 @@ class WarehouseReservation extends Model
     protected $fillable = [
         'source', 'source_code', 'product_code',
         'quantity', 'user_id', 'user_name', 'note',
+        'created_by_id', 'created_by_name',
         'released_at', 'released_by',
     ];
 

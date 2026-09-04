@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\AdminUser;
 use App\Models\Attribute;
 use App\Models\Product;
 use App\Models\ProductionItem;
@@ -546,6 +547,7 @@ class ProductionController extends Controller
                         'user_name' => $item->user_name,
                         'quantity' => $item->quantity,
                         'note' => $item->note,
+                        'created_by_name' => $item->created_by_name,
                         'label' => $item->label(),
                     ])->values()->all(),
                     'reserved' => (int) $reserved->sum('quantity'),
@@ -553,6 +555,10 @@ class ProductionController extends Controller
             })->values(),
             'source' => 'sheet',
             'editable' => self::SHEET_EDITABLE,
+            // Kto moze byc rezerwujacym. Tylko aktywne konta — rezerwacja dla
+            // wylaczonego uzytkownika to zawsze pomylka.
+            'people' => $this->reservationPeople(),
+            'me' => $request->user()?->id,
         ]);
     }
 
@@ -702,10 +708,17 @@ class ProductionController extends Controller
             'source_code' => ['required', 'string', 'max:100'],
             'quantity' => ['required', 'integer', 'min:1'],
             'note' => ['nullable', 'string', 'max:255'],
+            'for_user_id' => ['nullable', 'integer', Rule::exists('admin_users', 'id')],
             'area' => ['nullable', 'string', Rule::in(array_keys(WarehouseLog::AREAS))],
         ]);
 
-        $user = $request->user();
+        $author = $request->user();
+        // Rezerwacja moze byc DLA kogos innego niz ten, kto ja wpisuje — na
+        // magazynie jeden czlowiek stoi przy terminalu i odklada dla kilku osob.
+        $holder = isset($data['for_user_id'])
+            ? AdminUser::find($data['for_user_id'])
+            : $author;
+
         $sourceCode = trim($data['source_code']);
 
         $reservation = WarehouseReservation::create([
@@ -715,19 +728,32 @@ class ProductionController extends Controller
                 ->where('source_code', $sourceCode)
                 ->value('product_code'),
             'quantity' => $data['quantity'],
-            'user_id' => $user?->id,
-            'user_name' => WarehouseLog::actorName($user),
+            'user_id' => $holder?->id,
+            'user_name' => WarehouseLog::actorName($holder),
+            'created_by_id' => $author?->id,
+            'created_by_name' => WarehouseLog::actorName($author),
             'note' => $data['note'] ?? null,
         ]);
+
+        // „Dodal” dopisujemy tylko wtedy, gdy to KTOS INNY — inaczej kazdy wpis
+        // konczylby sie „(dodal: ten sam czlowiek)” i przestalby cokolwiek znaczyc.
+        $addedBy = $reservation->created_by_id !== $reservation->user_id
+            ? " (dodał: {$reservation->created_by_name})"
+            : '';
 
         WarehouseLog::write(
             $data['area'] ?? 'tabela',
             'reservation.create',
-            "{$sourceCode} — rezerwacja {$reservation->quantity} szt. dla {$reservation->user_name}",
+            "{$sourceCode} — rezerwacja {$reservation->quantity} szt. dla {$reservation->user_name}{$addedBy}",
             [
                 'source_code' => $sourceCode,
                 'product_code' => $reservation->product_code,
-                'meta' => ['ilosc' => $reservation->quantity, 'uwaga' => $reservation->note],
+                'meta' => [
+                    'ilosc' => $reservation->quantity,
+                    'uwaga' => $reservation->note,
+                    'dla' => $reservation->user_name,
+                    'dodal' => $reservation->created_by_name,
+                ],
             ],
         );
 
@@ -768,6 +794,23 @@ class ProductionController extends Controller
         return response()->json($this->reservationPayload($reservation->source_code));
     }
 
+    /**
+     * Osoby, na ktore wolno zapisac rezerwacje. Lista jest wspolna dla ekranu
+     * Tabeli i aplikacji, zeby w obu miejscach byly te same nazwiska.
+     *
+     * @return \Illuminate\Support\Collection<int, array{value: int, label: ?string}>
+     */
+    public static function reservationPeople(): Collection
+    {
+        return AdminUser::where('active', true)
+            ->orderBy('first_name')->orderBy('last_name')
+            ->get(['id', 'first_name', 'last_name'])
+            ->map(fn (AdminUser $item) => [
+                'value' => $item->id,
+                'label' => WarehouseLog::actorName($item),
+            ])->values();
+    }
+
     /** Zywe rezerwacje jednego kodu — tym ekran odswieza wiersz po zmianie. */
     private function reservationPayload(string $sourceCode): array
     {
@@ -783,6 +826,7 @@ class ProductionController extends Controller
                     'user_name' => $row->user_name,
                     'quantity' => $row->quantity,
                     'note' => $row->note,
+                    'created_by_name' => $row->created_by_name,
                     'label' => $row->label(),
                 ])->values()->all(),
         ];
