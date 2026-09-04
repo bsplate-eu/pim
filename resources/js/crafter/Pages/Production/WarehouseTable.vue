@@ -31,6 +31,25 @@
                     </Button>
                 </div>
 
+                <!-- Ten sam podzial co na liscie M3R: osobno to, co ma pare
+                     w PIM, osobno kubelek roboczy. Kolizje kodow miedzy arkuszem
+                     a Subiektem sa pewne, wiec „Do zmapowania" to staly stan
+                     pracy, a nie lista bledow. -->
+                <div class="mb-4 border-b border-gray-200">
+                    <nav class="-mb-px flex gap-6">
+                        <button
+                            v-for="tab in tabs"
+                            :key="tab.key"
+                            type="button"
+                            :class="tabClass(activeTab === tab.key)"
+                            @click="activeTab = tab.key"
+                        >
+                            {{ tab.label }}
+                            <span class="ml-1 text-xs text-gray-400">{{ tab.count }}</span>
+                        </button>
+                    </nav>
+                </div>
+
                 <div class="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                     <TextInput
                         v-model="search.code"
@@ -59,12 +78,6 @@
                     / Kodów w arkuszu: <strong>{{ rows.length }}</strong>
                     <span class="ml-4">Sztuk łącznie: <strong>{{ totalPieces }}</strong></span>
                     <span class="ml-4">Ze stanem 0: <strong>{{ zeroCount }}</strong></span>
-                    <span class="ml-4">
-                        Bez pary w PIM:
-                        <strong :class="unmatchedCount ? 'text-amber-700' : ''">
-                            {{ unmatchedCount }}
-                        </strong>
-                    </span>
                 </div>
 
                 <DataGrid
@@ -136,7 +149,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from "vue";
+import { computed, reactive, ref } from "vue";
 import { Link } from "@inertiajs/vue3";
 import axios from "axios";
 import { useToast } from "@brackets/vue-toastification";
@@ -198,13 +211,26 @@ const gridRef = ref<any>(null);
 
 const search = ref({ code: "", place: "", filter: "all" });
 
+// „Bez pary" nie ma tu wpisu — od tego sa zakladki, a dwa miejsca na te sama
+// decyzje potrafia sie ustawic sprzecznie i pokazac pusta liste bez powodu.
 const filterOptions = [
     { value: "all", label: "Wszystkie" },
-    { value: "unmatched", label: "Bez pary w PIM" },
     { value: "zero", label: "Stan 0" },
     { value: "notes", label: "Z uwagami" },
     { value: "multi", label: "W kilku miejscach" },
 ];
+
+type TabKey = "mapped" | "unmapped";
+const activeTab = ref<TabKey>("mapped");
+
+function tabClass(active: boolean): string {
+    return [
+        "border-b-2 px-1 py-3 text-sm font-medium whitespace-nowrap",
+        active
+            ? "border-primary-500 text-primary-600"
+            : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700",
+    ].join(" ");
+}
 
 const PAIRS = [1, 2, 3, 4, 5, 6] as const;
 
@@ -213,12 +239,23 @@ const placesOf = (row: SheetRow): string[] =>
 
 const totalPieces = computed(() => props.rows.reduce((sum, r) => sum + (r.quantity_total || 0), 0));
 const zeroCount = computed(() => props.rows.filter((r) => r.quantity_total === 0).length);
-const visibleCount = ref(props.rows.length);
+// Liczone tym samym predykatem, ktorym filtruje grid — inaczej licznik potrafi
+// pokazac co innego niz widac na ekranie.
+const visibleCount = computed(() => rows.value.filter(filterFn).length);
 
 /** Bez pary = ani kodu 1:1 w PIM, ani ręcznego mapowania. Liczone z żywych
  *  wierszy, nie z propsów, żeby licznik spadał od razu po zmapowaniu. */
 const isUnmatched = (row: SheetRow): boolean => !row.in_pim && !row.mapped_to;
 const unmatchedCount = computed(() => rows.value.filter(isUnmatched).length);
+
+const tabs = computed(() => [
+    {
+        key: "mapped" as TabKey,
+        label: "Zmapowane",
+        count: rows.value.length - unmatchedCount.value,
+    },
+    { key: "unmapped" as TabKey, label: "Do zmapowania", count: unmatchedCount.value },
+]);
 
 /**
  * Pary 5 i 6 nie maja naglowkow w arkuszu i korzysta z nich jeden wiersz
@@ -230,6 +267,9 @@ const visiblePairs = computed(() =>
 );
 
 function filterFn(row: SheetRow): boolean {
+    // Zakladka jest nadrzedna: decyduje, na ktorym kubelku w ogole pracujemy.
+    if ((activeTab.value === "unmapped") !== isUnmatched(row)) return false;
+
     const code = search.value.code.trim().toLowerCase();
     if (code && !String(row.product_code).toLowerCase().includes(code)) return false;
 
@@ -237,8 +277,6 @@ function filterFn(row: SheetRow): boolean {
     if (place && !placesOf(row).some((p) => p.includes(place))) return false;
 
     switch (search.value.filter) {
-        case "unmatched":
-            return isUnmatched(row);
         case "zero":
             return row.quantity_total === 0;
         case "notes":
@@ -485,15 +523,6 @@ const columns = computed(() => [
     textColumn("wymiar", "WYMIAR", 120),
     textColumn("waga", "WAGA", 120),
 ]);
-
-// DataGrid filtruje po swojej stronie; licznik „widocznych" bierzemy z tego
-// samego predykatu, zeby nie rozjechal sie z tym, co widac.
-const recount = (): void => {
-    visibleCount.value = rows.value.filter(filterFn).length;
-};
-
-// Kazda zmiana filtra przelicza licznik — watch na calym obiekcie, bo pola sa trzy.
-watch(search, recount, { deep: true });
 </script>
 
 <style scoped>
@@ -530,5 +559,33 @@ watch(search, recount, { deep: true });
     align-items: center;
     gap: 6px;
     height: 100%;
+}
+
+/* === WYGLAD ARKUSZA ===
+   Ten ekran ma sie czytac jak Excel, z ktorego pochodzi: szary pasek naglowka,
+   ramki miedzy kolumnami i naprzemienne tlo wierszy. Przy szesciu parach
+   Miejsce/il. obok siebie sama siatka robi za orientacje - bez pionowych linii
+   oko gubi, ktora ilosc nalezy do ktorego miejsca. */
+:deep(revogr-header .rgHeaderCell) {
+    background: #d9d9d9;
+    border-right: 1px solid #a6a6a6;
+    border-bottom: 1px solid #a6a6a6;
+    color: #1f2937;
+    font-weight: 600;
+}
+
+:deep(revogr-data .rgCell) {
+    border-right: 1px solid #d4d4d4;
+    border-bottom: 1px solid #e8e8e8;
+}
+
+/* Zebra po wierszu, nie po komorce - wiersze siedza w DOM w kolejnosci zrodla,
+   bo grid stoi na height="auto" i renderuje komplet bez wirtualizacji. */
+:deep(revogr-data .rgRow:nth-of-type(odd) .rgCell) {
+    background: #ffffff;
+}
+
+:deep(revogr-data .rgRow:nth-of-type(even) .rgCell) {
+    background: #f2f2f2;
 }
 </style>
