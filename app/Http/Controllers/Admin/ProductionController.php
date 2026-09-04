@@ -83,7 +83,7 @@ class ProductionController extends Controller
      * Wspolny dla Produkcji i Magazynu, bo obu ekranom chodzi o to samo:
      * zwinac powtorzenia kodu z `products` do jednej pozycji.
      */
-    private function codeCatalog(): Collection
+    private static function codeCatalog(): Collection
     {
         // Atrybut „Materiał" (Stal/Aluminium) — dociagany tak samo jak na liscie produktow.
         $materialValues = Attribute::with('values')->where('slug', 'material')->first()?->values ?? collect();
@@ -140,7 +140,7 @@ class ProductionController extends Controller
         // wierszem i nie doliczaja sie do sumy zadnej grupy.
         $excluded = $items->filter(fn ($item) => (bool) $item->excluded)->keys()->flip();
 
-        $rows = $this->codeCatalog()
+        $rows = self::codeCatalog()
             ->reject(fn ($row, $code) => $excluded->has($code))
             ->map(function (array $row) use ($items) {
                 $item = $items[$row['product_code']] ?? null;
@@ -223,7 +223,22 @@ class ProductionController extends Controller
      */
     public function warehouse(Request $request): Response
     {
-        $catalog = $this->codeCatalog();
+        return Inertia::render('Production/Warehouse', self::warehouseM3r() + [
+            'sources' => WarehouseCodeMap::SOURCES,
+        ]);
+    }
+
+    /**
+     * Lista M3R policzona raz, dla desktopu i dla Argo App.
+     *
+     * Regula dopasowania kodow zrodlowych do kodow PIM stoi TYLKO tutaj. Gdyby
+     * telefon liczyl to po swojemu, ten sam kod pokazywalby dwie rozne ilosci
+     * zaleznie od ekranu — a to jest dokladnie ten rodzaj bledu, ktorego nikt
+     * nie zglasza, tylko przestaje ufac liczbom.
+     */
+    public static function warehouseM3r(): array
+    {
+        $catalog = self::codeCatalog();
 
         // Dopasowanie po kodzie idzie bez wzgledu na wielkosc liter — w Subiekcie
         // i w arkuszu te same symbole bywaja pisane roznie.
@@ -321,16 +336,15 @@ class ProductionController extends Controller
             })
             ->values();
 
-        return Inertia::render('Production/Warehouse', [
+        return [
             'rows' => $rows,
             'unmapped' => $unmapped,
-            'sources' => WarehouseCodeMap::SOURCES,
             // Bez tego front nie odroznilby „jeszcze nic nie przyszlo" od „przyszlo i sa zera".
             'has_stock' => [
                 'gt' => isset($hasSnapshot['gt']),
                 'sheet' => isset($hasSnapshot['sheet']),
             ],
-        ]);
+        ];
     }
 
     /**
@@ -490,7 +504,7 @@ class ProductionController extends Controller
         // inaczej ten sam wiersz jest tam zmapowany, a tu nie. Stad ten sam
         // katalog kodow i to samo porownanie — wielkosc liter bez znaczenia,
         // reszta znakow (spacje!) juz nie.
-        $byUpperCode = $this->codeCatalog()->keys()
+        $byUpperCode = self::codeCatalog()->keys()
             ->mapWithKeys(fn ($code) => [mb_strtoupper($code) => $code]);
 
         // Reczne przypisania wygrywaja z automatem: jesli ktos przypial kod

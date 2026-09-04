@@ -1,7 +1,7 @@
 {
-    "name": "ARGO",
-    "short_name": "ARGO",
-    "description": "ARGO — poczta i zadania w jednym miejscu.",
+    "name": "BSPLATE",
+    "short_name": "BSPLATE",
+    "description": "BSPLATE — magazyn i poczta w jednym miejscu.",
     "lang": "pl",
     "dir": "ltr",
     "start_url": "/admin/m",
@@ -11,8 +11,8 @@
     "theme_color": "#ffffff",
     "categories": ["productivity", "business"],
     "icons": [
-        { "src": "/icons/argo-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-        { "src": "/icons/argo-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-        { "src": "/icons/argo-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+        { "src": "/icons/bsp-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+        { "src": "/icons/bsp-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+        { "src": "/icons/bsp-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
     ]
 }

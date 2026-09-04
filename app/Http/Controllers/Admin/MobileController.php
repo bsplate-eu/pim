@@ -91,6 +91,18 @@ class MobileController extends Controller
             // jeden czlowiek, a odklada dla calej zmiany.
             'people' => ProductionController::reservationPeople(),
             'me' => $request->user()?->id,
+            // Druga zakladka: lista M3R, liczona ta sama metoda co desktop.
+            // Bez `unmapped` — to robota administracyjna, nie hala.
+            'm3r' => collect(ProductionController::warehouseM3r()['rows'])
+                ->map(fn (array $row) => [
+                    'code'     => $row['product_code'],
+                    'name'     => $row['name'],
+                    'material' => $row['material'],
+                    'variants' => $row['variants'],
+                    'stock'    => $row['stock'],
+                    'sheet'    => $row['sheet_qty'],
+                ])
+                ->values(),
         ]);
     }
 

@@ -4,6 +4,26 @@
   <div class="flex flex-col">
     <!-- Szukajka przyklejona pod paskiem: w hali to jedyna rzecz, ktorej sie uzywa -->
     <div class="sticky top-14 z-10 bg-gray-50 px-4 pt-3 pb-2">
+      <!-- Te same dwie zakladki co w menu desktopu -->
+      <div class="mb-2 grid grid-cols-2 gap-1 rounded-xl bg-gray-200/70 p-1">
+        <button
+          type="button"
+          class="rounded-lg py-2 text-sm font-semibold transition-colors"
+          :class="tab === 'm3r' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'"
+          @click="selectTab('m3r')"
+        >
+          Magazyn M3R
+        </button>
+        <button
+          type="button"
+          class="rounded-lg py-2 text-sm font-semibold transition-colors"
+          :class="tab === 'sheet' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'"
+          @click="selectTab('sheet')"
+        >
+          Tabela
+        </button>
+      </div>
+
       <div class="relative">
         <MagnifyingGlassIcon class="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
         <input
@@ -12,7 +32,7 @@
           type="search"
           inputmode="search"
           autocomplete="off"
-          placeholder="Kod, miejsce albo auto…"
+          :placeholder="tab === 'sheet' ? 'Kod, miejsce albo auto…' : 'Kod albo auto…'"
           class="w-full rounded-xl border-gray-200 bg-white py-3 pl-10 pr-10 text-base shadow-sm focus:border-primary-500 focus:ring-primary-500"
         />
         <button
@@ -26,13 +46,59 @@
       </div>
 
       <div class="mt-1.5 flex items-center justify-between px-1 text-xs text-gray-400">
-        <span>{{ found.length }} z {{ rows.length }} kodów</span>
-        <span v-if="importedAt">arkusz z {{ importedAt }}</span>
+        <span>{{ found.length }} z {{ source.length }} kodów</span>
+        <span v-if="importedAt && tab === 'sheet'">arkusz z {{ importedAt }}</span>
       </div>
     </div>
 
-    <!-- Lista wynikow -->
-    <div class="px-4 pb-6 space-y-2">
+    <!-- ZAKLADKA: Magazyn M3R — katalog kodow PIM z obiema ilosciami obok siebie -->
+    <div v-if="tab === 'm3r'" class="px-4 pb-6 space-y-2">
+      <p v-if="found.length === 0" class="py-16 text-center text-sm text-gray-400">
+        Brak kodu „{{ q }}" na liście M3R.
+      </p>
+
+      <div
+        v-for="row in visible"
+        :key="row.code"
+        class="flex items-center gap-3 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm"
+      >
+        <div class="min-w-0 flex-1">
+          <div class="truncate font-semibold text-gray-900">{{ row.code }}</div>
+          <div class="truncate text-sm text-gray-500">
+            {{ row.name || '—' }}
+            <span v-if="row.variants > 1" class="text-gray-400">+{{ row.variants - 1 }}</span>
+          </div>
+          <div v-if="row.material" class="text-xs text-gray-400">{{ row.material }}</div>
+        </div>
+
+        <div class="shrink-0 space-y-1 text-right">
+          <div class="flex items-center justify-end gap-2">
+            <span class="text-[11px] uppercase tracking-wide text-gray-400">M3R</span>
+            <span class="rounded-full px-2.5 py-1 text-sm font-bold tabular-nums" :class="qtyClass(row.stock)">
+              {{ num(row.stock) }}
+            </span>
+          </div>
+          <div class="flex items-center justify-end gap-2">
+            <span class="text-[11px] uppercase tracking-wide text-gray-400">Tabela</span>
+            <span class="rounded-full px-2.5 py-1 text-sm font-bold tabular-nums" :class="qtyClass(row.sheet)">
+              {{ num(row.sheet) }}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <button
+        v-if="visible.length < found.length"
+        type="button"
+        class="w-full rounded-xl border border-gray-200 bg-white py-3 text-sm font-medium text-gray-600 active:bg-gray-50"
+        @click="limit += PAGE"
+      >
+        Pokaż więcej ({{ found.length - visible.length }})
+      </button>
+    </div>
+
+    <!-- ZAKLADKA: Tabela — wiersze arkusza inwentury, z miejscami i rezerwacja -->
+    <div v-else class="px-4 pb-6 space-y-2">
       <p v-if="found.length === 0" class="py-16 text-center text-sm text-gray-400">
         Brak kodu „{{ q }}" w arkuszu.
       </p>
@@ -222,6 +288,7 @@ import {
 
 const props = defineProps({
   rows: { type: Array, default: () => [] },
+  m3r: { type: Array, default: () => [] },
   sheet: { type: String, default: "" },
   importedAt: { type: String, default: null },
   people: { type: Array, default: () => [] },
@@ -229,6 +296,11 @@ const props = defineProps({
 });
 
 const PAGE = 40;
+
+/* Te same dwie zakladki co w menu desktopu. Oba komplety przychodza jednym
+   strzalem i przelaczaja sie lokalnie — w hali zasieg potrafi zniknac, a
+   przeskok miedzy widokami nie ma wtedy prawa wisiec na zadaniu do serwera. */
+const tab = ref("m3r"); // 'm3r' | 'sheet'
 
 const q = ref("");
 const open = ref(null);
@@ -239,31 +311,47 @@ const searchInput = ref(null);
    i wielkosci liter, zeby wpisanie jednej wersji znalazlo obie. */
 const normalize = (v) => String(v ?? "").replace(/\s+/g, "").toUpperCase();
 
+const source = computed(() => (tab.value === "sheet" ? props.rows : props.m3r));
+
 const haystacks = computed(() =>
-  props.rows.map((row) => ({
-    row,
-    key:
-      normalize(row.code) +
-      " " +
-      normalize(row.places.map((p) => p.place).join("")) +
-      " " +
-      normalize((row.names ?? []).join(" ")),
-  }))
+  tab.value === "sheet"
+    ? props.rows.map((row) => ({
+        row,
+        key:
+          normalize(row.code) +
+          " " +
+          normalize(row.places.map((p) => p.place).join("")) +
+          " " +
+          normalize((row.names ?? []).join(" ")),
+      }))
+    : props.m3r.map((row) => ({
+        row,
+        key: normalize(row.code) + " " + normalize(row.name) + " " + normalize(row.material),
+      }))
 );
 
 const found = computed(() => {
   const needle = normalize(q.value);
-  if (!needle) return props.rows;
+  if (!needle) return source.value;
   return haystacks.value.filter((h) => h.key.includes(needle)).map((h) => h.row);
 });
 
 const visible = computed(() => found.value.slice(0, limit.value));
 
 // Nowe szukanie zaczyna liste od gory — inaczej „Pokaż więcej" zostaje rozwiniete.
-watch(q, () => {
+watch([q, tab], () => {
   limit.value = PAGE;
   open.value = null;
 });
+
+const selectTab = (name) => {
+  tab.value = name;
+  window.scrollTo(0, 0);
+};
+
+/* Brak migawki zrodla to nie zero: „nie wiem" nie moze udawac „nie ma".
+   Ta sama zasada co na desktopie, tylko zamiast kolumny jest kreska. */
+const num = (v) => (v === null || v === undefined ? "—" : v);
 
 /* Rezerwacje trzymamy lokalnie obok wiersza: propsy Inertii sa zamrozone,
    a po zapisie ma sie odswiezyc jedna karta, nie caly ekran. */

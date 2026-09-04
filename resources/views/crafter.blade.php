@@ -13,6 +13,8 @@
 
     {{-- [argo-mail-pkg] PWA manifest --}}
     <link rel="manifest" href="/manifest.webmanifest">
+    {{-- iOS nie czyta ikon z manifestu — na ekran początkowy bierze wyłącznie to. --}}
+    <link rel="apple-touch-icon" href="/icons/bsp-192.png">
 
     @inertiaHead
 </head>
