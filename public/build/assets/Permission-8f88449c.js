@@ -1,0 +1,1 @@
+import{_ as o}from"./Permission.vue_vue_type_script_setup_true_lang-9b6c6114.js";import"./vendor-aa982de9.js";import"./index-3e8ba194.js";import"./usePermissionLabels-066cb696.js";import"./_baseIteratee-3f168355.js";import"./toInteger-2ade8aaf.js";export{o as default};

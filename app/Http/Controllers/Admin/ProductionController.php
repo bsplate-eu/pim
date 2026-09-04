@@ -499,6 +499,9 @@ class ProductionController extends Controller
             ->get(['product_code', 'source_code'])
             ->keyBy(fn ($row) => mb_strtoupper($row->source_code));
 
+        // Nazwy aut pod kodem — tylko do wyszukiwarki „Auto", na ekranie ich nie ma.
+        $productNames = self::sheetProductNames();
+
         // Rezerwacje sa OBOK ilosci, nie zamiast nich — stan mowi, ile lezy,
         // rezerwacja ile z tego jest obiecane.
         $reservations = WarehouseReservation::active()
@@ -510,7 +513,7 @@ class ProductionController extends Controller
         return Inertia::render('Production/WarehouseTable', [
             'sheet' => $sheet,
             'importedAt' => $rows->max('updated_at')?->format('Y-m-d H:i'),
-            'rows' => $rows->map(function (WarehouseSheetRow $row) use ($manual, $byUpperCode, $reservations) {
+            'rows' => $rows->map(function (WarehouseSheetRow $row) use ($manual, $byUpperCode, $reservations, $productNames) {
                 $upper = mb_strtoupper($row->product_code);
                 $manualTarget = $manual[$upper]->product_code ?? null;
                 $autoTarget = $byUpperCode[$upper] ?? null;
@@ -551,6 +554,9 @@ class ProductionController extends Controller
                         'label' => $item->label(),
                     ])->values()->all(),
                     'reserved' => (int) $reserved->sum('quantity'),
+                    // Auta, do ktorych pasuje ten kod. Ida na front schowane —
+                    // sluza wyszukiwarce, nie kolumnie.
+                    'names' => $productNames[$manualTarget ?? $autoTarget] ?? [],
                 ];
             })->values(),
             'source' => 'sheet',
@@ -792,6 +798,60 @@ class ProductionController extends Controller
         );
 
         return response()->json($this->reservationPayload($reservation->source_code));
+    }
+
+    /**
+     * Nazwy produktow pod kazdym `product_code` — material do wyszukiwarki
+     * „Auto", nie do wyswietlania.
+     *
+     * Jeden kod to zwykle kilkanascie aut, wiec cala lista nie miesci sie
+     * w zadnej komorce; ludzie i tak szukaja po tym, co maja w glowie
+     * („audi a4"), a nie po symbolu. Limit 20 nazw na kod ucina ogony przy
+     * kodach pasujacych do polowy rynku — do trafienia w frazie wystarcza
+     * z zapasem, a paczka na telefon zostaje lekka.
+     *
+     * @return \Illuminate\Support\Collection<string, array<int, string>>
+     */
+    public static function sheetProductNames(): Collection
+    {
+        return Product::query()
+            ->select('id', 'product_code', 'name')
+            ->orderBy('product_code')
+            ->orderBy('id')
+            ->get()
+            ->groupBy('product_code')
+            ->map(fn ($group) => $group
+                ->map(fn (Product $item) => self::searchableName($item))
+                ->filter()
+                ->unique()
+                ->take(20)
+                ->values()
+                ->all());
+    }
+
+    /**
+     * Nazwa produktu do wyszukiwania. Nazwy sa tlumaczone per jezyk, a panel
+     * potrafi chodzic na innym locale niz ten, w ktorym sa uzupelnione — bez
+     * tego wyszukiwarka „Auto" bylaby po prostu slepa na polowie asortymentu.
+     *
+     * Kolejnosc: polski (tym mowia ludzie na magazynie), potem locale aplikacji,
+     * a na koncu pierwsza niepusta wersja — model auta i tak brzmi tak samo
+     * w kazdym jezyku.
+     */
+    private static function searchableName(Product $product): ?string
+    {
+        $translations = $product->getTranslations('name');
+
+        foreach (['pl', app()->getLocale()] as $locale) {
+            if (trim((string) ($translations[$locale] ?? '')) !== '') {
+                // Nazwy w bazie bywaja z encjami HTML — tak samo jak na liscie produktow.
+                return htmlspecialchars_decode(trim($translations[$locale]));
+            }
+        }
+
+        $first = collect($translations)->first(fn ($value) => trim((string) $value) !== '');
+
+        return $first === null ? null : htmlspecialchars_decode(trim($first));
     }
 
     /**

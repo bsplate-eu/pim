@@ -55,12 +55,23 @@
                     </nav>
                 </div>
 
-                <div class="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                <div class="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
                     <TextInput
                         v-model="search.code"
                         name="search_code"
                         label="Kod"
                         placeholder="np. 00.004"
+                        clearable
+                    />
+                    <!-- Szukanie po aucie, nie po symbolu. Kod trzeba znac na
+                         pamiec, nazwe sie widzi — a jeden kod pasuje zwykle do
+                         kilkunastu aut, wiec lista nazw nie miesci sie w zadnej
+                         kolumnie i jedzie na front schowana. -->
+                    <TextInput
+                        v-model="search.car"
+                        name="search_car"
+                        label="Auto"
+                        placeholder="np. audi a4"
                         clearable
                     />
                     <TextInput
@@ -301,6 +312,8 @@ interface SheetRow {
     /** Do czego wiersz wróci po odpięciu ręcznego przypisania. */
     auto_to: string | null;
     /** Żywe rezerwacje tej pozycji — stan mówi ile leży, rezerwacja ile obiecane. */
+    /** Auta, do których pasuje kod. Nie ma ich na ekranie — są dla wyszukiwarki. */
+    names: string[];
     reservations: Reservation[];
     reserved: number;
 }
@@ -360,7 +373,7 @@ watch(
     }
 );
 
-const search = ref({ code: "", place: "", filter: "all" });
+const search = ref({ code: "", place: "", car: "", filter: "all" });
 
 // „Bez pary" nie ma tu wpisu — od tego sa zakladki, a dwa miejsca na te sama
 // decyzje potrafia sie ustawic sprzecznie i pokazac pusta liste bez powodu.
@@ -436,6 +449,18 @@ function filterFn(row: SheetRow): boolean {
 
     const place = search.value.place.trim().toLowerCase();
     if (place && !placesOf(row).some((p) => p.includes(place))) return false;
+
+    // Wszystkie slowa frazy musza wystapic w tej samej nazwie, ale kolejnosc
+    // nie ma znaczenia — „a4 audi" ma znalezc to samo co „audi a4".
+    const words = search.value.car.trim().toLowerCase().split(/\s+/).filter(Boolean);
+    if (words.length) {
+        const names = Array.isArray(row.names) ? row.names : [];
+        const hit = names.some((name) => {
+            const haystack = name.toLowerCase();
+            return words.every((word) => haystack.includes(word));
+        });
+        if (!hit) return false;
+    }
 
     switch (search.value.filter) {
         case "zero":
@@ -802,9 +827,14 @@ const columns = computed(() => [
         // zakladki „Do zmapowania", a nie blad w arkuszu.
         cellTemplate: (h: any, p: any) => {
             const code = String(p.model?.product_code ?? "");
-            if (p.model?.mapped_to) return h("span", {}, code);
+            // Nazwy aut sa schowane, ale musza byc jakś dostępne — najechanie
+            // na kod pokazuje, co pod nim siedzi.
+            const names: string[] = Array.isArray(p.model?.names) ? p.model.names : [];
+            const title = names.length ? names.join("\n") : undefined;
 
-            return h("span", { class: "revo-code-cell", title: "Brak pary w PIM" }, [
+            if (p.model?.mapped_to) return h("span", { title }, code);
+
+            return h("span", { class: "revo-code-cell", title: title ?? "Brak pary w PIM" }, [
                 h("span", {
                     style: {
                         display: "inline-block",

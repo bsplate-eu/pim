@@ -12,7 +12,7 @@
           type="search"
           inputmode="search"
           autocomplete="off"
-          placeholder="Szukaj kodu…"
+          placeholder="Kod, miejsce albo auto…"
           class="w-full rounded-xl border-gray-200 bg-white py-3 pl-10 pr-10 text-base shadow-sm focus:border-primary-500 focus:ring-primary-500"
         />
         <button
@@ -102,6 +102,21 @@
               <dd class="text-gray-800">{{ row.team }}</dd>
             </div>
           </dl>
+
+          <!-- Do czego pasuje kod. Na liscie tego nie ma, zeby karta zostala
+               skanowalna kciukiem — ale po rozwinieciu trzeba widziec, co sie
+               znalazlo. -->
+          <div v-if="(row.names ?? []).length" class="rounded-lg bg-gray-50 px-3 py-2">
+            <div class="text-xs text-gray-400">Pasuje do</div>
+            <div class="mt-1 space-y-0.5 text-sm text-gray-700">
+              <div v-for="(name, i) in row.names.slice(0, 6)" :key="i" class="truncate">
+                {{ name }}
+              </div>
+              <div v-if="row.names.length > 6" class="text-gray-400">
+                i {{ row.names.length - 6 }} więcej
+              </div>
+            </div>
+          </div>
 
           <div v-if="row.uwagi" class="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
             {{ row.uwagi }}
@@ -227,7 +242,12 @@ const normalize = (v) => String(v ?? "").replace(/\s+/g, "").toUpperCase();
 const haystacks = computed(() =>
   props.rows.map((row) => ({
     row,
-    key: normalize(row.code) + " " + normalize(row.places.map((p) => p.place).join("")),
+    key:
+      normalize(row.code) +
+      " " +
+      normalize(row.places.map((p) => p.place).join("")) +
+      " " +
+      normalize((row.names ?? []).join(" ")),
   }))
 );
 

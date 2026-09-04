@@ -50,6 +50,12 @@ class MobileController extends Controller
             ->orderBy('product_code')
             ->get();
 
+        // Nazwy aut pod kodem — material dla wyszukiwarki. W hali szuka sie
+        // „audi a4", a nie „26.174": kod trzeba znac, nazwe sie widzi.
+        $productNames = ProductionController::sheetProductNames();
+        $mapped = \App\Models\WarehouseCodeMap::where('source', 'sheet')
+            ->pluck('product_code', 'source_code');
+
         // Rezerwacje ida OBOK ilosci, nie zamiast nich: ilosc mowi, ile lezy
         // na polce, rezerwacja ile z tego jest juz komus obiecane.
         $reservations = WarehouseReservation::active()
@@ -70,6 +76,9 @@ class MobileController extends Controller
                 'waga'   => $row->waga,
                 'uwagi'  => $row->uwagi,
                 'team'   => $row->steel_team,
+                // Reczne mapowanie wygrywa, a gdy go nie ma — kod z arkusza
+                // jest wprost kodem PIM. Ta sama regula co na liscie M3R.
+                'names'  => $productNames[$mapped[$row->product_code] ?? $row->product_code] ?? [],
                 'reservations' => ($reservations[$row->product_code] ?? collect())
                     ->map(fn (WarehouseReservation $item) => [
                         'id'        => $item->id,
