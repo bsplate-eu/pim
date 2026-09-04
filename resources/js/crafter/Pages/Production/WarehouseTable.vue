@@ -253,8 +253,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref } from "vue";
-import { Link } from "@inertiajs/vue3";
+import { computed, reactive, ref, watch } from "vue";
+import { Link, router } from "@inertiajs/vue3";
 import axios from "axios";
 import { useToast } from "@brackets/vue-toastification";
 import {
@@ -338,6 +338,21 @@ const toast = useToast();
 // Kopia lokalna — DataGrid pracuje na v-model, a props Inertii sa zamrozone.
 const rows = ref<SheetRow[]>([...props.rows]);
 const gridRef = ref<any>(null);
+
+/**
+ * Po przeladowaniu propsow (router.reload) kopia lokalna i grid musza pojsc
+ * za serwerem. Bez tego ekran zostaje na starych danych i pokazuje stan,
+ * ktorego w bazie juz nie ma — dokladnie tak wygladalo „nadpisywanie"
+ * rezerwacji, ktore w bazie nigdy sie nie wydarzylo.
+ */
+watch(
+    () => props.rows,
+    (next) => {
+        rows.value = [...next];
+        takeSnapshot(next);
+        gridRef.value?.setSource?.([...next]);
+    }
+);
 
 const search = ref({ code: "", place: "", filter: "all" });
 
@@ -552,6 +567,15 @@ function closeRes(): void {
     resModal.show = false;
 }
 
+/**
+ * Dociagniecie wierszy z serwera. Lokalna podmiana wiersza wystarcza w 99%
+ * przypadkow, ale to serwer wie, ile rezerwacji naprawde wisi na kodzie —
+ * po kazdej zmianie pytamy go wprost, zamiast ufac, ze grid sie przerysowal.
+ */
+function syncFromServer(): void {
+    router.reload({ only: ["rows"], preserveScroll: true, preserveState: true });
+}
+
 /** Odpowiedz serwera niesie komplet rezerwacji kodu — wpisujemy ja w wiersz. */
 function applyReservations(sourceCode: string, list: Reservation[]): void {
     const row = rows.value.find((r) => r.product_code === sourceCode);
@@ -589,6 +613,7 @@ async function saveRes(): Promise<void> {
         resModal.quantity = "1";
         resModal.note = "";
         toast.success("Zarezerwowano.");
+        syncFromServer();
     } catch (error: any) {
         toast.error(error?.response?.data?.message ?? "Nie udało się zarezerwować.");
     } finally {
@@ -606,6 +631,7 @@ async function releaseRes(id: number): Promise<void> {
 
         applyReservations(resModal.source_code, data?.reservations ?? []);
         toast.success("Zwolniono rezerwację.");
+        syncFromServer();
     } catch {
         toast.error("Nie udało się zwolnić rezerwacji.");
     } finally {
@@ -678,6 +704,7 @@ async function saveMap(): Promise<void> {
 
         applyMapping(mapModal.source_code, productCode);
         mapModal.current = productCode;
+        syncFromServer();
         toast.success(`Zmapowano ${mapModal.source_code} → ${productCode}`);
         closeMap();
     } catch (error: any) {
@@ -718,6 +745,24 @@ async function removeMap(): Promise<void> {
         mapModal.busy = false;
     }
 }
+
+/**
+ * Ilu rezerwujacych ma najbardziej obciazona pozycja. Z tego liczy sie
+ * szerokosc kolumny — przy jednej osobie nie ma po co trzymac pustego pasa,
+ * a przy trzech nazwiska nie moga sie chowac za „+2".
+ */
+const RESERVATION_CHIPS = 3;
+const maxReservations = computed(() =>
+    rows.value.reduce((max, row) => Math.max(max, row.reservations?.length ?? 0), 0)
+);
+
+const reservationSize = computed(() => {
+    const shown = Math.min(Math.max(maxReservations.value, 1), RESERVATION_CHIPS);
+
+    // 150 px na pierwsze nazwisko, po 120 na kazde kolejne; powyzej trzech
+    // reszta i tak idzie w „+N", wiec kolumna przestaje rosnac.
+    return 150 + (shown - 1) * 120 + (maxReservations.value > RESERVATION_CHIPS ? 50 : 0);
+});
 
 const columns = computed(() => [
     {
@@ -833,7 +878,7 @@ const columns = computed(() => [
         prop: "reserved",
         name: "Rezerwacja",
         readonly: true,
-        size: 190,
+        size: reservationSize.value,
         sortable: true,
         cellCompare: (key: string, a: any, b: any): number =>
             (Number(a?.[key]) || 0) - (Number(b?.[key]) || 0),
@@ -857,19 +902,32 @@ const columns = computed(() => [
                 );
             }
 
-            // W komorce miesci sie jedna rezerwacja; reszta jest w „+N" i pod
-            // najechaniem, zeby wiersz nie rosl w pionie.
-            const extra = list.length - 1;
+            // Kazdy rezerwujacy dostaje wlasny chip — kolumna rozszerza sie sama
+            // (patrz `reservationSize`). Dopiero czwarta i kolejne osoby chowaja
+            // sie za „+N", zeby jeden skrajny wiersz nie rozpychal calej tabeli.
+            const title = list.map((item) => item.label).join(", ");
+            const shown = list.slice(0, RESERVATION_CHIPS);
+            const hidden = list.length - shown.length;
 
-            return h(
-                "button",
-                {
-                    class: "revo-map-chip revo-res-chip",
-                    title: list.map((item) => item.label).join(", "),
-                    onClick: open,
-                },
-                extra > 0 ? `${list[0].label} +${extra}` : list[0].label
+            const chips = shown.map((item) =>
+                h(
+                    "button",
+                    { class: "revo-map-chip revo-res-chip", title, onClick: open },
+                    item.label
+                )
             );
+
+            if (hidden > 0) {
+                chips.push(
+                    h(
+                        "button",
+                        { class: "revo-map-chip revo-res-more", title, onClick: open },
+                        `+${hidden}`
+                    )
+                );
+            }
+
+            return h("span", { class: "revo-code-cell revo-res-cell" }, chips);
         },
     },
     textColumn("steel_team", "steel team", 180),
@@ -895,6 +953,17 @@ const columns = computed(() => [
     border: 1px solid #bbf7d0;
     background: #f0fdf4;
     color: #15803d;
+}
+
+:deep(.revo-res-cell) {
+    gap: 4px;
+    overflow: hidden;
+}
+
+:deep(.revo-res-more) {
+    border: 1px solid #93c5fd;
+    background: #dbeafe;
+    color: #1e40af;
 }
 
 :deep(.revo-res-chip) {

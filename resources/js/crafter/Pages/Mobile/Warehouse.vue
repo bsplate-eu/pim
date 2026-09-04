@@ -190,7 +190,7 @@ export default { layout: MobileLayout };
 
 <script setup>
 import { ref, computed, watch } from "vue";
-import { Head } from "@inertiajs/vue3";
+import { Head, router } from "@inertiajs/vue3";
 import axios from "axios";
 import {
   MagnifyingGlassIcon,
@@ -266,6 +266,7 @@ const reserve = async (row) => {
     );
     overrides.value = { ...overrides.value, [row.id]: data?.reservations ?? [] };
     qty.value = { ...qty.value, [row.id]: "" };
+    router.reload({ only: ["rows"], preserveScroll: true, preserveState: true });
   } catch (e) {
     /* Telefon w hali bywa bez zasiegu — cisza jest lepsza niz alert,
        ktory trzeba klikac w rekawicach. Stan zostaje niezmieniony. */
@@ -283,6 +284,7 @@ const release = async (row, id) => {
       { data: { id, area: "mobile" } }
     );
     overrides.value = { ...overrides.value, [row.id]: data?.reservations ?? [] };
+    router.reload({ only: ["rows"], preserveScroll: true, preserveState: true });
   } catch (e) {
     /* jak wyzej */
   } finally {
