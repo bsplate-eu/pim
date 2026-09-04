@@ -867,6 +867,8 @@ Route::middleware(['crafter.base', 'auth', 'crafter.verified'])->prefix('admin')
         ->name('production.warehouse.map.store');
     Route::delete('production/magazyn/mapowanie', [App\Http\Controllers\Admin\ProductionController::class, 'destroyWarehouseMap'])
         ->name('production.warehouse.map.destroy');
+    Route::post('production/magazyn/wykluczenia', [App\Http\Controllers\Admin\ProductionController::class, 'bulkWarehouseExclusions'])
+        ->name('production.warehouse.exclusions.bulk');
     Route::get('production/magazyn/tabela', [App\Http\Controllers\Admin\ProductionController::class, 'warehouseTable'])
         ->name('production.warehouse.table');
     Route::post('production/magazyn/tabela/komorki', [App\Http\Controllers\Admin\ProductionController::class, 'updateWarehouseSheetCells'])

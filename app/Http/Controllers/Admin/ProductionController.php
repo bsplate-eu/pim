@@ -8,6 +8,7 @@ use App\Models\Attribute;
 use App\Models\Product;
 use App\Models\ProductionItem;
 use App\Models\ProductionStage;
+use App\Models\WarehouseCodeExclusion;
 use App\Models\WarehouseBridge;
 use App\Models\WarehouseCodeMap;
 use App\Models\WarehouseLog;
@@ -273,16 +274,35 @@ class ProductionController extends Controller
             ]);
         }
 
+        // Kody odlozone na bok. Wypadaja PRZED dopasowaniem — nie licza sie do
+        // stanu, nie zasmiecaja „Do zmapowania", ida na wlasna zakladke.
+        $excludedKeys = WarehouseCodeExclusion::get(['source', 'source_code'])
+            ->mapWithKeys(fn ($row) => [WarehouseCodeExclusion::key($row->source, $row->source_code) => true]);
+
         // Ilosci i kody zrodlowe zwiniete per kod PIM; osobno to, co nie trafilo nigdzie.
         $sums = [];      // [product_code][source] => suma ilosci
         $attached = [];  // [product_code][source] => [['code' =>, 'auto' =>], ...]
         $unmapped = [];
+        $excluded = [];
         $hasSnapshot = [];
 
         foreach ($sourceRows as $item) {
             $hasSnapshot[$item['source']] = true;
 
             $key = $item['source'].'|'.mb_strtoupper($item['code']);
+
+            if ($excludedKeys->has($key)) {
+                $excluded[] = [
+                    'key' => $item['source'].':'.$item['code'],
+                    'source' => $item['source'],
+                    'source_label' => WarehouseCodeMap::SOURCES[$item['source']] ?? $item['source'],
+                    'source_code' => $item['code'],
+                    'name' => $item['name'],
+                    'quantity' => $item['qty'],
+                ];
+                continue;
+            }
+
             $target = $manual[$key]->product_code ?? ($byUpperCode[mb_strtoupper($item['code'])] ?? null);
 
             if ($target === null || ! $catalog->has($target)) {
@@ -290,6 +310,8 @@ class ProductionController extends Controller
                     'key' => $item['source'].':'.$item['code'],
                     'source_code' => $item['code'],
                     'source' => WarehouseCodeMap::SOURCES[$item['source']] ?? $item['source'],
+                    // Klucz techniczny obok etykiety — front odsyla go przy wykluczaniu.
+                    'source_key' => $item['source'],
                     'name' => $item['name'],
                     'quantity' => $item['qty'],
                     'reason' => $target === null
@@ -339,6 +361,7 @@ class ProductionController extends Controller
         return [
             'rows' => $rows,
             'unmapped' => $unmapped,
+            'excluded' => $excluded,
             // Bez tego front nie odroznilby „jeszcze nic nie przyszlo" od „przyszlo i sa zera".
             'has_stock' => [
                 'gt' => isset($hasSnapshot['gt']),
@@ -398,6 +421,51 @@ class ProductionController extends Controller
         );
 
         return response()->json($this->mapPayload($data['product_code']));
+    }
+
+    /**
+     * Masowe odlozenie kodow na bok albo ich przywrocenie.
+     *
+     * Wyklucza sie kody ZRODLOWE, nie kody PIM — magazyn trzyma simmeringi,
+     * klocki i wykladzine, ktore nigdy nie beda miec pary w katalogu. Nic nie
+     * kasujemy: przywrocenie oddaje wiersz w tym samym stanie, bo ilosci i tak
+     * przyjezdzaja z kazda paczka od nowa.
+     */
+    public function bulkWarehouseExclusions(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'excluded' => ['required', 'boolean'],
+            'rows' => ['required', 'array', 'min:1'],
+            'rows.*.source' => ['required', 'string', Rule::in(array_keys(WarehouseCodeMap::SOURCES))],
+            'rows.*.source_code' => ['required', 'string', 'max:100'],
+        ]);
+
+        $changed = 0;
+
+        foreach ($data['rows'] as $row) {
+            $code = trim($row['source_code']);
+            if ($code === '') {
+                continue;
+            }
+
+            if ($data['excluded']) {
+                $exclusion = WarehouseCodeExclusion::firstOrCreate([
+                    'source' => $row['source'],
+                    'source_code' => $code,
+                ]);
+
+                $changed += $exclusion->wasRecentlyCreated ? 1 : 0;
+            } else {
+                $changed += WarehouseCodeExclusion::where('source', $row['source'])
+                    ->where('source_code', $code)
+                    ->delete();
+            }
+        }
+
+        return response()->json([
+            'changed' => $changed,
+            'excluded_total' => WarehouseCodeExclusion::count(),
+        ]);
     }
 
     /**

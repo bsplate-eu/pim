@@ -93,7 +93,7 @@
                 </template>
 
                 <!-- === DO ZMAPOWANIA === -->
-                <template v-else>
+                <template v-else-if="activeTab === 'unmapped'">
                     <div v-if="!unmapped.length" class="py-10 text-center">
                         <LinkSlashIcon class="mx-auto h-10 w-10 text-gray-300" />
                         <h3 class="mt-3 text-base font-medium text-gray-900">
@@ -111,14 +111,83 @@
                     </div>
 
                     <template v-else>
-                        <div class="mb-3 text-xs text-gray-500">
-                            Wierszy do zmapowania: <strong>{{ unmapped.length }}</strong>
+                        <!-- Pasek masowy — pojawia sie dopiero gdy cos zaznaczone,
+                             tak samo jak w Wykluczeniach w Produkcji. -->
+                        <div
+                            v-if="selected.size"
+                            class="mb-3 flex flex-wrap items-center gap-3 rounded-md border border-indigo-200 bg-indigo-50 px-4 py-2"
+                        >
+                            <span class="text-sm text-indigo-900">
+                                Zaznaczonych: <strong>{{ selected.size }}</strong>
+                            </span>
+                            <div class="ml-auto flex items-center gap-2">
+                                <Button size="sm" :loading="bulkBusy" @click="bulkExclude(true)">
+                                    Wyklucz zaznaczone
+                                </Button>
+                                <Button size="sm" color="gray" variant="ghost" @click="clearSelection">
+                                    Wyczyść
+                                </Button>
+                            </div>
+                        </div>
+
+                        <div class="mb-3 flex items-center gap-4 text-xs text-gray-500">
+                            <span>Wierszy do zmapowania: <strong>{{ unmapped.length }}</strong></span>
+                            <button type="button" class="text-primary-600 hover:underline" @click="selectAll(unmapped)">
+                                Zaznacz wszystkie
+                            </button>
                         </div>
 
                         <DataGrid
                             ref="unmappedGridRef"
                             v-model="unmapped"
                             :columns="unmappedColumns"
+                            keyField="key"
+                            height="auto"
+                        />
+                    </template>
+                </template>
+
+                <!-- === WYKLUCZONE === -->
+                <template v-else-if="activeTab === 'excluded'">
+                    <div v-if="!excluded.length" class="py-10 text-center">
+                        <ArchiveBoxXMarkIcon class="mx-auto h-10 w-10 text-gray-300" />
+                        <h3 class="mt-3 text-base font-medium text-gray-900">Nic nie wykluczono</h3>
+                        <p class="mx-auto mt-2 max-w-lg text-sm text-gray-500">
+                            Magazyn trzyma nie tylko osłony — simmeringi, klocki, wykładzina.
+                            Zaznacz je w „Do zmapowania" i odłóż tutaj, żeby przestały
+                            zaśmiecać listę roboczą. Nic przy tym nie znika z Subiekta.
+                        </p>
+                    </div>
+
+                    <template v-else>
+                        <div
+                            v-if="selected.size"
+                            class="mb-3 flex flex-wrap items-center gap-3 rounded-md border border-indigo-200 bg-indigo-50 px-4 py-2"
+                        >
+                            <span class="text-sm text-indigo-900">
+                                Zaznaczonych: <strong>{{ selected.size }}</strong>
+                            </span>
+                            <div class="ml-auto flex items-center gap-2">
+                                <Button size="sm" color="gray" variant="outline" :loading="bulkBusy" @click="bulkExclude(false)">
+                                    Przywróć zaznaczone
+                                </Button>
+                                <Button size="sm" color="gray" variant="ghost" @click="clearSelection">
+                                    Wyczyść
+                                </Button>
+                            </div>
+                        </div>
+
+                        <div class="mb-3 flex items-center gap-4 text-xs text-gray-500">
+                            <span>Wykluczonych: <strong>{{ excluded.length }}</strong></span>
+                            <button type="button" class="text-primary-600 hover:underline" @click="selectAll(excluded)">
+                                Zaznacz wszystkie
+                            </button>
+                        </div>
+
+                        <DataGrid
+                            ref="excludedGridRef"
+                            v-model="excluded"
+                            :columns="excludedColumns"
                             keyField="key"
                             height="auto"
                         />
@@ -208,10 +277,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref } from "vue";
+import { computed, reactive, ref, watch } from "vue";
 import axios from "axios";
 import { useToast } from "@brackets/vue-toastification";
-import { LinkSlashIcon } from "@heroicons/vue/24/outline";
+import { ArchiveBoxXMarkIcon, LinkSlashIcon } from "@heroicons/vue/24/outline";
+import { router } from "@inertiajs/vue3";
 import {
     Button,
     Card,
@@ -260,9 +330,20 @@ interface UnmappedRow {
     reason: string;
 }
 
+/** Wiersz odlozony na bok — ten sam ksztalt co „do zmapowania", bez powodu. */
+interface ExcludedRow {
+    key: string;
+    source: string;
+    source_label: string;
+    source_code: string;
+    name: string | null;
+    quantity: number | null;
+}
+
 interface Props {
     rows: WarehouseRow[];
     unmapped?: UnmappedRow[];
+    excluded?: ExcludedRow[];
     sources: Record<string, string>;
     // Czy z danego zrodla przyszla juz jakakolwiek migawka. Bez tego nie da sie
     // odroznic „nic nie przyszlo" od „przyszlo i sa zera".
@@ -271,6 +352,7 @@ interface Props {
 
 const props = withDefaults(defineProps<Props>(), {
     unmapped: () => [],
+    excluded: () => [],
     has_stock: () => ({}),
 });
 
@@ -280,8 +362,10 @@ const toast = useToast();
 // Kopie lokalne — DataGrid pracuje na v-model, a props Inertii sa zamrozone.
 const rows = ref<WarehouseRow[]>([...props.rows]);
 const unmapped = ref<UnmappedRow[]>([...props.unmapped]);
+const excluded = ref<ExcludedRow[]>([...props.excluded]);
 const gridRef = ref<any>(null);
 const unmappedGridRef = ref<any>(null);
+const excludedGridRef = ref<any>(null);
 
 // Skroty na chipy w kolumnie Mapowanie — pelna nazwa zrodla nie miesci sie
 // w komorce, a i tak widac ja po najechaniu.
@@ -294,13 +378,20 @@ const sourceLabel = (key: string): string => props.sources[key] ?? key;
 // „Zmapowane" to kody PIM — jedyna lista, na ktorej ilosc da sie do czegokolwiek
 // przypiac. „Do zmapowania" to wiersze ze zrodel bez pary: kod z arkusza albo z
 // Subiekta, ktorego w PIM nie ma, albo ktory pasuje do wiecej niz jednego.
-type TabKey = "mapped" | "unmapped";
+// „Wykluczone" to trzeci kubelek: wiersze odlozone recznie, bo nigdy nie beda
+// mialy pary w PIM (simmeringi, klocki, wykladzina). Nie licza sie nigdzie.
+type TabKey = "mapped" | "unmapped" | "excluded";
 const activeTab = ref<TabKey>("mapped");
 
 const tabs = computed(() => [
     { key: "mapped" as TabKey, label: "Zmapowane", count: rows.value.length },
     { key: "unmapped" as TabKey, label: "Do zmapowania", count: unmapped.value.length },
+    { key: "excluded" as TabKey, label: "Wykluczone", count: excluded.value.length },
 ]);
+
+// Zaznaczenie zerujemy przy zmianie zakladki — inaczej „Przywroc zaznaczone"
+// dzialaloby na wierszach, ktorych juz nie widac.
+watch(activeTab, () => clearSelection());
 
 function tabClass(active: boolean): string {
     return [
@@ -572,7 +663,106 @@ const columns = computed(() => [
 
 // Kolumny zakladki „Do zmapowania". Bez nazwy produktu — tych wierszy nie ma
 // w PIM, wiec nazwy nie ma skad wziac; jest kod ze zrodla i powod odrzucenia.
+// === ZAZNACZANIE I WYKLUCZANIE ===
+// Klucz zaznaczenia to `key` wiersza (zrodlo:kod) — ten sam po obu stronach,
+// wiec przywracanie dziala tak samo jak wykluczanie.
+const selected = ref<Set<string>>(new Set());
+const bulkBusy = ref(false);
+
+function clearSelection(): void {
+    selected.value = new Set();
+}
+
+function toggleRow(key: string, on: boolean): void {
+    const next = new Set(selected.value);
+    on ? next.add(key) : next.delete(key);
+    selected.value = next;
+    refreshSideGrids();
+}
+
+function selectAll(list: Array<{ key: string }>): void {
+    selected.value = new Set(list.map((row) => row.key));
+    refreshSideGrids();
+}
+
+/** RevoGrid nie sledzi mutacji — po zmianie zaznaczenia trzeba przerysowac. */
+function refreshSideGrids(): void {
+    [unmappedGridRef.value, excludedGridRef.value].forEach((grid) => {
+        if (grid?.getSource) grid.setSource([...grid.getSource()]);
+    });
+}
+
+/** Kolumna z checkboxem — pierwsza, waska, bez nazwy. */
+const selectColumn = {
+    prop: "__sel__",
+    name: "",
+    readonly: true,
+    sortable: false,
+    size: 46,
+    cellTemplate: (h: any, p: any) => {
+        const key = String(p.model?.key ?? "");
+
+        return h("label", { class: "revo-sel-cell" }, [
+            h("input", {
+                type: "checkbox",
+                checked: selected.value.has(key),
+                onClick: (e: any) => e.stopPropagation(),
+                onChange: (e: any) => toggleRow(key, !!(e.target as HTMLInputElement).checked),
+            }),
+        ]);
+    },
+};
+
+async function bulkExclude(excludedFlag: boolean): Promise<void> {
+    const list = excludedFlag ? unmapped.value : excluded.value;
+    const picked = list.filter((row: any) => selected.value.has(row.key));
+
+    if (!picked.length || bulkBusy.value) return;
+
+    bulkBusy.value = true;
+    try {
+        await axios.post(route("crafter.production.warehouse.exclusions.bulk"), {
+            excluded: excludedFlag,
+            rows: picked.map((row: any) => ({
+                // „Do zmapowania" niesie klucz techniczny w `source_key`,
+                // „Wykluczone" wprost w `source` — etykieta jest osobno.
+                source: row.source_key ?? row.source,
+                source_code: row.source_code,
+            })),
+        });
+
+        clearSelection();
+        toast.success(
+            excludedFlag
+                ? `Wykluczono ${picked.length} pozycji`
+                : `Przywrócono ${picked.length} pozycji`
+        );
+
+        // Przeliczenie robi serwer — te same reguly co przy wejsciu na ekran.
+        router.reload({ only: ["rows", "unmapped", "excluded", "has_stock"] });
+    } catch (e: any) {
+        toast.error(e?.response?.data?.message ?? "Nie udało się zapisać zmiany");
+    } finally {
+        bulkBusy.value = false;
+    }
+}
+
+// Props Inertii przychodza na nowo po `router.reload` — lokalne kopie musza za nimi nadazyc.
+watch(
+    () => props.unmapped,
+    (value) => (unmapped.value = [...(value ?? [])])
+);
+watch(
+    () => props.excluded,
+    (value) => (excluded.value = [...(value ?? [])])
+);
+watch(
+    () => props.rows,
+    (value) => (rows.value = [...(value ?? [])])
+);
+
 const unmappedColumns = computed(() => [
+    selectColumn,
     { prop: "source_code", name: "Kod ze źródła", readonly: true, size: 200, sortable: true },
     // Nazwa PO STRONIE ZRODLA — jedyny trop, po ktorym da sie rozpoznac, czym
     // ten wiersz w ogole jest, skoro w PIM go nie ma.
@@ -588,6 +778,23 @@ const unmappedColumns = computed(() => [
             (Number(a?.[key]) || 0) - (Number(b?.[key]) || 0),
     },
     { prop: "reason", name: "Dlaczego", readonly: true, size: 380, sortable: true },
+]);
+
+// Wykluczone: to samo bez kolumny „Dlaczego" — powod jest jeden i wynika z zakladki.
+const excludedColumns = computed(() => [
+    selectColumn,
+    { prop: "source_code", name: "Kod ze źródła", readonly: true, size: 200, sortable: true },
+    { prop: "name", name: "Nazwa w źródle", readonly: true, size: 380, sortable: true },
+    { prop: "source_label", name: "Źródło", readonly: true, size: 140, sortable: true },
+    {
+        prop: "quantity",
+        name: "Ilość",
+        readonly: true,
+        size: 120,
+        sortable: true,
+        cellCompare: (key: string, a: any, b: any): number =>
+            (Number(a?.[key]) || 0) - (Number(b?.[key]) || 0),
+    },
 ]);
 
 // === WYSZUKIWARKA ===
@@ -693,4 +900,13 @@ const totalCount = computed<number>(() => allRows.value.length);
     border-color: #9ca3af;
     color: #4b5563;
 }
+:deep(.revo-sel-cell) {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    width: 100%;
+    cursor: pointer;
+}
+
 </style>
