@@ -40,7 +40,7 @@
                                 <strong>Stan M3R</strong> — realny stan ze wskazanego magazynu
                                 Subiekta GT przez ARGO Bridge; <strong>Tabela</strong> — ilości
                                 z arkusza Google, w którym gospodarka magazynowa prowadzona jest
-                                ręcznie.
+                                ręcznie. Mapowanie kodów można ustawiać już teraz.
                             </div>
                             <div>
                                 Kreska w kolumnie znaczy „brak odczytu", a nie „zero sztuk".
@@ -74,6 +74,12 @@
                     <div class="mb-3 text-xs text-gray-500">
                         Widocznych: <strong>{{ visibleCount }}</strong>
                         / Wszystkich kodów: <strong>{{ totalCount }}</strong>
+                        <span class="ml-4">
+                            Zmapowanych z Subiekta: <strong>{{ mappedCount("gt") }}</strong>
+                        </span>
+                        <span class="ml-4">
+                            Zmapowanych z Tabeli: <strong>{{ mappedCount("sheet") }}</strong>
+                        </span>
                     </div>
 
                     <DataGrid
@@ -118,7 +124,7 @@
             </Card>
         </div>
 
-        <!-- Ramka po najechaniu na „+N" — poza karta i na fixed, bo komorki
+        <!-- Ramka po najechaniu na chip — poza karta i na fixed, bo komorki
              RevoGrida maja overflow: hidden i popover w srodku bylby uciety.
              Ten sam wzorzec co na liscie kodow produkcji. -->
         <div
@@ -130,16 +136,75 @@
             <div v-for="(line, i) in hoverBox.lines" :key="i" class="py-0.5 text-sm text-gray-900">
                 {{ line }}
             </div>
+            <div v-if="hoverBox.note" class="mt-1 border-t border-gray-100 pt-1 text-xs text-gray-400">
+                {{ hoverBox.note }}
+            </div>
         </div>
+
+        <!-- === MAPOWANIE RECZNE === -->
+        <Modal :open="mapModal.show" externalOpen size="md" alignButtons="right" @toggleOpen="closeMap">
+            <template #title>
+                Mapowanie: {{ mapModal.product_code }} ↔ {{ sourceLabel(mapModal.source) }}
+            </template>
+
+            <template #content>
+                <p class="text-sm text-gray-500">
+                    Kod z tej strony może mieć kilka odpowiedników w źródle — ilości się
+                    wtedy sumują. Jeden kod źródłowy trafia zawsze do jednego kodu PIM.
+                </p>
+
+                <div v-if="mapModal.codes.length" class="mt-4 space-y-2">
+                    <div
+                        v-for="code in mapModal.codes"
+                        :key="code"
+                        class="flex items-center justify-between rounded border border-gray-200 px-3 py-2"
+                    >
+                        <code class="text-sm text-gray-900">{{ code }}</code>
+                        <button
+                            type="button"
+                            class="text-sm text-gray-400 hover:text-red-600"
+                            :disabled="mapModal.busy"
+                            @click="removeMap(code)"
+                        >
+                            Odepnij
+                        </button>
+                    </div>
+                </div>
+                <div v-else class="mt-4 rounded border border-dashed border-gray-300 px-3 py-4 text-center text-sm text-gray-400">
+                    Nic jeszcze nie przypisane
+                </div>
+
+                <div class="mt-4 flex items-end gap-2">
+                    <div class="flex-1">
+                        <TextInput
+                            v-model="mapModal.input"
+                            name="map_source_code"
+                            :label="`Kod w źródle (${sourceLabel(mapModal.source)})`"
+                            placeholder="wpisz kod dokładnie tak, jak jest w źródle"
+                            @keyup.enter="addMap"
+                        />
+                    </div>
+                    <Button class="mb-1" :loading="mapModal.busy" @click="addMap">Dopnij</Button>
+                </div>
+            </template>
+
+            <template #buttons>
+                <Button variant="outline" color="gray" @click="closeMap">Zamknij</Button>
+            </template>
+        </Modal>
     </PageContent>
 </template>
 
 <script setup lang="ts">
 import { computed, reactive, ref } from "vue";
+import axios from "axios";
+import { useToast } from "@brackets/vue-toastification";
 import { LinkSlashIcon } from "@heroicons/vue/24/outline";
 import {
+    Button,
     Card,
     DataGrid,
+    Modal,
     PageContent,
     PageHeader,
     SelectInput,
@@ -153,6 +218,9 @@ interface WarehouseRow {
     material: string;
     variants: number;
     variant_names: string[];
+    // Kody zrodlowe przypiete do tego kodu PIM — po jednej liscie na zrodlo.
+    map_gt?: string[];
+    map_sheet?: string[];
 }
 
 /**
@@ -171,15 +239,24 @@ interface UnmappedRow {
 interface Props {
     rows: WarehouseRow[];
     unmapped?: UnmappedRow[];
+    sources: Record<string, string>;
 }
 
 const props = withDefaults(defineProps<Props>(), { unmapped: () => [] });
+const toast = useToast();
 
 // Kopie lokalne — DataGrid pracuje na v-model, a props Inertii sa zamrozone.
 const rows = ref<WarehouseRow[]>([...props.rows]);
 const unmapped = ref<UnmappedRow[]>([...props.unmapped]);
 const gridRef = ref<any>(null);
 const unmappedGridRef = ref<any>(null);
+
+// Skroty na chipy w kolumnie Mapowanie — pelna nazwa zrodla nie miesci sie
+// w komorce, a i tak widac ja po najechaniu.
+const SHORT: Record<string, string> = { gt: "GT", sheet: "TAB" };
+
+const sourceKeys = computed<string[]>(() => Object.keys(props.sources));
+const sourceLabel = (key: string): string => props.sources[key] ?? key;
 
 // === ZAKLADKI: STAN ZMAPOWANIA ===
 // „Zmapowane" to kody PIM — jedyna lista, na ktorej ilosc da sie do czegokolwiek
@@ -202,24 +279,126 @@ function tabClass(active: boolean): string {
     ].join(" ");
 }
 
-// === RAMKA PO NAJECHANIU NA „+N" ===
-const hoverBox = ref<{ show: boolean; x: number; y: number; title: string; lines: string[] }>({
-    show: false,
-    x: 0,
-    y: 0,
-    title: "",
-    lines: [],
-});
+// === RAMKA PO NAJECHANIU ===
+const hoverBox = ref<{
+    show: boolean;
+    x: number;
+    y: number;
+    title: string;
+    lines: string[];
+    note: string;
+}>({ show: false, x: 0, y: 0, title: "", lines: [], note: "" });
 
-function showBox(event: MouseEvent, title: string, lines: string[]): void {
+function showBox(event: MouseEvent, title: string, lines: string[], note = ""): void {
     const rect = (event.currentTarget as HTMLElement)?.getBoundingClientRect();
     if (!rect) return;
 
-    hoverBox.value = { show: true, x: rect.left, y: rect.bottom + 6, title, lines };
+    hoverBox.value = { show: true, x: rect.left, y: rect.bottom + 6, title, lines, note };
 }
 
 function hideBox(): void {
     hoverBox.value = { ...hoverBox.value, show: false };
+}
+
+// RevoGrid nie sledzi mutacji pol wiersza — podmiana referencji zrodla wymusza
+// przerysowanie po zapisaniu mapowania.
+function refreshGrid(): void {
+    const grid = gridRef.value;
+    if (grid) grid.setSource([...grid.getSource()]);
+}
+
+function rowByCode(code: string): any {
+    const source: any[] = gridRef.value?.getSource?.() ?? rows.value;
+    return source.find((r) => r.product_code === code);
+}
+
+function mappedCodes(row: any, source: string): string[] {
+    const value = row?.["map_" + source];
+    return Array.isArray(value) ? value : [];
+}
+
+const mappedCount = (source: string): number =>
+    (gridRef.value?.getSource?.() ?? rows.value).filter(
+        (r: any) => mappedCodes(r, source).length > 0
+    ).length;
+
+// === MAPOWANIE RECZNE ===
+const mapModal = reactive<{
+    show: boolean;
+    product_code: string;
+    source: string;
+    codes: string[];
+    input: string;
+    busy: boolean;
+}>({ show: false, product_code: "", source: "gt", codes: [], input: "", busy: false });
+
+function openMap(productCode: string, source: string): void {
+    hideBox();
+    mapModal.show = true;
+    mapModal.product_code = productCode;
+    mapModal.source = source;
+    mapModal.codes = [...mappedCodes(rowByCode(productCode), source)];
+    mapModal.input = "";
+}
+
+function closeMap(): void {
+    mapModal.show = false;
+}
+
+/** Odpowiedz serwera niesie komplet przypisan kodu — wpisujemy ja w wiersz. */
+function applyPayload(payload: any): void {
+    const row = rowByCode(payload.product_code);
+    if (row) {
+        sourceKeys.value.forEach((key) => {
+            row["map_" + key] = payload["map_" + key] ?? [];
+        });
+        refreshGrid();
+    }
+
+    mapModal.codes = payload["map_" + mapModal.source] ?? [];
+}
+
+async function addMap(): Promise<void> {
+    const code = mapModal.input.trim();
+    if (!code || mapModal.busy) return;
+
+    mapModal.busy = true;
+    try {
+        const { data } = await axios.post(route("crafter.production.warehouse.map.store"), {
+            product_code: mapModal.product_code,
+            source: mapModal.source,
+            source_code: code,
+        });
+        applyPayload(data);
+        mapModal.input = "";
+        toast.success(`Dopięto ${code}`);
+    } catch (e: any) {
+        // 422 z kontrolera niesie konkretny powod — np. ze kod wisi juz na innym produkcie.
+        toast.error(e?.response?.data?.message ?? "Nie udało się dopiąć kodu");
+    } finally {
+        mapModal.busy = false;
+    }
+}
+
+async function removeMap(code: string): Promise<void> {
+    if (mapModal.busy) return;
+
+    mapModal.busy = true;
+    try {
+        const { data } = await axios.delete(route("crafter.production.warehouse.map.destroy"), {
+            data: {
+                product_code: mapModal.product_code,
+                source: mapModal.source,
+                source_code: code,
+            },
+        });
+        applyPayload(data);
+        toast.success(`Odpięto ${code}`);
+    } catch (e: any) {
+        toast.error(e?.response?.data?.message ?? "Nie udało się odpiąć kodu");
+    } finally {
+        mapModal.busy = false;
+    }
 }
 
 /**
@@ -260,12 +439,68 @@ const columns = computed(() => [
             return h("span", { style: { color: "#9ca3af" } }, String(lp));
         },
     },
-    { prop: "product_code", name: "Kod", readonly: true, size: 170, sortable: true },
+    { prop: "product_code", name: "Kod", readonly: true, size: 150, sortable: true },
+    {
+        // Mapowanie tuz przy kodzie: po jednym chipie na zrodlo. Zielony = jest
+        // para (najechanie pokazuje z czym), przerywany „+" = nic nie przypisane
+        // i klikniecie otwiera reczne mapowanie.
+        prop: "__map__",
+        name: "Mapowanie",
+        readonly: true,
+        sortable: false,
+        size: 170,
+        cellTemplate: (h: any, p: any) => {
+            const code = String(p.model?.product_code ?? "");
+
+            const chips = sourceKeys.value.map((key) => {
+                const codes = mappedCodes(p.model, key);
+                const label = sourceLabel(key);
+                const short = SHORT[key] ?? label;
+
+                if (!codes.length) {
+                    return h(
+                        "button",
+                        {
+                            class: "revo-map-chip revo-map-empty",
+                            title: `Dopnij kod z: ${label}`,
+                            onClick: (e: any) => {
+                                e.stopPropagation();
+                                openMap(code, key);
+                            },
+                        },
+                        `${short} +`
+                    );
+                }
+
+                return h(
+                    "button",
+                    {
+                        class: "revo-map-chip revo-map-set",
+                        onMouseenter: (e: any) =>
+                            showBox(
+                                e,
+                                `${label} → ${code}`,
+                                codes,
+                                "Kliknij, żeby zmienić przypisanie."
+                            ),
+                        onMouseleave: hideBox,
+                        onClick: (e: any) => {
+                            e.stopPropagation();
+                            openMap(code, key);
+                        },
+                    },
+                    codes.length > 1 ? `${short} ×${codes.length}` : short
+                );
+            });
+
+            return h("span", { class: "revo-code-cell" }, chips);
+        },
+    },
     {
         prop: "name",
         name: "Nazwa",
         readonly: true,
-        size: 480,
+        size: 420,
         sortable: true,
         // Pod jednym kodem siedzi zwykle kilkanascie aut — nazwa to nazwa pierwszego.
         // „+N" mowi, ze reszta istnieje; najechanie pokazuje ich liste.
@@ -393,5 +628,32 @@ const totalCount = computed<number>(() => allRows.value.length);
     color: #9ca3af;
     font-size: 12px;
     cursor: help;
+}
+
+:deep(.revo-map-chip) {
+    flex: none;
+    padding: 0 8px;
+    border-radius: 9px;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 18px;
+    cursor: pointer;
+}
+
+:deep(.revo-map-set) {
+    border: 1px solid #bbf7d0;
+    background: #f0fdf4;
+    color: #15803d;
+}
+
+:deep(.revo-map-empty) {
+    border: 1px dashed #d1d5db;
+    background: transparent;
+    color: #9ca3af;
+}
+
+:deep(.revo-map-empty:hover) {
+    border-color: #9ca3af;
+    color: #4b5563;
 }
 </style>
