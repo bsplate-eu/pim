@@ -10,6 +10,7 @@ use App\Models\ProductionStage;
 use App\Services\Production\CodeGrouper;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -42,15 +43,53 @@ class ProductionController extends Controller
     ];
 
     /**
-     * Lista kodow produkcyjnych (bez powtorzen) do gridu produkcji.
+     * Katalog kodow: jeden wiersz na `product_code`, kluczowany kodem.
+     * Sam katalog, bez danych produkcyjnych — te dokleja `index()`.
+     *
+     * Wspolny dla Produkcji i Magazynu, bo obu ekranom chodzi o to samo:
+     * zwinac powtorzenia kodu z `products` do jednej pozycji.
      */
-    public function index(Request $request, CodeGrouper $grouper): Response
+    private function codeCatalog(): Collection
     {
         // Atrybut „Materiał" (Stal/Aluminium) — dociagany tak samo jak na liscie produktow.
         $materialValues = Attribute::with('values')->where('slug', 'material')->first()?->values ?? collect();
         $materialValueIds = $materialValues->pluck('id')->all();
         $materialLabels = $materialValues->mapWithKeys(fn ($value) => [$value->slug => $value->name])->all();
 
+        return Product::query()
+            ->select('id', 'product_code', 'name')
+            ->with(['attributeValues' => fn ($query) => $query->whereIn('attribute_values.id', $materialValueIds)])
+            ->orderBy('product_code')
+            ->orderBy('id')
+            ->get()
+            ->groupBy('product_code')
+            ->map(function ($group) use ($materialLabels) {
+                // Reprezentant kodu = najstarszy produkt (najnizsze id) — po nim bierzemy nazwe.
+                $product = $group->first();
+                $slug = $product->attributeValues->first()?->slug;
+
+                return [
+                    'product_id' => $product->id,
+                    'product_code' => $product->product_code,
+                    // Nazwy w bazie bywaja z encjami HTML (&quot;) — te same, co na liscie produktow.
+                    'name' => htmlspecialchars_decode((string) $product->name),
+                    'material' => $slug === null ? '' : ($materialLabels[$slug] ?? $slug),
+                    // Ile produktow (aut) kryje sie pod tym kodem — sygnal, ze nazwa to jeden z wielu wariantow.
+                    'variants' => $group->count(),
+                    // Nazwy wszystkich aut pod tym kodem — do ramki po najechaniu na „+N".
+                    'variant_names' => $group
+                        ->map(fn ($p) => htmlspecialchars_decode((string) $p->name))
+                        ->values()
+                        ->all(),
+                ];
+            });
+    }
+
+    /**
+     * Lista kodow produkcyjnych (bez powtorzen) do gridu produkcji.
+     */
+    public function index(Request $request, CodeGrouper $grouper): Response
+    {
         $stages = ProductionStage::orderBy('position')->orderBy('id')->get();
 
         // Dane produkcyjne — tylko dla kodow, na ktorych cos ustawiono albo wgrano.
@@ -67,39 +106,16 @@ class ProductionController extends Controller
         // wierszem i nie doliczaja sie do sumy zadnej grupy.
         $excluded = $items->filter(fn ($item) => (bool) $item->excluded)->keys()->flip();
 
-        $rows = Product::query()
-            ->select('id', 'product_code', 'name')
-            ->with(['attributeValues' => fn ($query) => $query->whereIn('attribute_values.id', $materialValueIds)])
-            ->orderBy('product_code')
-            ->orderBy('id')
-            ->get()
-            ->groupBy('product_code')
-            ->reject(fn ($group, $code) => $excluded->has($code))
-            ->map(function ($group) use ($materialLabels, $items) {
-                // Reprezentant kodu = najstarszy produkt (najnizsze id) — po nim bierzemy nazwe.
-                $product = $group->first();
-                $slug = $product->attributeValues->first()?->slug;
-                $item = $items[$product->product_code] ?? null;
+        $rows = $this->codeCatalog()
+            ->reject(fn ($row, $code) => $excluded->has($code))
+            ->map(function (array $row) use ($items) {
+                $item = $items[$row['product_code']] ?? null;
 
-                $row = [
-                    'product_id' => $product->id,
-                    'product_code' => $product->product_code,
-                    // Nazwy w bazie bywaja z encjami HTML (&quot;) — te same, co na liscie produktow.
-                    'name' => htmlspecialchars_decode((string) $product->name),
-                    'material' => $slug === null ? '' : ($materialLabels[$slug] ?? $slug),
-                    // Ile produktow (aut) kryje sie pod tym kodem — sygnal, ze nazwa to jeden z wielu wariantow.
-                    'variants' => $group->count(),
-                    // Nazwy wszystkich aut pod tym kodem — do ramki po najechaniu na „+N".
-                    'variant_names' => $group
-                        ->map(fn ($p) => htmlspecialchars_decode((string) $p->name))
-                        ->values()
-                        ->all(),
-                    // Sprzedaz 12M z raportu Subiekta. Kod bez wiersza w raporcie = 0.
-                    'sales_12m' => (int) ($item?->sales_12m ?? 0),
-                    'stage_id' => $item?->stage_id,
-                    // Warianty wciagniete do tego wiersza (wypelniane nizej).
-                    'group_codes' => [],
-                ];
+                // Sprzedaz 12M z raportu Subiekta. Kod bez wiersza w raporcie = 0.
+                $row['sales_12m'] = (int) ($item?->sales_12m ?? 0);
+                $row['stage_id'] = $item?->stage_id;
+                // Warianty wciagniete do tego wiersza (wypelniane nizej).
+                $row['group_codes'] = [];
 
                 // Znaczniki lecą pod nazwami z frontu — dodanie kolejnego to jeden wpis w FLAGS.
                 foreach (self::FLAGS as $key => $column) {
@@ -107,8 +123,7 @@ class ProductionController extends Controller
                 }
 
                 return $row;
-            })
-            ->keyBy('product_code');
+            });
 
         // Skladamy warianty w trzony: sprzedaz sie sumuje, wiersz wariantu znika.
         foreach ($groupMap as $variant => $trunk) {
@@ -156,12 +171,20 @@ class ProductionController extends Controller
     }
 
     /**
-     * Magazyn — osobny ekran dzialu produkcji. Na razie pusty: PIM nie trzyma
-     * jeszcze stanow magazynowych, wiec jest tu miejsce, a nie dane.
+     * Magazyn — na razie jedna zakladka „Magazyn M3R" z pelna lista kodow.
+     *
+     * Swiadomie BEZ wykluczen i bez grupowania z Produkcji: tam chodzi o to,
+     * co trzeba zaprojektowac, a tu o to, co fizycznie lezy na polce — kod
+     * wykluczony z produkcji dalej moze miec stan.
+     *
+     * Kolumna stanu jest pusta do czasu, az poleci do niej odczyt ze wskazanego
+     * magazynu Subiekta GT przez ARGO Bridge.
      */
     public function warehouse(Request $request): Response
     {
-        return Inertia::render('Production/Warehouse');
+        return Inertia::render('Production/Warehouse', [
+            'rows' => $this->codeCatalog()->values(),
+        ]);
     }
 
     /**

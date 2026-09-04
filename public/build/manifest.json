@@ -1,8 +1,8 @@
 {
   "../PIM/node_modules/@revolist/revogrid/dist/esm/revo-grid.entry.js": {
-    "file": "assets/revo-grid.entry-e7311b7f.js",
+    "file": "assets/revo-grid.entry-167c9d68.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "_viewport.helpers-CoCAvmZs-f4dac066.js",
       "_events-BvSmBueA-09314f63.js"
     ],
@@ -10,38 +10,38 @@
     "src": "../PIM/node_modules/@revolist/revogrid/dist/esm/revo-grid.entry.js"
   },
   "../PIM/node_modules/@revolist/revogrid/dist/esm/revogr-attribution_7.entry.js": {
-    "file": "assets/revogr-attribution_7.entry-9478e7d9.js",
+    "file": "assets/revogr-attribution_7.entry-2fb58706.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "_events-BvSmBueA-09314f63.js",
       "_viewport.helpers-CoCAvmZs-f4dac066.js",
-      "_throttle-CaUDyxyU-bcaa0c29.js"
+      "_throttle-CaUDyxyU-0b689d7e.js"
     ],
     "isDynamicEntry": true,
     "src": "../PIM/node_modules/@revolist/revogrid/dist/esm/revogr-attribution_7.entry.js"
   },
   "../PIM/node_modules/@revolist/revogrid/dist/esm/revogr-clipboard_3.entry.js": {
-    "file": "assets/revogr-clipboard_3.entry-3c4f3b58.js",
+    "file": "assets/revogr-clipboard_3.entry-03c65828.js",
     "imports": [
-      "_vendor-da3a8442.js"
+      "_vendor-2e0ac3b3.js"
     ],
     "isDynamicEntry": true,
     "src": "../PIM/node_modules/@revolist/revogrid/dist/esm/revogr-clipboard_3.entry.js"
   },
   "../PIM/node_modules/@revolist/revogrid/dist/esm/revogr-data_4.entry.js": {
-    "file": "assets/revogr-data_4.entry-a255e24d.js",
+    "file": "assets/revogr-data_4.entry-b68b1bc4.js",
     "imports": [
-      "_vendor-da3a8442.js",
-      "_throttle-CaUDyxyU-bcaa0c29.js",
+      "_vendor-2e0ac3b3.js",
+      "_throttle-CaUDyxyU-0b689d7e.js",
       "_viewport.helpers-CoCAvmZs-f4dac066.js"
     ],
     "isDynamicEntry": true,
     "src": "../PIM/node_modules/@revolist/revogrid/dist/esm/revogr-data_4.entry.js"
   },
   "../PIM/node_modules/@revolist/revogrid/dist/esm/revogr-filter-panel.entry.js": {
-    "file": "assets/revogr-filter-panel.entry-dd466188.js",
+    "file": "assets/revogr-filter-panel.entry-ae711ff6.js",
     "imports": [
-      "_vendor-da3a8442.js"
+      "_vendor-2e0ac3b3.js"
     ],
     "isDynamicEntry": true,
     "src": "../PIM/node_modules/@revolist/revogrid/dist/esm/revogr-filter-panel.entry.js"
@@ -66,445 +66,445 @@
     "file": "assets/marker-shadow-264f5c64.png",
     "src": "../PIM/node_modules/leaflet/dist/images/marker-shadow.png"
   },
-  "_AiToolsModal.vue_vue_type_script_setup_true_lang-60a3c225.js": {
-    "file": "assets/AiToolsModal.vue_vue_type_script_setup_true_lang-60a3c225.js",
+  "_AiToolsModal.vue_vue_type_script_setup_true_lang-78610f36.js": {
+    "file": "assets/AiToolsModal.vue_vue_type_script_setup_true_lang-78610f36.js",
     "imports": [
-      "_vendor-da3a8442.js",
-      "_useFormLocale-3f62e584.js",
+      "_vendor-2e0ac3b3.js",
+      "_useFormLocale-b37cddbd.js",
       "resources/js/crafter/index.ts",
-      "_TextArea.vue_vue_type_script_setup_true_lang-6aaeb8a6.js"
+      "_TextArea.vue_vue_type_script_setup_true_lang-26e648a8.js"
     ]
   },
-  "_Alert.vue_vue_type_script_setup_true_lang-cbc8ff82.js": {
-    "file": "assets/Alert.vue_vue_type_script_setup_true_lang-cbc8ff82.js",
+  "_Alert.vue_vue_type_script_setup_true_lang-14df72e6.js": {
+    "file": "assets/Alert.vue_vue_type_script_setup_true_lang-14df72e6.js",
     "imports": [
-      "_vendor-da3a8442.js"
+      "_vendor-2e0ac3b3.js"
     ]
   },
-  "_CustomPropertyInput.vue_vue_type_script_setup_true_lang-dfa98632.js": {
-    "file": "assets/CustomPropertyInput.vue_vue_type_script_setup_true_lang-dfa98632.js",
+  "_CustomPropertyInput.vue_vue_type_script_setup_true_lang-2e655217.js": {
+    "file": "assets/CustomPropertyInput.vue_vue_type_script_setup_true_lang-2e655217.js",
     "imports": [
-      "_useFormLocale-3f62e584.js",
-      "_vendor-da3a8442.js",
+      "_useFormLocale-b37cddbd.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts"
     ]
   },
-  "_DataGrid-af062b83.js": {
-    "file": "assets/DataGrid-af062b83.js",
+  "_DataGrid-b98aa0b1.js": {
+    "file": "assets/DataGrid-b98aa0b1.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts"
     ]
   },
-  "_EbayTabs.vue_vue_type_script_setup_true_lang-732e3e6b.js": {
-    "file": "assets/EbayTabs.vue_vue_type_script_setup_true_lang-732e3e6b.js",
+  "_EbayTabs.vue_vue_type_script_setup_true_lang-68adddc9.js": {
+    "file": "assets/EbayTabs.vue_vue_type_script_setup_true_lang-68adddc9.js",
     "imports": [
-      "_vendor-da3a8442.js"
+      "_vendor-2e0ac3b3.js"
     ]
   },
-  "_EditTranslationModal.vue_vue_type_script_setup_true_lang-ab0bf787.js": {
-    "file": "assets/EditTranslationModal.vue_vue_type_script_setup_true_lang-ab0bf787.js",
+  "_EditTranslationModal.vue_vue_type_script_setup_true_lang-003c3b37.js": {
+    "file": "assets/EditTranslationModal.vue_vue_type_script_setup_true_lang-003c3b37.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_Modal.vue_vue_type_script_setup_true_lang-80d67ad5.js"
+      "_Modal.vue_vue_type_script_setup_true_lang-4943ddbb.js"
     ]
   },
-  "_ExclusionsTab.vue_vue_type_script_setup_true_lang-fb35cde7.js": {
-    "file": "assets/ExclusionsTab.vue_vue_type_script_setup_true_lang-fb35cde7.js",
+  "_ExclusionsTab.vue_vue_type_script_setup_true_lang-c5617464.js": {
+    "file": "assets/ExclusionsTab.vue_vue_type_script_setup_true_lang-c5617464.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts"
     ]
   },
-  "_ExportModal.vue_vue_type_script_setup_true_lang-e99844f3.js": {
-    "file": "assets/ExportModal.vue_vue_type_script_setup_true_lang-e99844f3.js",
+  "_ExportModal.vue_vue_type_script_setup_true_lang-5c80339e.js": {
+    "file": "assets/ExportModal.vue_vue_type_script_setup_true_lang-5c80339e.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_Multiselect.vue_vue_type_script_setup_true_lang-4ba87aea.js",
-      "_Modal.vue_vue_type_script_setup_true_lang-80d67ad5.js"
+      "_Multiselect.vue_vue_type_script_setup_true_lang-46a75aec.js",
+      "_Modal.vue_vue_type_script_setup_true_lang-4943ddbb.js"
     ]
   },
-  "_Form.vue_vue_type_script_setup_true_lang-00274733.js": {
-    "file": "assets/Form.vue_vue_type_script_setup_true_lang-00274733.js",
+  "_Form.vue_vue_type_script_setup_true_lang-4c9dd179.js": {
+    "file": "assets/Form.vue_vue_type_script_setup_true_lang-4c9dd179.js",
     "imports": [
-      "_AiToolsModal.vue_vue_type_script_setup_true_lang-60a3c225.js",
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js",
-      "_Multiselect.vue_vue_type_script_setup_true_lang-4ba87aea.js",
-      "_Tooltip.vue_vue_type_script_setup_true_lang-a4cc89df.js",
-      "_Wysiwyg.vue_vue_type_script_setup_true_lang-e5f0f5b7.js",
-      "_ImageEditor.vue_vue_type_script_setup_true_lang-6cb76c18.js",
-      "_useFormLocale-3f62e584.js",
-      "_vue3-treeselect.min-c3cfec1c.js"
+      "_TextArea.vue_vue_type_script_setup_true_lang-26e648a8.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js",
+      "_Tooltip.vue_vue_type_script_setup_true_lang-38b98cc1.js",
+      "_useFormLocale-b37cddbd.js"
     ]
   },
-  "_Form.vue_vue_type_script_setup_true_lang-2ae8720b.js": {
-    "file": "assets/Form.vue_vue_type_script_setup_true_lang-2ae8720b.js",
+  "_Form.vue_vue_type_script_setup_true_lang-4f7aef2b.js": {
+    "file": "assets/Form.vue_vue_type_script_setup_true_lang-4f7aef2b.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_Permission.vue_vue_type_script_setup_true_lang-7cdbfa00.js"
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js",
+      "_Tooltip.vue_vue_type_script_setup_true_lang-38b98cc1.js",
+      "_vue3-treeselect.min-78415016.js",
+      "_useFormLocale-b37cddbd.js"
     ]
   },
-  "_Form.vue_vue_type_script_setup_true_lang-30aeb34a.js": {
-    "file": "assets/Form.vue_vue_type_script_setup_true_lang-30aeb34a.js",
+  "_Form.vue_vue_type_script_setup_true_lang-5123edd2.js": {
+    "file": "assets/Form.vue_vue_type_script_setup_true_lang-5123edd2.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js"
+      "_Multiselect.vue_vue_type_script_setup_true_lang-46a75aec.js",
+      "_ProfileCard.vue_vue_type_script_setup_true_lang-90b8d77b.js",
+      "_PasswordCard.vue_vue_type_script_setup_true_lang-adcf1d17.js",
+      "_MailAccountsCard.vue_vue_type_script_setup_true_lang-62c72718.js"
     ]
   },
-  "_Form.vue_vue_type_script_setup_true_lang-54edab91.js": {
-    "file": "assets/Form.vue_vue_type_script_setup_true_lang-54edab91.js",
+  "_Form.vue_vue_type_script_setup_true_lang-69e9b845.js": {
+    "file": "assets/Form.vue_vue_type_script_setup_true_lang-69e9b845.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js",
-      "_Modal.vue_vue_type_script_setup_true_lang-80d67ad5.js",
-      "_DataGrid-af062b83.js"
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js",
+      "_Tooltip.vue_vue_type_script_setup_true_lang-38b98cc1.js",
+      "_useFormLocale-b37cddbd.js"
     ]
   },
-  "_Form.vue_vue_type_script_setup_true_lang-60a1bd45.js": {
-    "file": "assets/Form.vue_vue_type_script_setup_true_lang-60a1bd45.js",
+  "_Form.vue_vue_type_script_setup_true_lang-729cd128.js": {
+    "file": "assets/Form.vue_vue_type_script_setup_true_lang-729cd128.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_Multiselect.vue_vue_type_script_setup_true_lang-4ba87aea.js",
-      "_ProfileCard.vue_vue_type_script_setup_true_lang-6c5e2981.js",
-      "_PasswordCard.vue_vue_type_script_setup_true_lang-b65097ac.js",
-      "_MailAccountsCard.vue_vue_type_script_setup_true_lang-49169aaa.js"
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js",
+      "_DataGrid-b98aa0b1.js"
     ]
   },
-  "_Form.vue_vue_type_script_setup_true_lang-66f96ddd.js": {
-    "file": "assets/Form.vue_vue_type_script_setup_true_lang-66f96ddd.js",
+  "_Form.vue_vue_type_script_setup_true_lang-7325b31e.js": {
+    "file": "assets/Form.vue_vue_type_script_setup_true_lang-7325b31e.js",
     "imports": [
-      "_Alert.vue_vue_type_script_setup_true_lang-cbc8ff82.js",
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_TextArea.vue_vue_type_script_setup_true_lang-6aaeb8a6.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js",
-      "_Multiselect.vue_vue_type_script_setup_true_lang-4ba87aea.js",
-      "_Tab.vue_vue_type_script_setup_true_lang-593f1688.js",
-      "_TabGroup.vue_vue_type_script_setup_true_lang-43b6ae91.js"
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js"
     ]
   },
-  "_Form.vue_vue_type_script_setup_true_lang-831b3daa.js": {
-    "file": "assets/Form.vue_vue_type_script_setup_true_lang-831b3daa.js",
+  "_Form.vue_vue_type_script_setup_true_lang-a39959d7.js": {
+    "file": "assets/Form.vue_vue_type_script_setup_true_lang-a39959d7.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_Alert.vue_vue_type_script_setup_true_lang-14df72e6.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js",
-      "_Tooltip.vue_vue_type_script_setup_true_lang-a4cc89df.js",
-      "_vue3-treeselect.min-c3cfec1c.js",
-      "_useFormLocale-3f62e584.js"
+      "_TextArea.vue_vue_type_script_setup_true_lang-26e648a8.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js",
+      "_Multiselect.vue_vue_type_script_setup_true_lang-46a75aec.js",
+      "_Tab.vue_vue_type_script_setup_true_lang-02c4a265.js",
+      "_TabGroup.vue_vue_type_script_setup_true_lang-eb45ce7d.js"
     ]
   },
-  "_Form.vue_vue_type_script_setup_true_lang-8a738253.js": {
-    "file": "assets/Form.vue_vue_type_script_setup_true_lang-8a738253.js",
+  "_Form.vue_vue_type_script_setup_true_lang-b78189d1.js": {
+    "file": "assets/Form.vue_vue_type_script_setup_true_lang-b78189d1.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_AiToolsModal.vue_vue_type_script_setup_true_lang-78610f36.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js",
-      "_DataGrid-af062b83.js"
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js",
+      "_Multiselect.vue_vue_type_script_setup_true_lang-46a75aec.js",
+      "_Tooltip.vue_vue_type_script_setup_true_lang-38b98cc1.js",
+      "_Wysiwyg.vue_vue_type_script_setup_true_lang-79d3e8b0.js",
+      "_ImageEditor.vue_vue_type_script_setup_true_lang-e467f5f2.js",
+      "_useFormLocale-b37cddbd.js",
+      "_vue3-treeselect.min-78415016.js"
     ]
   },
-  "_Form.vue_vue_type_script_setup_true_lang-e26b48f9.js": {
-    "file": "assets/Form.vue_vue_type_script_setup_true_lang-e26b48f9.js",
+  "_Form.vue_vue_type_script_setup_true_lang-c9bb9646.js": {
+    "file": "assets/Form.vue_vue_type_script_setup_true_lang-c9bb9646.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_TextArea.vue_vue_type_script_setup_true_lang-6aaeb8a6.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js",
-      "_Tooltip.vue_vue_type_script_setup_true_lang-a4cc89df.js",
-      "_useFormLocale-3f62e584.js"
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js",
+      "_Modal.vue_vue_type_script_setup_true_lang-4943ddbb.js",
+      "_DataGrid-b98aa0b1.js"
     ]
   },
-  "_Form.vue_vue_type_script_setup_true_lang-ec96b134.js": {
-    "file": "assets/Form.vue_vue_type_script_setup_true_lang-ec96b134.js",
+  "_Form.vue_vue_type_script_setup_true_lang-f254fe50.js": {
+    "file": "assets/Form.vue_vue_type_script_setup_true_lang-f254fe50.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js",
-      "_Tooltip.vue_vue_type_script_setup_true_lang-a4cc89df.js",
-      "_useFormLocale-3f62e584.js"
+      "_Permission.vue_vue_type_script_setup_true_lang-acf0e471.js"
     ]
   },
-  "_Form.vue_vue_type_script_setup_true_lang-f7be7f66.js": {
-    "file": "assets/Form.vue_vue_type_script_setup_true_lang-f7be7f66.js",
+  "_Form.vue_vue_type_script_setup_true_lang-f7e8b985.js": {
+    "file": "assets/Form.vue_vue_type_script_setup_true_lang-f7e8b985.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js",
-      "_Tooltip.vue_vue_type_script_setup_true_lang-a4cc89df.js",
-      "_useFormLocale-3f62e584.js"
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js",
+      "_Tooltip.vue_vue_type_script_setup_true_lang-38b98cc1.js",
+      "_useFormLocale-b37cddbd.js"
     ]
   },
-  "_GroupsTab.vue_vue_type_script_setup_true_lang-192fb339.js": {
-    "file": "assets/GroupsTab.vue_vue_type_script_setup_true_lang-192fb339.js",
+  "_GroupsTab.vue_vue_type_script_setup_true_lang-9a0fac02.js": {
+    "file": "assets/GroupsTab.vue_vue_type_script_setup_true_lang-9a0fac02.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts"
     ]
   },
-  "_ImageEditor.vue_vue_type_script_setup_true_lang-6cb76c18.js": {
-    "file": "assets/ImageEditor.vue_vue_type_script_setup_true_lang-6cb76c18.js",
+  "_ImageEditor.vue_vue_type_script_setup_true_lang-e467f5f2.js": {
+    "file": "assets/ImageEditor.vue_vue_type_script_setup_true_lang-e467f5f2.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_Modal.vue_vue_type_script_setup_true_lang-80d67ad5.js"
+      "_Modal.vue_vue_type_script_setup_true_lang-4943ddbb.js"
     ]
   },
-  "_ImageUploadModal.vue_vue_type_script_setup_true_lang-8c7d72dc.js": {
-    "file": "assets/ImageUploadModal.vue_vue_type_script_setup_true_lang-8c7d72dc.js",
+  "_ImageUploadModal.vue_vue_type_script_setup_true_lang-fb3cf8cc.js": {
+    "file": "assets/ImageUploadModal.vue_vue_type_script_setup_true_lang-fb3cf8cc.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_Modal.vue_vue_type_script_setup_true_lang-80d67ad5.js",
-      "_ImageEditor.vue_vue_type_script_setup_true_lang-6cb76c18.js"
+      "_Modal.vue_vue_type_script_setup_true_lang-4943ddbb.js",
+      "_ImageEditor.vue_vue_type_script_setup_true_lang-e467f5f2.js"
     ]
   },
-  "_ImportModal.vue_vue_type_script_setup_true_lang-153d55fa.js": {
-    "file": "assets/ImportModal.vue_vue_type_script_setup_true_lang-153d55fa.js",
+  "_ImportModal.vue_vue_type_script_setup_true_lang-90811779.js": {
+    "file": "assets/ImportModal.vue_vue_type_script_setup_true_lang-90811779.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_Modal.vue_vue_type_script_setup_true_lang-80d67ad5.js",
-      "_ImportModalFirstStep.vue_vue_type_script_setup_true_lang-4e227f94.js",
-      "_ImportModalThirdStep.vue_vue_type_script_setup_true_lang-6c12e0fd.js",
-      "_ImportModalSecondStep.vue_vue_type_script_setup_true_lang-6bbd75e6.js"
+      "_Modal.vue_vue_type_script_setup_true_lang-4943ddbb.js",
+      "_ImportModalFirstStep.vue_vue_type_script_setup_true_lang-5d03a4f9.js",
+      "_ImportModalThirdStep.vue_vue_type_script_setup_true_lang-56ac102a.js",
+      "_ImportModalSecondStep.vue_vue_type_script_setup_true_lang-a47ee307.js"
     ]
   },
-  "_ImportModalFirstStep.vue_vue_type_script_setup_true_lang-4e227f94.js": {
-    "file": "assets/ImportModalFirstStep.vue_vue_type_script_setup_true_lang-4e227f94.js",
+  "_ImportModalFirstStep.vue_vue_type_script_setup_true_lang-5d03a4f9.js": {
+    "file": "assets/ImportModalFirstStep.vue_vue_type_script_setup_true_lang-5d03a4f9.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_Multiselect.vue_vue_type_script_setup_true_lang-4ba87aea.js"
+      "_Multiselect.vue_vue_type_script_setup_true_lang-46a75aec.js"
     ]
   },
-  "_ImportModalSecondStep.vue_vue_type_script_setup_true_lang-6bbd75e6.js": {
-    "file": "assets/ImportModalSecondStep.vue_vue_type_script_setup_true_lang-6bbd75e6.js",
+  "_ImportModalSecondStep.vue_vue_type_script_setup_true_lang-a47ee307.js": {
+    "file": "assets/ImportModalSecondStep.vue_vue_type_script_setup_true_lang-a47ee307.js",
     "imports": [
-      "_vendor-da3a8442.js"
+      "_vendor-2e0ac3b3.js"
     ]
   },
-  "_ImportModalThirdStep.vue_vue_type_script_setup_true_lang-6c12e0fd.js": {
-    "file": "assets/ImportModalThirdStep.vue_vue_type_script_setup_true_lang-6c12e0fd.js",
+  "_ImportModalThirdStep.vue_vue_type_script_setup_true_lang-56ac102a.js": {
+    "file": "assets/ImportModalThirdStep.vue_vue_type_script_setup_true_lang-56ac102a.js",
     "imports": [
-      "_vendor-da3a8442.js"
+      "_vendor-2e0ac3b3.js"
     ]
   },
-  "_MailAccountsCard.vue_vue_type_script_setup_true_lang-49169aaa.js": {
-    "file": "assets/MailAccountsCard.vue_vue_type_script_setup_true_lang-49169aaa.js",
+  "_MailAccountsCard.vue_vue_type_script_setup_true_lang-62c72718.js": {
+    "file": "assets/MailAccountsCard.vue_vue_type_script_setup_true_lang-62c72718.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts"
     ]
   },
-  "_MobileLayout-e073ebbb.js": {
-    "file": "assets/MobileLayout-e073ebbb.js",
+  "_MobileLayout-c3f6d119.js": {
+    "file": "assets/MobileLayout-c3f6d119.js",
     "imports": [
-      "_vendor-da3a8442.js"
+      "_vendor-2e0ac3b3.js"
     ]
   },
-  "_Modal.vue_vue_type_script_setup_true_lang-80d67ad5.js": {
-    "file": "assets/Modal.vue_vue_type_script_setup_true_lang-80d67ad5.js",
+  "_Modal.vue_vue_type_script_setup_true_lang-4943ddbb.js": {
+    "file": "assets/Modal.vue_vue_type_script_setup_true_lang-4943ddbb.js",
     "imports": [
-      "_vendor-da3a8442.js"
+      "_vendor-2e0ac3b3.js"
     ]
   },
-  "_Multiselect.vue_vue_type_script_setup_true_lang-4ba87aea.js": {
-    "file": "assets/Multiselect.vue_vue_type_script_setup_true_lang-4ba87aea.js",
+  "_Multiselect.vue_vue_type_script_setup_true_lang-46a75aec.js": {
+    "file": "assets/Multiselect.vue_vue_type_script_setup_true_lang-46a75aec.js",
     "imports": [
       "resources/js/crafter/index.ts",
-      "_vendor-da3a8442.js",
-      "_Tag.vue_vue_type_script_setup_true_lang-41e7292d.js"
+      "_vendor-2e0ac3b3.js",
+      "_Tag.vue_vue_type_script_setup_true_lang-aeb9ea0a.js"
     ]
   },
-  "_NamedColorEditor.vue_vue_type_script_setup_true_lang-f42f4da5.js": {
-    "file": "assets/NamedColorEditor.vue_vue_type_script_setup_true_lang-f42f4da5.js",
+  "_NamedColorEditor.vue_vue_type_script_setup_true_lang-2312d9f5.js": {
+    "file": "assets/NamedColorEditor.vue_vue_type_script_setup_true_lang-2312d9f5.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts"
     ]
   },
-  "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js": {
-    "file": "assets/PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js",
+  "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js": {
+    "file": "assets/PageContent.vue_vue_type_script_setup_true_lang-d2386724.js",
     "imports": [
-      "_vendor-da3a8442.js"
+      "_vendor-2e0ac3b3.js"
     ]
   },
-  "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js": {
-    "file": "assets/PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
+  "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js": {
+    "file": "assets/PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
     "imports": [
-      "_vendor-da3a8442.js"
+      "_vendor-2e0ac3b3.js"
     ]
   },
-  "_PasswordCard.vue_vue_type_script_setup_true_lang-b65097ac.js": {
-    "file": "assets/PasswordCard.vue_vue_type_script_setup_true_lang-b65097ac.js",
+  "_PasswordCard.vue_vue_type_script_setup_true_lang-adcf1d17.js": {
+    "file": "assets/PasswordCard.vue_vue_type_script_setup_true_lang-adcf1d17.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts"
     ]
   },
-  "_Permission.vue_vue_type_script_setup_true_lang-7cdbfa00.js": {
-    "file": "assets/Permission.vue_vue_type_script_setup_true_lang-7cdbfa00.js",
+  "_Permission.vue_vue_type_script_setup_true_lang-acf0e471.js": {
+    "file": "assets/Permission.vue_vue_type_script_setup_true_lang-acf0e471.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_usePermissionLabels-abd49a99.js",
-      "__baseIteratee-83fcf11d.js",
-      "_toInteger-4e7d1f81.js"
+      "_usePermissionLabels-0ff7d9c8.js",
+      "__baseIteratee-c0aed953.js",
+      "_toInteger-e1dc2c0e.js"
     ]
   },
-  "_PermissionTableRow.vue_vue_type_script_setup_true_lang-a7a6a046.js": {
-    "file": "assets/PermissionTableRow.vue_vue_type_script_setup_true_lang-a7a6a046.js",
+  "_PermissionTableRow.vue_vue_type_script_setup_true_lang-f14615d2.js": {
+    "file": "assets/PermissionTableRow.vue_vue_type_script_setup_true_lang-f14615d2.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_usePermissionLabels-abd49a99.js"
+      "_usePermissionLabels-0ff7d9c8.js"
     ]
   },
-  "_ProfileCard.vue_vue_type_script_setup_true_lang-6c5e2981.js": {
-    "file": "assets/ProfileCard.vue_vue_type_script_setup_true_lang-6c5e2981.js",
+  "_ProfileCard.vue_vue_type_script_setup_true_lang-90b8d77b.js": {
+    "file": "assets/ProfileCard.vue_vue_type_script_setup_true_lang-90b8d77b.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_Multiselect.vue_vue_type_script_setup_true_lang-4ba87aea.js"
+      "_Multiselect.vue_vue_type_script_setup_true_lang-46a75aec.js"
     ]
   },
-  "_ProgressGauge.vue_vue_type_script_setup_true_lang-2e780764.js": {
-    "file": "assets/ProgressGauge.vue_vue_type_script_setup_true_lang-2e780764.js",
+  "_ProgressGauge.vue_vue_type_script_setup_true_lang-6f4f1b93.js": {
+    "file": "assets/ProgressGauge.vue_vue_type_script_setup_true_lang-6f4f1b93.js",
     "imports": [
-      "_vendor-da3a8442.js"
+      "_vendor-2e0ac3b3.js"
     ]
   },
-  "_RecipientInput.vue_vue_type_script_setup_true_lang-be95cf79.js": {
-    "file": "assets/RecipientInput.vue_vue_type_script_setup_true_lang-be95cf79.js",
+  "_RecipientInput.vue_vue_type_script_setup_true_lang-ea710dd1.js": {
+    "file": "assets/RecipientInput.vue_vue_type_script_setup_true_lang-ea710dd1.js",
     "imports": [
-      "_vendor-da3a8442.js"
+      "_vendor-2e0ac3b3.js"
     ]
   },
-  "_Tab.vue_vue_type_script_setup_true_lang-593f1688.js": {
-    "file": "assets/Tab.vue_vue_type_script_setup_true_lang-593f1688.js",
+  "_Tab.vue_vue_type_script_setup_true_lang-02c4a265.js": {
+    "file": "assets/Tab.vue_vue_type_script_setup_true_lang-02c4a265.js",
     "imports": [
-      "_vendor-da3a8442.js"
+      "_vendor-2e0ac3b3.js"
     ]
   },
-  "_TabGroup.vue_vue_type_script_setup_true_lang-43b6ae91.js": {
-    "file": "assets/TabGroup.vue_vue_type_script_setup_true_lang-43b6ae91.js",
+  "_TabGroup.vue_vue_type_script_setup_true_lang-eb45ce7d.js": {
+    "file": "assets/TabGroup.vue_vue_type_script_setup_true_lang-eb45ce7d.js",
     "imports": [
-      "_vendor-da3a8442.js"
+      "_vendor-2e0ac3b3.js"
     ]
   },
-  "_Tag.vue_vue_type_script_setup_true_lang-41e7292d.js": {
-    "file": "assets/Tag.vue_vue_type_script_setup_true_lang-41e7292d.js",
+  "_Tag.vue_vue_type_script_setup_true_lang-aeb9ea0a.js": {
+    "file": "assets/Tag.vue_vue_type_script_setup_true_lang-aeb9ea0a.js",
     "imports": [
       "resources/js/crafter/index.ts",
-      "_vendor-da3a8442.js"
+      "_vendor-2e0ac3b3.js"
     ]
   },
-  "_TextArea.vue_vue_type_script_setup_true_lang-6aaeb8a6.js": {
-    "file": "assets/TextArea.vue_vue_type_script_setup_true_lang-6aaeb8a6.js",
+  "_TextArea.vue_vue_type_script_setup_true_lang-26e648a8.js": {
+    "file": "assets/TextArea.vue_vue_type_script_setup_true_lang-26e648a8.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts"
     ]
   },
-  "_Toggle.vue_vue_type_script_setup_true_lang-11d0c142.js": {
-    "file": "assets/Toggle.vue_vue_type_script_setup_true_lang-11d0c142.js",
+  "_Toggle.vue_vue_type_script_setup_true_lang-bcce03a8.js": {
+    "file": "assets/Toggle.vue_vue_type_script_setup_true_lang-bcce03a8.js",
     "imports": [
       "resources/js/crafter/index.ts",
-      "_vendor-da3a8442.js"
+      "_vendor-2e0ac3b3.js"
     ]
   },
-  "_Tooltip.vue_vue_type_script_setup_true_lang-a4cc89df.js": {
-    "file": "assets/Tooltip.vue_vue_type_script_setup_true_lang-a4cc89df.js",
+  "_Tooltip.vue_vue_type_script_setup_true_lang-38b98cc1.js": {
+    "file": "assets/Tooltip.vue_vue_type_script_setup_true_lang-38b98cc1.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_useFormLocale-3f62e584.js"
+      "_useFormLocale-b37cddbd.js"
     ]
   },
-  "_Wysiwyg.vue_vue_type_script_setup_true_lang-e5f0f5b7.js": {
-    "file": "assets/Wysiwyg.vue_vue_type_script_setup_true_lang-e5f0f5b7.js",
+  "_Wysiwyg.vue_vue_type_script_setup_true_lang-79d3e8b0.js": {
+    "file": "assets/Wysiwyg.vue_vue_type_script_setup_true_lang-79d3e8b0.js",
     "imports": [
-      "_index-f1f12b88.js",
+      "_index-fa266a67.js",
       "resources/js/crafter/index.ts",
-      "_vendor-da3a8442.js",
-      "_ImageUploadModal.vue_vue_type_script_setup_true_lang-8c7d72dc.js",
-      "_ImageEditor.vue_vue_type_script_setup_true_lang-6cb76c18.js",
-      "_Modal.vue_vue_type_script_setup_true_lang-80d67ad5.js"
+      "_vendor-2e0ac3b3.js",
+      "_ImageUploadModal.vue_vue_type_script_setup_true_lang-fb3cf8cc.js",
+      "_ImageEditor.vue_vue_type_script_setup_true_lang-e467f5f2.js",
+      "_Modal.vue_vue_type_script_setup_true_lang-4943ddbb.js"
     ]
   },
-  "__baseIteratee-83fcf11d.js": {
-    "file": "assets/_baseIteratee-83fcf11d.js",
+  "__baseIteratee-c0aed953.js": {
+    "file": "assets/_baseIteratee-c0aed953.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts"
     ]
   },
   "_events-BvSmBueA-09314f63.js": {
     "file": "assets/events-BvSmBueA-09314f63.js"
   },
-  "_index-f1f12b88.js": {
-    "file": "assets/index-f1f12b88.js",
+  "_index-fa266a67.js": {
+    "file": "assets/index-fa266a67.js",
     "imports": [
       "resources/js/crafter/index.ts",
-      "_vendor-da3a8442.js"
+      "_vendor-2e0ac3b3.js"
     ]
   },
-  "_pickBy-20189d61.js": {
-    "file": "assets/pickBy-20189d61.js",
+  "_pickBy-c3a40573.js": {
+    "file": "assets/pickBy-c3a40573.js",
     "imports": [
-      "_vendor-da3a8442.js",
-      "__baseIteratee-83fcf11d.js",
+      "_vendor-2e0ac3b3.js",
+      "__baseIteratee-c0aed953.js",
       "resources/js/crafter/index.ts"
     ]
   },
-  "_throttle-CaUDyxyU-bcaa0c29.js": {
-    "file": "assets/throttle-CaUDyxyU-bcaa0c29.js",
+  "_throttle-CaUDyxyU-0b689d7e.js": {
+    "file": "assets/throttle-CaUDyxyU-0b689d7e.js",
     "imports": [
       "_viewport.helpers-CoCAvmZs-f4dac066.js",
-      "_vendor-da3a8442.js"
+      "_vendor-2e0ac3b3.js"
     ]
   },
-  "_toInteger-4e7d1f81.js": {
-    "file": "assets/toInteger-4e7d1f81.js",
+  "_toInteger-e1dc2c0e.js": {
+    "file": "assets/toInteger-e1dc2c0e.js",
     "imports": [
       "resources/js/crafter/index.ts"
     ]
   },
-  "_useForm-5d6c32e4.js": {
-    "file": "assets/useForm-5d6c32e4.js",
+  "_useForm-f643b7ba.js": {
+    "file": "assets/useForm-f643b7ba.js",
     "imports": [
-      "_vendor-da3a8442.js"
+      "_vendor-2e0ac3b3.js"
     ]
   },
-  "_useFormLocale-3f62e584.js": {
-    "file": "assets/useFormLocale-3f62e584.js",
+  "_useFormLocale-b37cddbd.js": {
+    "file": "assets/useFormLocale-b37cddbd.js",
     "imports": [
-      "_vendor-da3a8442.js"
+      "_vendor-2e0ac3b3.js"
     ]
   },
-  "_useListingFilters-2c20b207.js": {
-    "file": "assets/useListingFilters-2c20b207.js",
+  "_useListingFilters-6c27c6eb.js": {
+    "file": "assets/useListingFilters-6c27c6eb.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_pickBy-20189d61.js"
+      "_pickBy-c3a40573.js"
     ]
   },
-  "_usePermissionLabels-abd49a99.js": {
-    "file": "assets/usePermissionLabels-abd49a99.js",
+  "_usePermissionLabels-0ff7d9c8.js": {
+    "file": "assets/usePermissionLabels-0ff7d9c8.js",
     "imports": [
-      "_vendor-da3a8442.js"
+      "_vendor-2e0ac3b3.js"
     ]
   },
-  "_vendor-da3a8442.js": {
+  "_vendor-2e0ac3b3.js": {
     "dynamicImports": [
       "../PIM/node_modules/@revolist/revogrid/dist/esm/revo-grid.entry.js",
       "../PIM/node_modules/@revolist/revogrid/dist/esm/revogr-filter-panel.entry.js",
@@ -512,26 +512,26 @@
       "../PIM/node_modules/@revolist/revogrid/dist/esm/revogr-clipboard_3.entry.js",
       "../PIM/node_modules/@revolist/revogrid/dist/esm/revogr-data_4.entry.js"
     ],
-    "file": "assets/vendor-da3a8442.js"
+    "file": "assets/vendor-2e0ac3b3.js"
   },
   "_viewport.helpers-CoCAvmZs-f4dac066.js": {
     "file": "assets/viewport.helpers-CoCAvmZs-f4dac066.js"
   },
-  "_vue3-treeselect.min-c3cfec1c.js": {
+  "_vue3-treeselect.min-78415016.js": {
     "css": [
       "assets/vue3-treeselect-2c5417a5.css"
     ],
-    "file": "assets/vue3-treeselect.min-c3cfec1c.js",
+    "file": "assets/vue3-treeselect.min-78415016.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_toInteger-4e7d1f81.js"
+      "_toInteger-e1dc2c0e.js"
     ]
   },
-  "_vuedraggable.umd-794269c5.js": {
-    "file": "assets/vuedraggable.umd-794269c5.js",
+  "_vuedraggable.umd-93e7a853.js": {
+    "file": "assets/vuedraggable.umd-93e7a853.js",
     "imports": [
-      "_vendor-da3a8442.js"
+      "_vendor-2e0ac3b3.js"
     ]
   },
   "resources/css/crafter.css": {
@@ -540,229 +540,229 @@
     "src": "resources/css/crafter.css"
   },
   "resources/js/crafter/Pages/AdminUser/Components/MailAccountsCard.vue": {
-    "file": "assets/MailAccountsCard-5e4d7918.js",
+    "file": "assets/MailAccountsCard-3d03f734.js",
     "imports": [
-      "_MailAccountsCard.vue_vue_type_script_setup_true_lang-49169aaa.js",
-      "_vendor-da3a8442.js",
+      "_MailAccountsCard.vue_vue_type_script_setup_true_lang-62c72718.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/AdminUser/Components/MailAccountsCard.vue"
   },
   "resources/js/crafter/Pages/AdminUser/Components/PasswordCard.vue": {
-    "file": "assets/PasswordCard-48a5a9ce.js",
+    "file": "assets/PasswordCard-274d4739.js",
     "imports": [
-      "_PasswordCard.vue_vue_type_script_setup_true_lang-b65097ac.js",
-      "_vendor-da3a8442.js",
+      "_PasswordCard.vue_vue_type_script_setup_true_lang-adcf1d17.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/AdminUser/Components/PasswordCard.vue"
   },
   "resources/js/crafter/Pages/AdminUser/Components/ProfileCard.vue": {
-    "file": "assets/ProfileCard-9782a315.js",
+    "file": "assets/ProfileCard-d5e377cf.js",
     "imports": [
-      "_ProfileCard.vue_vue_type_script_setup_true_lang-6c5e2981.js",
-      "_vendor-da3a8442.js",
+      "_ProfileCard.vue_vue_type_script_setup_true_lang-90b8d77b.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_Multiselect.vue_vue_type_script_setup_true_lang-4ba87aea.js",
-      "_Tag.vue_vue_type_script_setup_true_lang-41e7292d.js"
+      "_Multiselect.vue_vue_type_script_setup_true_lang-46a75aec.js",
+      "_Tag.vue_vue_type_script_setup_true_lang-aeb9ea0a.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/AdminUser/Components/ProfileCard.vue"
   },
   "resources/js/crafter/Pages/AdminUser/Create.vue": {
-    "file": "assets/Create-7b3f95bd.js",
+    "file": "assets/Create-a43448cf.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js",
-      "_useForm-5d6c32e4.js",
-      "_Form.vue_vue_type_script_setup_true_lang-60a1bd45.js",
-      "_Multiselect.vue_vue_type_script_setup_true_lang-4ba87aea.js",
-      "_Tag.vue_vue_type_script_setup_true_lang-41e7292d.js",
-      "_ProfileCard.vue_vue_type_script_setup_true_lang-6c5e2981.js",
-      "_PasswordCard.vue_vue_type_script_setup_true_lang-b65097ac.js",
-      "_MailAccountsCard.vue_vue_type_script_setup_true_lang-49169aaa.js"
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js",
+      "_useForm-f643b7ba.js",
+      "_Form.vue_vue_type_script_setup_true_lang-5123edd2.js",
+      "_Multiselect.vue_vue_type_script_setup_true_lang-46a75aec.js",
+      "_Tag.vue_vue_type_script_setup_true_lang-aeb9ea0a.js",
+      "_ProfileCard.vue_vue_type_script_setup_true_lang-90b8d77b.js",
+      "_PasswordCard.vue_vue_type_script_setup_true_lang-adcf1d17.js",
+      "_MailAccountsCard.vue_vue_type_script_setup_true_lang-62c72718.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/AdminUser/Create.vue"
   },
   "resources/js/crafter/Pages/AdminUser/Edit.vue": {
-    "file": "assets/Edit-fab7bc55.js",
+    "file": "assets/Edit-a681d15d.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js",
-      "_Form.vue_vue_type_script_setup_true_lang-60a1bd45.js",
-      "__baseIteratee-83fcf11d.js",
-      "_pickBy-20189d61.js",
-      "_Multiselect.vue_vue_type_script_setup_true_lang-4ba87aea.js",
-      "_Tag.vue_vue_type_script_setup_true_lang-41e7292d.js",
-      "_ProfileCard.vue_vue_type_script_setup_true_lang-6c5e2981.js",
-      "_PasswordCard.vue_vue_type_script_setup_true_lang-b65097ac.js",
-      "_MailAccountsCard.vue_vue_type_script_setup_true_lang-49169aaa.js"
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js",
+      "_Form.vue_vue_type_script_setup_true_lang-5123edd2.js",
+      "__baseIteratee-c0aed953.js",
+      "_pickBy-c3a40573.js",
+      "_Multiselect.vue_vue_type_script_setup_true_lang-46a75aec.js",
+      "_Tag.vue_vue_type_script_setup_true_lang-aeb9ea0a.js",
+      "_ProfileCard.vue_vue_type_script_setup_true_lang-90b8d77b.js",
+      "_PasswordCard.vue_vue_type_script_setup_true_lang-adcf1d17.js",
+      "_MailAccountsCard.vue_vue_type_script_setup_true_lang-62c72718.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/AdminUser/Edit.vue"
   },
   "resources/js/crafter/Pages/AdminUser/Form.vue": {
-    "file": "assets/Form-488b3c49.js",
+    "file": "assets/Form-ceff6b0d.js",
     "imports": [
-      "_Form.vue_vue_type_script_setup_true_lang-60a1bd45.js",
-      "_vendor-da3a8442.js",
+      "_Form.vue_vue_type_script_setup_true_lang-5123edd2.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_Multiselect.vue_vue_type_script_setup_true_lang-4ba87aea.js",
-      "_Tag.vue_vue_type_script_setup_true_lang-41e7292d.js",
-      "_ProfileCard.vue_vue_type_script_setup_true_lang-6c5e2981.js",
-      "_PasswordCard.vue_vue_type_script_setup_true_lang-b65097ac.js",
-      "_MailAccountsCard.vue_vue_type_script_setup_true_lang-49169aaa.js"
+      "_Multiselect.vue_vue_type_script_setup_true_lang-46a75aec.js",
+      "_Tag.vue_vue_type_script_setup_true_lang-aeb9ea0a.js",
+      "_ProfileCard.vue_vue_type_script_setup_true_lang-90b8d77b.js",
+      "_PasswordCard.vue_vue_type_script_setup_true_lang-adcf1d17.js",
+      "_MailAccountsCard.vue_vue_type_script_setup_true_lang-62c72718.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/AdminUser/Form.vue"
   },
   "resources/js/crafter/Pages/AdminUser/Index.vue": {
-    "file": "assets/Index-06b39bf5.js",
+    "file": "assets/Index-1824bbdd.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js",
-      "_Multiselect.vue_vue_type_script_setup_true_lang-4ba87aea.js",
-      "_Modal.vue_vue_type_script_setup_true_lang-80d67ad5.js",
-      "_Tag.vue_vue_type_script_setup_true_lang-41e7292d.js",
-      "_useListingFilters-2c20b207.js",
-      "_pickBy-20189d61.js",
-      "__baseIteratee-83fcf11d.js"
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js",
+      "_Multiselect.vue_vue_type_script_setup_true_lang-46a75aec.js",
+      "_Modal.vue_vue_type_script_setup_true_lang-4943ddbb.js",
+      "_Tag.vue_vue_type_script_setup_true_lang-aeb9ea0a.js",
+      "_useListingFilters-6c27c6eb.js",
+      "_pickBy-c3a40573.js",
+      "__baseIteratee-c0aed953.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/AdminUser/Index.vue"
   },
   "resources/js/crafter/Pages/AdminUser/Password/Edit.vue": {
-    "file": "assets/Edit-c030e03d.js",
+    "file": "assets/Edit-aefe8434.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js",
-      "_useForm-5d6c32e4.js",
-      "_PasswordCard.vue_vue_type_script_setup_true_lang-b65097ac.js"
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js",
+      "_useForm-f643b7ba.js",
+      "_PasswordCard.vue_vue_type_script_setup_true_lang-adcf1d17.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/AdminUser/Password/Edit.vue"
   },
   "resources/js/crafter/Pages/AdminUser/Profile/Edit.vue": {
-    "file": "assets/Edit-d5a51a1d.js",
+    "file": "assets/Edit-7d520190.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js",
-      "_useForm-5d6c32e4.js",
-      "_ProfileCard.vue_vue_type_script_setup_true_lang-6c5e2981.js",
-      "_Multiselect.vue_vue_type_script_setup_true_lang-4ba87aea.js",
-      "_Tag.vue_vue_type_script_setup_true_lang-41e7292d.js"
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js",
+      "_useForm-f643b7ba.js",
+      "_ProfileCard.vue_vue_type_script_setup_true_lang-90b8d77b.js",
+      "_Multiselect.vue_vue_type_script_setup_true_lang-46a75aec.js",
+      "_Tag.vue_vue_type_script_setup_true_lang-aeb9ea0a.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/AdminUser/Profile/Edit.vue"
   },
   "resources/js/crafter/Pages/AiAgents/Tools/Mail/Administrator.vue": {
-    "file": "assets/Administrator-c20c0c80.js",
+    "file": "assets/Administrator-ec483e3a.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js"
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/AiAgents/Tools/Mail/Administrator.vue"
   },
   "resources/js/crafter/Pages/AiTool/Create.vue": {
-    "file": "assets/Create-c508d061.js",
+    "file": "assets/Create-4543c3d5.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_useFormLocale-3f62e584.js",
-      "_useForm-5d6c32e4.js",
-      "_Form.vue_vue_type_script_setup_true_lang-e26b48f9.js",
-      "_TextArea.vue_vue_type_script_setup_true_lang-6aaeb8a6.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js",
-      "_Tooltip.vue_vue_type_script_setup_true_lang-a4cc89df.js"
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_useFormLocale-b37cddbd.js",
+      "_useForm-f643b7ba.js",
+      "_Form.vue_vue_type_script_setup_true_lang-4c9dd179.js",
+      "_TextArea.vue_vue_type_script_setup_true_lang-26e648a8.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js",
+      "_Tooltip.vue_vue_type_script_setup_true_lang-38b98cc1.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/AiTool/Create.vue"
   },
   "resources/js/crafter/Pages/AiTool/Edit.vue": {
-    "file": "assets/Edit-eb8de07e.js",
+    "file": "assets/Edit-4db5ced7.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_useFormLocale-3f62e584.js",
-      "_useForm-5d6c32e4.js",
-      "_Form.vue_vue_type_script_setup_true_lang-e26b48f9.js",
-      "_TextArea.vue_vue_type_script_setup_true_lang-6aaeb8a6.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js",
-      "_Tooltip.vue_vue_type_script_setup_true_lang-a4cc89df.js"
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_useFormLocale-b37cddbd.js",
+      "_useForm-f643b7ba.js",
+      "_Form.vue_vue_type_script_setup_true_lang-4c9dd179.js",
+      "_TextArea.vue_vue_type_script_setup_true_lang-26e648a8.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js",
+      "_Tooltip.vue_vue_type_script_setup_true_lang-38b98cc1.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/AiTool/Edit.vue"
   },
   "resources/js/crafter/Pages/AiTool/Form.vue": {
-    "file": "assets/Form-68bedd83.js",
+    "file": "assets/Form-e91a9a9b.js",
     "imports": [
-      "_Form.vue_vue_type_script_setup_true_lang-e26b48f9.js",
-      "_vendor-da3a8442.js",
+      "_Form.vue_vue_type_script_setup_true_lang-4c9dd179.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_TextArea.vue_vue_type_script_setup_true_lang-6aaeb8a6.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js",
-      "_Tooltip.vue_vue_type_script_setup_true_lang-a4cc89df.js",
-      "_useFormLocale-3f62e584.js"
+      "_TextArea.vue_vue_type_script_setup_true_lang-26e648a8.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js",
+      "_Tooltip.vue_vue_type_script_setup_true_lang-38b98cc1.js",
+      "_useFormLocale-b37cddbd.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/AiTool/Form.vue"
   },
   "resources/js/crafter/Pages/AiTool/Index.vue": {
-    "file": "assets/Index-2617853b.js",
+    "file": "assets/Index-e45b86d9.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js",
-      "_Modal.vue_vue_type_script_setup_true_lang-80d67ad5.js",
-      "_useFormLocale-3f62e584.js",
-      "_Tag.vue_vue_type_script_setup_true_lang-41e7292d.js"
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js",
+      "_Modal.vue_vue_type_script_setup_true_lang-4943ddbb.js",
+      "_useFormLocale-b37cddbd.js",
+      "_Tag.vue_vue_type_script_setup_true_lang-aeb9ea0a.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/AiTool/Index.vue"
   },
   "resources/js/crafter/Pages/ArgoMail/Accounts/Form.vue": {
-    "file": "assets/Form-13d5a6d4.js",
+    "file": "assets/Form-729fa2ba.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js",
-      "_Toggle.vue_vue_type_script_setup_true_lang-11d0c142.js",
-      "_Wysiwyg.vue_vue_type_script_setup_true_lang-e5f0f5b7.js",
-      "_index-f1f12b88.js",
-      "_ImageUploadModal.vue_vue_type_script_setup_true_lang-8c7d72dc.js",
-      "_Modal.vue_vue_type_script_setup_true_lang-80d67ad5.js",
-      "_ImageEditor.vue_vue_type_script_setup_true_lang-6cb76c18.js"
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js",
+      "_Toggle.vue_vue_type_script_setup_true_lang-bcce03a8.js",
+      "_Wysiwyg.vue_vue_type_script_setup_true_lang-79d3e8b0.js",
+      "_index-fa266a67.js",
+      "_ImageUploadModal.vue_vue_type_script_setup_true_lang-fb3cf8cc.js",
+      "_Modal.vue_vue_type_script_setup_true_lang-4943ddbb.js",
+      "_ImageEditor.vue_vue_type_script_setup_true_lang-e467f5f2.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/ArgoMail/Accounts/Form.vue"
   },
   "resources/js/crafter/Pages/ArgoMail/Accounts/Index.vue": {
-    "file": "assets/Index-cb6a701f.js",
+    "file": "assets/Index-3db02d94.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js"
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/ArgoMail/Accounts/Index.vue"
@@ -775,86 +775,86 @@
     "css": [
       "assets/Index-95db8f59.css"
     ],
-    "file": "assets/Index-dec603c6.js",
+    "file": "assets/Index-fe745c54.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js",
-      "_Wysiwyg.vue_vue_type_script_setup_true_lang-e5f0f5b7.js",
-      "_RecipientInput.vue_vue_type_script_setup_true_lang-be95cf79.js",
-      "_index-f1f12b88.js",
-      "_ImageUploadModal.vue_vue_type_script_setup_true_lang-8c7d72dc.js",
-      "_Modal.vue_vue_type_script_setup_true_lang-80d67ad5.js",
-      "_ImageEditor.vue_vue_type_script_setup_true_lang-6cb76c18.js"
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js",
+      "_Wysiwyg.vue_vue_type_script_setup_true_lang-79d3e8b0.js",
+      "_RecipientInput.vue_vue_type_script_setup_true_lang-ea710dd1.js",
+      "_index-fa266a67.js",
+      "_ImageUploadModal.vue_vue_type_script_setup_true_lang-fb3cf8cc.js",
+      "_Modal.vue_vue_type_script_setup_true_lang-4943ddbb.js",
+      "_ImageEditor.vue_vue_type_script_setup_true_lang-e467f5f2.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/ArgoMail/Index.vue"
   },
   "resources/js/crafter/Pages/ArgoMail/RecipientInput.vue": {
-    "file": "assets/RecipientInput-1d7e610e.js",
+    "file": "assets/RecipientInput-f8de24a7.js",
     "imports": [
-      "_RecipientInput.vue_vue_type_script_setup_true_lang-be95cf79.js",
-      "_vendor-da3a8442.js"
+      "_RecipientInput.vue_vue_type_script_setup_true_lang-ea710dd1.js",
+      "_vendor-2e0ac3b3.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/ArgoMail/RecipientInput.vue"
   },
   "resources/js/crafter/Pages/ArgoMail/Settings.vue": {
-    "file": "assets/Settings-824bd8a0.js",
+    "file": "assets/Settings-7206fec0.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js",
-      "_vuedraggable.umd-794269c5.js"
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js",
+      "_vuedraggable.umd-93e7a853.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/ArgoMail/Settings.vue"
   },
   "resources/js/crafter/Pages/ArgoTask/CreateGroup.vue": {
-    "file": "assets/CreateGroup-a010773f.js",
+    "file": "assets/CreateGroup-212d22e8.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_TextArea.vue_vue_type_script_setup_true_lang-6aaeb8a6.js",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js"
+      "_TextArea.vue_vue_type_script_setup_true_lang-26e648a8.js",
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/ArgoTask/CreateGroup.vue"
   },
   "resources/js/crafter/Pages/ArgoTask/CreateProject.vue": {
-    "file": "assets/CreateProject-5b3e0b29.js",
+    "file": "assets/CreateProject-65789fcf.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_TextArea.vue_vue_type_script_setup_true_lang-6aaeb8a6.js",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js"
+      "_TextArea.vue_vue_type_script_setup_true_lang-26e648a8.js",
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/ArgoTask/CreateProject.vue"
   },
   "resources/js/crafter/Pages/ArgoTask/EditGroup.vue": {
-    "file": "assets/EditGroup-b12343d4.js",
+    "file": "assets/EditGroup-9646d9ac.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_TextArea.vue_vue_type_script_setup_true_lang-6aaeb8a6.js",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js"
+      "_TextArea.vue_vue_type_script_setup_true_lang-26e648a8.js",
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/ArgoTask/EditGroup.vue"
   },
   "resources/js/crafter/Pages/ArgoTask/GroupShow.vue": {
-    "file": "assets/GroupShow-9ba27c4e.js",
+    "file": "assets/GroupShow-81a3c9d5.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js",
-      "_Modal.vue_vue_type_script_setup_true_lang-80d67ad5.js"
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js",
+      "_Modal.vue_vue_type_script_setup_true_lang-4943ddbb.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/ArgoTask/GroupShow.vue"
@@ -867,15 +867,15 @@
     "css": [
       "assets/Show-2236f401.css"
     ],
-    "file": "assets/Show-20b2728a.js",
+    "file": "assets/Show-7108e01b.js",
     "imports": [
-      "_vendor-da3a8442.js",
-      "_vuedraggable.umd-794269c5.js",
+      "_vendor-2e0ac3b3.js",
+      "_vuedraggable.umd-93e7a853.js",
       "resources/js/crafter/index.ts",
-      "_TextArea.vue_vue_type_script_setup_true_lang-6aaeb8a6.js",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js",
-      "_Modal.vue_vue_type_script_setup_true_lang-80d67ad5.js"
+      "_TextArea.vue_vue_type_script_setup_true_lang-26e648a8.js",
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js",
+      "_Modal.vue_vue_type_script_setup_true_lang-4943ddbb.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/ArgoTask/Show.vue"
@@ -888,373 +888,373 @@
     "css": [
       "assets/TaskShow-12106204.css"
     ],
-    "file": "assets/TaskShow-22a9a5b5.js",
+    "file": "assets/TaskShow-0c68092e.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js",
-      "_index-f1f12b88.js"
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js",
+      "_index-fa266a67.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/ArgoTask/TaskShow.vue"
   },
   "resources/js/crafter/Pages/Attribute/Create.vue": {
-    "file": "assets/Create-e6dbc5ec.js",
+    "file": "assets/Create-183fb0ae.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_useFormLocale-3f62e584.js",
-      "_useForm-5d6c32e4.js",
-      "_Form.vue_vue_type_script_setup_true_lang-ec96b134.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js",
-      "_Tooltip.vue_vue_type_script_setup_true_lang-a4cc89df.js"
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_useFormLocale-b37cddbd.js",
+      "_useForm-f643b7ba.js",
+      "_Form.vue_vue_type_script_setup_true_lang-69e9b845.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js",
+      "_Tooltip.vue_vue_type_script_setup_true_lang-38b98cc1.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Attribute/Create.vue"
   },
   "resources/js/crafter/Pages/Attribute/Edit.vue": {
-    "file": "assets/Edit-2149f086.js",
+    "file": "assets/Edit-4937fc51.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_useFormLocale-3f62e584.js",
-      "_useForm-5d6c32e4.js",
-      "_Form.vue_vue_type_script_setup_true_lang-ec96b134.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js",
-      "_Tooltip.vue_vue_type_script_setup_true_lang-a4cc89df.js"
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_useFormLocale-b37cddbd.js",
+      "_useForm-f643b7ba.js",
+      "_Form.vue_vue_type_script_setup_true_lang-69e9b845.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js",
+      "_Tooltip.vue_vue_type_script_setup_true_lang-38b98cc1.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Attribute/Edit.vue"
   },
   "resources/js/crafter/Pages/Attribute/Form.vue": {
-    "file": "assets/Form-955613da.js",
+    "file": "assets/Form-e1e85fcb.js",
     "imports": [
-      "_Form.vue_vue_type_script_setup_true_lang-ec96b134.js",
-      "_vendor-da3a8442.js",
+      "_Form.vue_vue_type_script_setup_true_lang-69e9b845.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js",
-      "_Tooltip.vue_vue_type_script_setup_true_lang-a4cc89df.js",
-      "_useFormLocale-3f62e584.js"
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js",
+      "_Tooltip.vue_vue_type_script_setup_true_lang-38b98cc1.js",
+      "_useFormLocale-b37cddbd.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Attribute/Form.vue"
   },
   "resources/js/crafter/Pages/Attribute/Index.vue": {
-    "file": "assets/Index-2bd4bcb5.js",
+    "file": "assets/Index-bc784008.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js",
-      "_Modal.vue_vue_type_script_setup_true_lang-80d67ad5.js",
-      "_useFormLocale-3f62e584.js",
-      "_vuedraggable.umd-794269c5.js"
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js",
+      "_Modal.vue_vue_type_script_setup_true_lang-4943ddbb.js",
+      "_useFormLocale-b37cddbd.js",
+      "_vuedraggable.umd-93e7a853.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Attribute/Index.vue"
   },
   "resources/js/crafter/Pages/AttributeValue/Create.vue": {
-    "file": "assets/Create-f594f607.js",
+    "file": "assets/Create-126550c2.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_useFormLocale-3f62e584.js",
-      "_useForm-5d6c32e4.js",
-      "_Form.vue_vue_type_script_setup_true_lang-f7be7f66.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js",
-      "_Tooltip.vue_vue_type_script_setup_true_lang-a4cc89df.js"
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_useFormLocale-b37cddbd.js",
+      "_useForm-f643b7ba.js",
+      "_Form.vue_vue_type_script_setup_true_lang-f7e8b985.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js",
+      "_Tooltip.vue_vue_type_script_setup_true_lang-38b98cc1.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/AttributeValue/Create.vue"
   },
   "resources/js/crafter/Pages/AttributeValue/Edit.vue": {
-    "file": "assets/Edit-bb77e283.js",
+    "file": "assets/Edit-9334402c.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_useFormLocale-3f62e584.js",
-      "_useForm-5d6c32e4.js",
-      "_Form.vue_vue_type_script_setup_true_lang-f7be7f66.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js",
-      "_Tooltip.vue_vue_type_script_setup_true_lang-a4cc89df.js"
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_useFormLocale-b37cddbd.js",
+      "_useForm-f643b7ba.js",
+      "_Form.vue_vue_type_script_setup_true_lang-f7e8b985.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js",
+      "_Tooltip.vue_vue_type_script_setup_true_lang-38b98cc1.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/AttributeValue/Edit.vue"
   },
   "resources/js/crafter/Pages/AttributeValue/Form.vue": {
-    "file": "assets/Form-3108c621.js",
+    "file": "assets/Form-0d8805d1.js",
     "imports": [
-      "_Form.vue_vue_type_script_setup_true_lang-f7be7f66.js",
-      "_vendor-da3a8442.js",
+      "_Form.vue_vue_type_script_setup_true_lang-f7e8b985.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js",
-      "_Tooltip.vue_vue_type_script_setup_true_lang-a4cc89df.js",
-      "_useFormLocale-3f62e584.js"
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js",
+      "_Tooltip.vue_vue_type_script_setup_true_lang-38b98cc1.js",
+      "_useFormLocale-b37cddbd.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/AttributeValue/Form.vue"
   },
   "resources/js/crafter/Pages/AttributeValue/Index.vue": {
-    "file": "assets/Index-33c82b1f.js",
+    "file": "assets/Index-de3722d0.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js",
-      "_Modal.vue_vue_type_script_setup_true_lang-80d67ad5.js",
-      "_useFormLocale-3f62e584.js"
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js",
+      "_Modal.vue_vue_type_script_setup_true_lang-4943ddbb.js",
+      "_useFormLocale-b37cddbd.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/AttributeValue/Index.vue"
   },
   "resources/js/crafter/Pages/Auth/ConfirmPassword.vue": {
-    "file": "assets/ConfirmPassword-441a4b3f.js",
+    "file": "assets/ConfirmPassword-4247dc14.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Auth/ConfirmPassword.vue"
   },
   "resources/js/crafter/Pages/Auth/ForgotPassword.vue": {
-    "file": "assets/ForgotPassword-c33608ca.js",
+    "file": "assets/ForgotPassword-a291cd56.js",
     "imports": [
-      "_vendor-da3a8442.js",
-      "_Alert.vue_vue_type_script_setup_true_lang-cbc8ff82.js",
+      "_vendor-2e0ac3b3.js",
+      "_Alert.vue_vue_type_script_setup_true_lang-14df72e6.js",
       "resources/js/crafter/index.ts"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Auth/ForgotPassword.vue"
   },
   "resources/js/crafter/Pages/Auth/InviteUser.vue": {
-    "file": "assets/InviteUser-72d73fec.js",
+    "file": "assets/InviteUser-84a4fbd3.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_Multiselect.vue_vue_type_script_setup_true_lang-4ba87aea.js",
-      "_Tag.vue_vue_type_script_setup_true_lang-41e7292d.js"
+      "_Multiselect.vue_vue_type_script_setup_true_lang-46a75aec.js",
+      "_Tag.vue_vue_type_script_setup_true_lang-aeb9ea0a.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Auth/InviteUser.vue"
   },
   "resources/js/crafter/Pages/Auth/Login.vue": {
-    "file": "assets/Login-2dd2e01d.js",
+    "file": "assets/Login-b7800693.js",
     "imports": [
-      "_vendor-da3a8442.js",
-      "_Alert.vue_vue_type_script_setup_true_lang-cbc8ff82.js",
+      "_vendor-2e0ac3b3.js",
+      "_Alert.vue_vue_type_script_setup_true_lang-14df72e6.js",
       "resources/js/crafter/index.ts"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Auth/Login.vue"
   },
   "resources/js/crafter/Pages/Auth/Register.vue": {
-    "file": "assets/Register-f7eb4789.js",
+    "file": "assets/Register-e7f4b43e.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Auth/Register.vue"
   },
   "resources/js/crafter/Pages/Auth/ResetPassword.vue": {
-    "file": "assets/ResetPassword-f2114606.js",
+    "file": "assets/ResetPassword-d39a67cb.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Auth/ResetPassword.vue"
   },
   "resources/js/crafter/Pages/Auth/VerifyEmail.vue": {
-    "file": "assets/VerifyEmail-8fdd86c3.js",
+    "file": "assets/VerifyEmail-018dbcb8.js",
     "imports": [
-      "_vendor-da3a8442.js",
-      "_Alert.vue_vue_type_script_setup_true_lang-cbc8ff82.js",
+      "_vendor-2e0ac3b3.js",
+      "_Alert.vue_vue_type_script_setup_true_lang-14df72e6.js",
       "resources/js/crafter/index.ts"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Auth/VerifyEmail.vue"
   },
   "resources/js/crafter/Pages/BankStatement/Index.vue": {
-    "file": "assets/Index-d15e2db0.js",
+    "file": "assets/Index-750e7c92.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js",
-      "_Modal.vue_vue_type_script_setup_true_lang-80d67ad5.js"
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js",
+      "_Modal.vue_vue_type_script_setup_true_lang-4943ddbb.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/BankStatement/Index.vue"
   },
   "resources/js/crafter/Pages/BankStatement/Show.vue": {
-    "file": "assets/Show-ef6ae41a.js",
+    "file": "assets/Show-308137d5.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js",
-      "_Modal.vue_vue_type_script_setup_true_lang-80d67ad5.js"
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js",
+      "_Modal.vue_vue_type_script_setup_true_lang-4943ddbb.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/BankStatement/Show.vue"
   },
   "resources/js/crafter/Pages/Category/Create.vue": {
-    "file": "assets/Create-b0e883e2.js",
+    "file": "assets/Create-f463107a.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_useFormLocale-3f62e584.js",
-      "_useForm-5d6c32e4.js",
-      "_Form.vue_vue_type_script_setup_true_lang-831b3daa.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js",
-      "_Tooltip.vue_vue_type_script_setup_true_lang-a4cc89df.js",
-      "_vue3-treeselect.min-c3cfec1c.js",
-      "_toInteger-4e7d1f81.js"
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_useFormLocale-b37cddbd.js",
+      "_useForm-f643b7ba.js",
+      "_Form.vue_vue_type_script_setup_true_lang-4f7aef2b.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js",
+      "_Tooltip.vue_vue_type_script_setup_true_lang-38b98cc1.js",
+      "_vue3-treeselect.min-78415016.js",
+      "_toInteger-e1dc2c0e.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Category/Create.vue"
   },
   "resources/js/crafter/Pages/Category/Edit.vue": {
-    "file": "assets/Edit-b58f154a.js",
+    "file": "assets/Edit-eb1cca8e.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_useFormLocale-3f62e584.js",
-      "_useForm-5d6c32e4.js",
-      "_Form.vue_vue_type_script_setup_true_lang-831b3daa.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js",
-      "_Tooltip.vue_vue_type_script_setup_true_lang-a4cc89df.js",
-      "_vue3-treeselect.min-c3cfec1c.js",
-      "_toInteger-4e7d1f81.js"
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_useFormLocale-b37cddbd.js",
+      "_useForm-f643b7ba.js",
+      "_Form.vue_vue_type_script_setup_true_lang-4f7aef2b.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js",
+      "_Tooltip.vue_vue_type_script_setup_true_lang-38b98cc1.js",
+      "_vue3-treeselect.min-78415016.js",
+      "_toInteger-e1dc2c0e.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Category/Edit.vue"
   },
   "resources/js/crafter/Pages/Category/Form.vue": {
-    "file": "assets/Form-195fe545.js",
+    "file": "assets/Form-eab9a13d.js",
     "imports": [
-      "_Form.vue_vue_type_script_setup_true_lang-831b3daa.js",
-      "_vendor-da3a8442.js",
+      "_Form.vue_vue_type_script_setup_true_lang-4f7aef2b.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js",
-      "_Tooltip.vue_vue_type_script_setup_true_lang-a4cc89df.js",
-      "_useFormLocale-3f62e584.js",
-      "_vue3-treeselect.min-c3cfec1c.js",
-      "_toInteger-4e7d1f81.js"
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js",
+      "_Tooltip.vue_vue_type_script_setup_true_lang-38b98cc1.js",
+      "_useFormLocale-b37cddbd.js",
+      "_vue3-treeselect.min-78415016.js",
+      "_toInteger-e1dc2c0e.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Category/Form.vue"
   },
   "resources/js/crafter/Pages/Category/Index.vue": {
-    "file": "assets/Index-1f109403.js",
+    "file": "assets/Index-d99120bd.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js",
-      "_Modal.vue_vue_type_script_setup_true_lang-80d67ad5.js",
-      "_useFormLocale-3f62e584.js"
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js",
+      "_Modal.vue_vue_type_script_setup_true_lang-4943ddbb.js",
+      "_useFormLocale-b37cddbd.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Category/Index.vue"
   },
   "resources/js/crafter/Pages/Connect/Chatbot/Index.vue": {
-    "file": "assets/Index-9e25f227.js",
+    "file": "assets/Index-c4dad40b.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js",
-      "_Toggle.vue_vue_type_script_setup_true_lang-11d0c142.js"
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js",
+      "_Toggle.vue_vue_type_script_setup_true_lang-bcce03a8.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Connect/Chatbot/Index.vue"
   },
   "resources/js/crafter/Pages/Connect/Customers/Index.vue": {
-    "file": "assets/Index-bfd82cba.js",
+    "file": "assets/Index-661c0646.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js"
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Connect/Customers/Index.vue"
   },
   "resources/js/crafter/Pages/Connect/Customers/Show.vue": {
-    "file": "assets/Show-68c53187.js",
+    "file": "assets/Show-b793401e.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js"
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Connect/Customers/Show.vue"
   },
   "resources/js/crafter/Pages/Connect/Integrations/Base/Form.vue": {
-    "file": "assets/Form-b02d03cd.js",
+    "file": "assets/Form-0de1c6bf.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js",
-      "_Toggle.vue_vue_type_script_setup_true_lang-11d0c142.js"
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js",
+      "_Toggle.vue_vue_type_script_setup_true_lang-bcce03a8.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Connect/Integrations/Base/Form.vue"
   },
   "resources/js/crafter/Pages/Connect/Integrations/Base/Index.vue": {
-    "file": "assets/Index-036c571f.js",
+    "file": "assets/Index-6b7bd926.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js"
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Connect/Integrations/Base/Index.vue"
   },
   "resources/js/crafter/Pages/Connect/Integrations/Ebay/Index.vue": {
-    "file": "assets/Index-14bef9dc.js",
+    "file": "assets/Index-825c298f.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js",
-      "_Toggle.vue_vue_type_script_setup_true_lang-11d0c142.js"
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js",
+      "_Toggle.vue_vue_type_script_setup_true_lang-bcce03a8.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Connect/Integrations/Ebay/Index.vue"
   },
   "resources/js/crafter/Pages/Connect/Integrations/Ebay/Offers.vue": {
-    "file": "assets/Offers-398623f6.js",
+    "file": "assets/Offers-0f5a1781.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js",
-      "_EbayTabs.vue_vue_type_script_setup_true_lang-732e3e6b.js"
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js",
+      "_EbayTabs.vue_vue_type_script_setup_true_lang-68adddc9.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Connect/Integrations/Ebay/Offers.vue"
   },
   "resources/js/crafter/Pages/Connect/Integrations/Ksef/Index.vue": {
-    "file": "assets/Index-e32c7ae9.js",
+    "file": "assets/Index-c06dec27.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js",
-      "_Toggle.vue_vue_type_script_setup_true_lang-11d0c142.js"
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js",
+      "_Toggle.vue_vue_type_script_setup_true_lang-bcce03a8.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Connect/Integrations/Ksef/Index.vue"
@@ -1274,196 +1274,196 @@
     "css": [
       "assets/Index-835b7867.css"
     ],
-    "file": "assets/Index-4aeb17ff.js",
+    "file": "assets/Index-753454e1.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js"
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Connect/Map/Index.vue"
   },
   "resources/js/crafter/Pages/Connect/Marketplace/Ebay/Categories/Index.vue": {
-    "file": "assets/Index-92764704.js",
+    "file": "assets/Index-d5b16b81.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js"
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Connect/Marketplace/Ebay/Categories/Index.vue"
   },
   "resources/js/crafter/Pages/Connect/Marketplace/Ebay/EbayTabs.vue": {
-    "file": "assets/EbayTabs-da40e90a.js",
+    "file": "assets/EbayTabs-c32385e6.js",
     "imports": [
-      "_EbayTabs.vue_vue_type_script_setup_true_lang-732e3e6b.js",
-      "_vendor-da3a8442.js"
+      "_EbayTabs.vue_vue_type_script_setup_true_lang-68adddc9.js",
+      "_vendor-2e0ac3b3.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Connect/Marketplace/Ebay/EbayTabs.vue"
   },
   "resources/js/crafter/Pages/Connect/Marketplace/Ebay/Ktype/Index.vue": {
-    "file": "assets/Index-5a2bb760.js",
+    "file": "assets/Index-520253a9.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js"
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Connect/Marketplace/Ebay/Ktype/Index.vue"
   },
   "resources/js/crafter/Pages/Connect/Marketplace/Ebay/Listing/Index.vue": {
-    "file": "assets/Index-69c119b3.js",
+    "file": "assets/Index-5edfca1b.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js",
-      "_EbayTabs.vue_vue_type_script_setup_true_lang-732e3e6b.js"
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js",
+      "_EbayTabs.vue_vue_type_script_setup_true_lang-68adddc9.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Connect/Marketplace/Ebay/Listing/Index.vue"
   },
   "resources/js/crafter/Pages/Connect/Marketplace/Ebay/Schemes/Index.vue": {
-    "file": "assets/Index-2f81502f.js",
+    "file": "assets/Index-c5e5d313.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js"
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Connect/Marketplace/Ebay/Schemes/Index.vue"
   },
   "resources/js/crafter/Pages/Connect/Marketplace/Ebay/Templates/Index.vue": {
-    "file": "assets/Index-57b67275.js",
+    "file": "assets/Index-320971d2.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js"
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Connect/Marketplace/Ebay/Templates/Index.vue"
   },
   "resources/js/crafter/Pages/Connect/Orders/Index.vue": {
-    "file": "assets/Index-4a149a1b.js",
+    "file": "assets/Index-ac4156c6.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js"
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Connect/Orders/Index.vue"
   },
   "resources/js/crafter/Pages/Connect/Orders/Show.vue": {
-    "file": "assets/Show-57959071.js",
+    "file": "assets/Show-3f757aa8.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js"
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Connect/Orders/Show.vue"
   },
   "resources/js/crafter/Pages/CostPlanner/Index.vue": {
-    "file": "assets/Index-016d8377.js",
+    "file": "assets/Index-d5e46341.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js",
-      "_Modal.vue_vue_type_script_setup_true_lang-80d67ad5.js"
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js",
+      "_Modal.vue_vue_type_script_setup_true_lang-4943ddbb.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/CostPlanner/Index.vue"
   },
   "resources/js/crafter/Pages/CostPlanner/NamedColorEditor.vue": {
-    "file": "assets/NamedColorEditor-4448d432.js",
+    "file": "assets/NamedColorEditor-427f2b4e.js",
     "imports": [
-      "_NamedColorEditor.vue_vue_type_script_setup_true_lang-f42f4da5.js",
-      "_vendor-da3a8442.js",
+      "_NamedColorEditor.vue_vue_type_script_setup_true_lang-2312d9f5.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/CostPlanner/NamedColorEditor.vue"
   },
   "resources/js/crafter/Pages/CostPlanner/Reports.vue": {
-    "file": "assets/Reports-a6933c35.js",
+    "file": "assets/Reports-d249299e.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js"
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/CostPlanner/Reports.vue"
   },
   "resources/js/crafter/Pages/CostPlanner/Settings.vue": {
-    "file": "assets/Settings-78e45cd8.js",
+    "file": "assets/Settings-0140a55e.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js",
-      "_NamedColorEditor.vue_vue_type_script_setup_true_lang-f42f4da5.js"
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js",
+      "_NamedColorEditor.vue_vue_type_script_setup_true_lang-2312d9f5.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/CostPlanner/Settings.vue"
   },
   "resources/js/crafter/Pages/CostPlanner/Show.vue": {
-    "file": "assets/Show-922c3a44.js",
+    "file": "assets/Show-f31c20ed.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js",
-      "_Modal.vue_vue_type_script_setup_true_lang-80d67ad5.js"
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js",
+      "_Modal.vue_vue_type_script_setup_true_lang-4943ddbb.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/CostPlanner/Show.vue"
   },
   "resources/js/crafter/Pages/Home.vue": {
-    "file": "assets/Home-9f96e1a5.js",
+    "file": "assets/Home-1e2f520e.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js"
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Home.vue"
   },
   "resources/js/crafter/Pages/Integration/Create.vue": {
-    "file": "assets/Create-1c69ccb5.js",
+    "file": "assets/Create-5bcd0b42.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_useForm-5d6c32e4.js",
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_useForm-f643b7ba.js",
       "resources/js/crafter/Pages/Integration/Form.vue",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js",
-      "_Multiselect.vue_vue_type_script_setup_true_lang-4ba87aea.js",
-      "_Tag.vue_vue_type_script_setup_true_lang-41e7292d.js"
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js",
+      "_Multiselect.vue_vue_type_script_setup_true_lang-46a75aec.js",
+      "_Tag.vue_vue_type_script_setup_true_lang-aeb9ea0a.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Integration/Create.vue"
   },
   "resources/js/crafter/Pages/Integration/Edit.vue": {
-    "file": "assets/Edit-6fabf361.js",
+    "file": "assets/Edit-a0625336.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_useForm-5d6c32e4.js",
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_useForm-f643b7ba.js",
       "resources/js/crafter/Pages/Integration/Form.vue",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js",
-      "_Multiselect.vue_vue_type_script_setup_true_lang-4ba87aea.js",
-      "_Tag.vue_vue_type_script_setup_true_lang-41e7292d.js"
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js",
+      "_Multiselect.vue_vue_type_script_setup_true_lang-46a75aec.js",
+      "_Tag.vue_vue_type_script_setup_true_lang-aeb9ea0a.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Integration/Edit.vue"
@@ -1476,482 +1476,482 @@
     "css": [
       "assets/Form-7c4c41c0.css"
     ],
-    "file": "assets/Form-e66a4451.js",
+    "file": "assets/Form-88cb41e7.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js",
-      "_Multiselect.vue_vue_type_script_setup_true_lang-4ba87aea.js",
-      "_Tag.vue_vue_type_script_setup_true_lang-41e7292d.js"
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js",
+      "_Multiselect.vue_vue_type_script_setup_true_lang-46a75aec.js",
+      "_Tag.vue_vue_type_script_setup_true_lang-aeb9ea0a.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Integration/Form.vue"
   },
   "resources/js/crafter/Pages/Integration/Index.vue": {
-    "file": "assets/Index-3bce1c1b.js",
+    "file": "assets/Index-ed16d952.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js",
-      "_Modal.vue_vue_type_script_setup_true_lang-80d67ad5.js",
-      "_Tag.vue_vue_type_script_setup_true_lang-41e7292d.js"
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js",
+      "_Modal.vue_vue_type_script_setup_true_lang-4943ddbb.js",
+      "_Tag.vue_vue_type_script_setup_true_lang-aeb9ea0a.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Integration/Index.vue"
   },
   "resources/js/crafter/Pages/Integration/Status.vue": {
-    "file": "assets/Status-43fef75b.js",
+    "file": "assets/Status-e1ee3019.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js"
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Integration/Status.vue"
   },
   "resources/js/crafter/Pages/IntegrationProduct/Create.vue": {
-    "file": "assets/Create-3410c69a.js",
+    "file": "assets/Create-1af6e233.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_useFormLocale-3f62e584.js",
-      "_useForm-5d6c32e4.js",
-      "_Form.vue_vue_type_script_setup_true_lang-8a738253.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js",
-      "_DataGrid-af062b83.js"
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_useFormLocale-b37cddbd.js",
+      "_useForm-f643b7ba.js",
+      "_Form.vue_vue_type_script_setup_true_lang-729cd128.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js",
+      "_DataGrid-b98aa0b1.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/IntegrationProduct/Create.vue"
   },
   "resources/js/crafter/Pages/IntegrationProduct/Edit.vue": {
-    "file": "assets/Edit-b5bb3717.js",
+    "file": "assets/Edit-6b1edd41.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_useForm-5d6c32e4.js",
-      "_Form.vue_vue_type_script_setup_true_lang-8a738253.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js",
-      "_DataGrid-af062b83.js"
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_useForm-f643b7ba.js",
+      "_Form.vue_vue_type_script_setup_true_lang-729cd128.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js",
+      "_DataGrid-b98aa0b1.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/IntegrationProduct/Edit.vue"
   },
   "resources/js/crafter/Pages/IntegrationProduct/Form.vue": {
-    "file": "assets/Form-d875afe1.js",
+    "file": "assets/Form-6ca5eb32.js",
     "imports": [
-      "_Form.vue_vue_type_script_setup_true_lang-8a738253.js",
-      "_vendor-da3a8442.js",
+      "_Form.vue_vue_type_script_setup_true_lang-729cd128.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js",
-      "_DataGrid-af062b83.js"
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js",
+      "_DataGrid-b98aa0b1.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/IntegrationProduct/Form.vue"
   },
   "resources/js/crafter/Pages/IntegrationProduct/Index.vue": {
-    "file": "assets/Index-d80d9a7a.js",
+    "file": "assets/Index-be6eaafc.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js",
-      "_Modal.vue_vue_type_script_setup_true_lang-80d67ad5.js",
-      "_useFormLocale-3f62e584.js"
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js",
+      "_Modal.vue_vue_type_script_setup_true_lang-4943ddbb.js",
+      "_useFormLocale-b37cddbd.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/IntegrationProduct/Index.vue"
   },
   "resources/js/crafter/Pages/Kasa/Index.vue": {
-    "file": "assets/Index-ff1f67c6.js",
+    "file": "assets/Index-2979054c.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js"
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Kasa/Index.vue"
   },
   "resources/js/crafter/Pages/Ksef/Index.vue": {
-    "file": "assets/Index-686e676c.js",
+    "file": "assets/Index-03b9d793.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js",
-      "_Modal.vue_vue_type_script_setup_true_lang-80d67ad5.js"
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js",
+      "_Modal.vue_vue_type_script_setup_true_lang-4943ddbb.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Ksef/Index.vue"
   },
   "resources/js/crafter/Pages/Mail/Logs.vue": {
-    "file": "assets/Logs-0a0c163e.js",
+    "file": "assets/Logs-37277b7c.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js"
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Mail/Logs.vue"
   },
   "resources/js/crafter/Pages/Mail/Smtp.vue": {
-    "file": "assets/Smtp-0460b4d1.js",
+    "file": "assets/Smtp-dc1e4f49.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js",
-      "_Toggle.vue_vue_type_script_setup_true_lang-11d0c142.js",
-      "_Modal.vue_vue_type_script_setup_true_lang-80d67ad5.js",
-      "_useForm-5d6c32e4.js"
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js",
+      "_Toggle.vue_vue_type_script_setup_true_lang-bcce03a8.js",
+      "_Modal.vue_vue_type_script_setup_true_lang-4943ddbb.js",
+      "_useForm-f643b7ba.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Mail/Smtp.vue"
   },
   "resources/js/crafter/Pages/Mail/TemplateEdit.vue": {
-    "file": "assets/TemplateEdit-29124c83.js",
+    "file": "assets/TemplateEdit-51ff0e10.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_TextArea.vue_vue_type_script_setup_true_lang-6aaeb8a6.js",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js",
-      "_Toggle.vue_vue_type_script_setup_true_lang-11d0c142.js",
-      "_Wysiwyg.vue_vue_type_script_setup_true_lang-e5f0f5b7.js",
-      "_useForm-5d6c32e4.js",
-      "_index-f1f12b88.js",
-      "_ImageUploadModal.vue_vue_type_script_setup_true_lang-8c7d72dc.js",
-      "_Modal.vue_vue_type_script_setup_true_lang-80d67ad5.js",
-      "_ImageEditor.vue_vue_type_script_setup_true_lang-6cb76c18.js"
+      "_TextArea.vue_vue_type_script_setup_true_lang-26e648a8.js",
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js",
+      "_Toggle.vue_vue_type_script_setup_true_lang-bcce03a8.js",
+      "_Wysiwyg.vue_vue_type_script_setup_true_lang-79d3e8b0.js",
+      "_useForm-f643b7ba.js",
+      "_index-fa266a67.js",
+      "_ImageUploadModal.vue_vue_type_script_setup_true_lang-fb3cf8cc.js",
+      "_Modal.vue_vue_type_script_setup_true_lang-4943ddbb.js",
+      "_ImageEditor.vue_vue_type_script_setup_true_lang-e467f5f2.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Mail/TemplateEdit.vue"
   },
   "resources/js/crafter/Pages/Mail/Templates.vue": {
-    "file": "assets/Templates-986b7f7a.js",
+    "file": "assets/Templates-76ccd9f8.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js"
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Mail/Templates.vue"
   },
   "resources/js/crafter/Pages/Media/Components/CustomPropertyInput.vue": {
-    "file": "assets/CustomPropertyInput-7aafbcc6.js",
+    "file": "assets/CustomPropertyInput-5ae211dc.js",
     "imports": [
-      "_CustomPropertyInput.vue_vue_type_script_setup_true_lang-dfa98632.js",
-      "_useFormLocale-3f62e584.js",
-      "_vendor-da3a8442.js",
+      "_CustomPropertyInput.vue_vue_type_script_setup_true_lang-2e655217.js",
+      "_useFormLocale-b37cddbd.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Media/Components/CustomPropertyInput.vue"
   },
   "resources/js/crafter/Pages/Media/Index.vue": {
-    "file": "assets/Index-5cefee9f.js",
+    "file": "assets/Index-5d734042.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js",
-      "_Multiselect.vue_vue_type_script_setup_true_lang-4ba87aea.js",
-      "_Modal.vue_vue_type_script_setup_true_lang-80d67ad5.js",
-      "_ImageEditor.vue_vue_type_script_setup_true_lang-6cb76c18.js",
-      "_ImageUploadModal.vue_vue_type_script_setup_true_lang-8c7d72dc.js",
-      "_Tab.vue_vue_type_script_setup_true_lang-593f1688.js",
-      "_useListingFilters-2c20b207.js",
-      "_CustomPropertyInput.vue_vue_type_script_setup_true_lang-dfa98632.js",
-      "_Tag.vue_vue_type_script_setup_true_lang-41e7292d.js",
-      "_pickBy-20189d61.js",
-      "__baseIteratee-83fcf11d.js",
-      "_useFormLocale-3f62e584.js"
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js",
+      "_Multiselect.vue_vue_type_script_setup_true_lang-46a75aec.js",
+      "_Modal.vue_vue_type_script_setup_true_lang-4943ddbb.js",
+      "_ImageEditor.vue_vue_type_script_setup_true_lang-e467f5f2.js",
+      "_ImageUploadModal.vue_vue_type_script_setup_true_lang-fb3cf8cc.js",
+      "_Tab.vue_vue_type_script_setup_true_lang-02c4a265.js",
+      "_useListingFilters-6c27c6eb.js",
+      "_CustomPropertyInput.vue_vue_type_script_setup_true_lang-2e655217.js",
+      "_Tag.vue_vue_type_script_setup_true_lang-aeb9ea0a.js",
+      "_pickBy-c3a40573.js",
+      "__baseIteratee-c0aed953.js",
+      "_useFormLocale-b37cddbd.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Media/Index.vue"
   },
   "resources/js/crafter/Pages/Mobile/Home.vue": {
-    "file": "assets/Home-254349e5.js",
+    "file": "assets/Home-d6899137.js",
     "imports": [
-      "_vendor-da3a8442.js",
-      "_MobileLayout-e073ebbb.js"
+      "_vendor-2e0ac3b3.js",
+      "_MobileLayout-c3f6d119.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Mobile/Home.vue"
   },
   "resources/js/crafter/Pages/Mobile/Mail.vue": {
-    "file": "assets/Mail-d64db8a0.js",
+    "file": "assets/Mail-2a5f2dd9.js",
     "imports": [
-      "_vendor-da3a8442.js",
-      "_MobileLayout-e073ebbb.js"
+      "_vendor-2e0ac3b3.js",
+      "_MobileLayout-c3f6d119.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Mobile/Mail.vue"
   },
   "resources/js/crafter/Pages/Mobile/Notifications.vue": {
-    "file": "assets/Notifications-3033d6e5.js",
+    "file": "assets/Notifications-32d97fd9.js",
     "imports": [
-      "_vendor-da3a8442.js",
-      "_MobileLayout-e073ebbb.js"
+      "_vendor-2e0ac3b3.js",
+      "_MobileLayout-c3f6d119.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Mobile/Notifications.vue"
   },
   "resources/js/crafter/Pages/Mobile/Tasks.vue": {
-    "file": "assets/Tasks-f7247cb8.js",
+    "file": "assets/Tasks-8963c960.js",
     "imports": [
-      "_vendor-da3a8442.js",
-      "_MobileLayout-e073ebbb.js"
+      "_vendor-2e0ac3b3.js",
+      "_MobileLayout-c3f6d119.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Mobile/Tasks.vue"
   },
   "resources/js/crafter/Pages/OdysseyCost/Index.vue": {
-    "file": "assets/Index-13eedb4f.js",
+    "file": "assets/Index-2b0580b0.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js",
-      "_Modal.vue_vue_type_script_setup_true_lang-80d67ad5.js"
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js",
+      "_Modal.vue_vue_type_script_setup_true_lang-4943ddbb.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/OdysseyCost/Index.vue"
   },
   "resources/js/crafter/Pages/OdysseyCost/Show.vue": {
-    "file": "assets/Show-041b149b.js",
+    "file": "assets/Show-975a83b2.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js",
-      "_Modal.vue_vue_type_script_setup_true_lang-80d67ad5.js"
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js",
+      "_Modal.vue_vue_type_script_setup_true_lang-4943ddbb.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/OdysseyCost/Show.vue"
   },
   "resources/js/crafter/Pages/Permissions/Components/PermissionTableRow.vue": {
-    "file": "assets/PermissionTableRow-93b67258.js",
+    "file": "assets/PermissionTableRow-97e92ab5.js",
     "imports": [
-      "_PermissionTableRow.vue_vue_type_script_setup_true_lang-a7a6a046.js",
-      "_vendor-da3a8442.js",
+      "_PermissionTableRow.vue_vue_type_script_setup_true_lang-f14615d2.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_usePermissionLabels-abd49a99.js"
+      "_usePermissionLabels-0ff7d9c8.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Permissions/Components/PermissionTableRow.vue"
   },
   "resources/js/crafter/Pages/Permissions/Index.vue": {
-    "file": "assets/Index-87d1da3a.js",
+    "file": "assets/Index-1dd38766.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js",
-      "_useForm-5d6c32e4.js",
-      "_PermissionTableRow.vue_vue_type_script_setup_true_lang-a7a6a046.js",
-      "_usePermissionLabels-abd49a99.js"
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js",
+      "_useForm-f643b7ba.js",
+      "_PermissionTableRow.vue_vue_type_script_setup_true_lang-f14615d2.js",
+      "_usePermissionLabels-0ff7d9c8.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Permissions/Index.vue"
   },
   "resources/js/crafter/Pages/Pricelist/Create.vue": {
-    "file": "assets/Create-a9af881d.js",
+    "file": "assets/Create-5d829557.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_useForm-5d6c32e4.js",
-      "_Form.vue_vue_type_script_setup_true_lang-54edab91.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js",
-      "_Modal.vue_vue_type_script_setup_true_lang-80d67ad5.js",
-      "_DataGrid-af062b83.js"
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_useForm-f643b7ba.js",
+      "_Form.vue_vue_type_script_setup_true_lang-c9bb9646.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js",
+      "_Modal.vue_vue_type_script_setup_true_lang-4943ddbb.js",
+      "_DataGrid-b98aa0b1.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Pricelist/Create.vue"
   },
   "resources/js/crafter/Pages/Pricelist/Edit.vue": {
-    "file": "assets/Edit-af992dba.js",
+    "file": "assets/Edit-bb98e8a4.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_useForm-5d6c32e4.js",
-      "_Form.vue_vue_type_script_setup_true_lang-54edab91.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js",
-      "_Modal.vue_vue_type_script_setup_true_lang-80d67ad5.js",
-      "_DataGrid-af062b83.js"
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_useForm-f643b7ba.js",
+      "_Form.vue_vue_type_script_setup_true_lang-c9bb9646.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js",
+      "_Modal.vue_vue_type_script_setup_true_lang-4943ddbb.js",
+      "_DataGrid-b98aa0b1.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Pricelist/Edit.vue"
   },
   "resources/js/crafter/Pages/Pricelist/Form.vue": {
-    "file": "assets/Form-79fbb648.js",
+    "file": "assets/Form-315958c4.js",
     "imports": [
-      "_Form.vue_vue_type_script_setup_true_lang-54edab91.js",
-      "_vendor-da3a8442.js",
+      "_Form.vue_vue_type_script_setup_true_lang-c9bb9646.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js",
-      "_Modal.vue_vue_type_script_setup_true_lang-80d67ad5.js",
-      "_DataGrid-af062b83.js"
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js",
+      "_Modal.vue_vue_type_script_setup_true_lang-4943ddbb.js",
+      "_DataGrid-b98aa0b1.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Pricelist/Form.vue"
   },
   "resources/js/crafter/Pages/Pricelist/Index.vue": {
-    "file": "assets/Index-14cbe137.js",
+    "file": "assets/Index-e70d8b61.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js",
-      "_Modal.vue_vue_type_script_setup_true_lang-80d67ad5.js"
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js",
+      "_Modal.vue_vue_type_script_setup_true_lang-4943ddbb.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Pricelist/Index.vue"
   },
   "resources/js/crafter/Pages/Product/AiToolsModal.vue": {
-    "file": "assets/AiToolsModal-99ae40f3.js",
+    "file": "assets/AiToolsModal-b0d90dd4.js",
     "imports": [
-      "_AiToolsModal.vue_vue_type_script_setup_true_lang-60a3c225.js",
-      "_vendor-da3a8442.js",
-      "_useFormLocale-3f62e584.js",
+      "_AiToolsModal.vue_vue_type_script_setup_true_lang-78610f36.js",
+      "_vendor-2e0ac3b3.js",
+      "_useFormLocale-b37cddbd.js",
       "resources/js/crafter/index.ts",
-      "_TextArea.vue_vue_type_script_setup_true_lang-6aaeb8a6.js"
+      "_TextArea.vue_vue_type_script_setup_true_lang-26e648a8.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Product/AiToolsModal.vue"
   },
   "resources/js/crafter/Pages/Product/Create.vue": {
-    "file": "assets/Create-f040385a.js",
+    "file": "assets/Create-52130515.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_useFormLocale-3f62e584.js",
-      "_useForm-5d6c32e4.js",
-      "_Form.vue_vue_type_script_setup_true_lang-00274733.js",
-      "_toInteger-4e7d1f81.js",
-      "_AiToolsModal.vue_vue_type_script_setup_true_lang-60a3c225.js",
-      "_TextArea.vue_vue_type_script_setup_true_lang-6aaeb8a6.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js",
-      "_Multiselect.vue_vue_type_script_setup_true_lang-4ba87aea.js",
-      "_Tag.vue_vue_type_script_setup_true_lang-41e7292d.js",
-      "_Tooltip.vue_vue_type_script_setup_true_lang-a4cc89df.js",
-      "_Wysiwyg.vue_vue_type_script_setup_true_lang-e5f0f5b7.js",
-      "_index-f1f12b88.js",
-      "_ImageUploadModal.vue_vue_type_script_setup_true_lang-8c7d72dc.js",
-      "_Modal.vue_vue_type_script_setup_true_lang-80d67ad5.js",
-      "_ImageEditor.vue_vue_type_script_setup_true_lang-6cb76c18.js",
-      "_vue3-treeselect.min-c3cfec1c.js"
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_useFormLocale-b37cddbd.js",
+      "_useForm-f643b7ba.js",
+      "_Form.vue_vue_type_script_setup_true_lang-b78189d1.js",
+      "_toInteger-e1dc2c0e.js",
+      "_AiToolsModal.vue_vue_type_script_setup_true_lang-78610f36.js",
+      "_TextArea.vue_vue_type_script_setup_true_lang-26e648a8.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js",
+      "_Multiselect.vue_vue_type_script_setup_true_lang-46a75aec.js",
+      "_Tag.vue_vue_type_script_setup_true_lang-aeb9ea0a.js",
+      "_Tooltip.vue_vue_type_script_setup_true_lang-38b98cc1.js",
+      "_Wysiwyg.vue_vue_type_script_setup_true_lang-79d3e8b0.js",
+      "_index-fa266a67.js",
+      "_ImageUploadModal.vue_vue_type_script_setup_true_lang-fb3cf8cc.js",
+      "_Modal.vue_vue_type_script_setup_true_lang-4943ddbb.js",
+      "_ImageEditor.vue_vue_type_script_setup_true_lang-e467f5f2.js",
+      "_vue3-treeselect.min-78415016.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Product/Create.vue"
   },
   "resources/js/crafter/Pages/Product/Edit.vue": {
-    "file": "assets/Edit-2be9ee66.js",
+    "file": "assets/Edit-5439054b.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_useFormLocale-3f62e584.js",
-      "_ImageEditor.vue_vue_type_script_setup_true_lang-6cb76c18.js",
-      "_useForm-5d6c32e4.js",
-      "_Form.vue_vue_type_script_setup_true_lang-00274733.js",
-      "_Modal.vue_vue_type_script_setup_true_lang-80d67ad5.js",
-      "_AiToolsModal.vue_vue_type_script_setup_true_lang-60a3c225.js",
-      "_TextArea.vue_vue_type_script_setup_true_lang-6aaeb8a6.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js",
-      "_Multiselect.vue_vue_type_script_setup_true_lang-4ba87aea.js",
-      "_Tag.vue_vue_type_script_setup_true_lang-41e7292d.js",
-      "_Tooltip.vue_vue_type_script_setup_true_lang-a4cc89df.js",
-      "_Wysiwyg.vue_vue_type_script_setup_true_lang-e5f0f5b7.js",
-      "_index-f1f12b88.js",
-      "_ImageUploadModal.vue_vue_type_script_setup_true_lang-8c7d72dc.js",
-      "_vue3-treeselect.min-c3cfec1c.js",
-      "_toInteger-4e7d1f81.js"
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_useFormLocale-b37cddbd.js",
+      "_ImageEditor.vue_vue_type_script_setup_true_lang-e467f5f2.js",
+      "_useForm-f643b7ba.js",
+      "_Form.vue_vue_type_script_setup_true_lang-b78189d1.js",
+      "_Modal.vue_vue_type_script_setup_true_lang-4943ddbb.js",
+      "_AiToolsModal.vue_vue_type_script_setup_true_lang-78610f36.js",
+      "_TextArea.vue_vue_type_script_setup_true_lang-26e648a8.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js",
+      "_Multiselect.vue_vue_type_script_setup_true_lang-46a75aec.js",
+      "_Tag.vue_vue_type_script_setup_true_lang-aeb9ea0a.js",
+      "_Tooltip.vue_vue_type_script_setup_true_lang-38b98cc1.js",
+      "_Wysiwyg.vue_vue_type_script_setup_true_lang-79d3e8b0.js",
+      "_index-fa266a67.js",
+      "_ImageUploadModal.vue_vue_type_script_setup_true_lang-fb3cf8cc.js",
+      "_vue3-treeselect.min-78415016.js",
+      "_toInteger-e1dc2c0e.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Product/Edit.vue"
   },
   "resources/js/crafter/Pages/Product/Export.vue": {
-    "file": "assets/Export-f233106c.js",
+    "file": "assets/Export-b8999019.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_Multiselect.vue_vue_type_script_setup_true_lang-4ba87aea.js",
-      "_ImageEditor.vue_vue_type_script_setup_true_lang-6cb76c18.js",
-      "_useForm-5d6c32e4.js",
-      "_Tag.vue_vue_type_script_setup_true_lang-41e7292d.js",
-      "_Modal.vue_vue_type_script_setup_true_lang-80d67ad5.js"
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_Multiselect.vue_vue_type_script_setup_true_lang-46a75aec.js",
+      "_ImageEditor.vue_vue_type_script_setup_true_lang-e467f5f2.js",
+      "_useForm-f643b7ba.js",
+      "_Tag.vue_vue_type_script_setup_true_lang-aeb9ea0a.js",
+      "_Modal.vue_vue_type_script_setup_true_lang-4943ddbb.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Product/Export.vue"
   },
   "resources/js/crafter/Pages/Product/Form.vue": {
-    "file": "assets/Form-0b5499d2.js",
+    "file": "assets/Form-4fd4b290.js",
     "imports": [
-      "_Form.vue_vue_type_script_setup_true_lang-00274733.js",
-      "_AiToolsModal.vue_vue_type_script_setup_true_lang-60a3c225.js",
-      "_vendor-da3a8442.js",
-      "_useFormLocale-3f62e584.js",
+      "_Form.vue_vue_type_script_setup_true_lang-b78189d1.js",
+      "_AiToolsModal.vue_vue_type_script_setup_true_lang-78610f36.js",
+      "_vendor-2e0ac3b3.js",
+      "_useFormLocale-b37cddbd.js",
       "resources/js/crafter/index.ts",
-      "_TextArea.vue_vue_type_script_setup_true_lang-6aaeb8a6.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js",
-      "_Multiselect.vue_vue_type_script_setup_true_lang-4ba87aea.js",
-      "_Tag.vue_vue_type_script_setup_true_lang-41e7292d.js",
-      "_Tooltip.vue_vue_type_script_setup_true_lang-a4cc89df.js",
-      "_Wysiwyg.vue_vue_type_script_setup_true_lang-e5f0f5b7.js",
-      "_index-f1f12b88.js",
-      "_ImageUploadModal.vue_vue_type_script_setup_true_lang-8c7d72dc.js",
-      "_Modal.vue_vue_type_script_setup_true_lang-80d67ad5.js",
-      "_ImageEditor.vue_vue_type_script_setup_true_lang-6cb76c18.js",
-      "_vue3-treeselect.min-c3cfec1c.js",
-      "_toInteger-4e7d1f81.js"
+      "_TextArea.vue_vue_type_script_setup_true_lang-26e648a8.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js",
+      "_Multiselect.vue_vue_type_script_setup_true_lang-46a75aec.js",
+      "_Tag.vue_vue_type_script_setup_true_lang-aeb9ea0a.js",
+      "_Tooltip.vue_vue_type_script_setup_true_lang-38b98cc1.js",
+      "_Wysiwyg.vue_vue_type_script_setup_true_lang-79d3e8b0.js",
+      "_index-fa266a67.js",
+      "_ImageUploadModal.vue_vue_type_script_setup_true_lang-fb3cf8cc.js",
+      "_Modal.vue_vue_type_script_setup_true_lang-4943ddbb.js",
+      "_ImageEditor.vue_vue_type_script_setup_true_lang-e467f5f2.js",
+      "_vue3-treeselect.min-78415016.js",
+      "_toInteger-e1dc2c0e.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Product/Form.vue"
   },
   "resources/js/crafter/Pages/Product/Index.vue": {
-    "file": "assets/Index-0582fff7.js",
+    "file": "assets/Index-175a0ca4.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js",
-      "_Multiselect.vue_vue_type_script_setup_true_lang-4ba87aea.js",
-      "_Modal.vue_vue_type_script_setup_true_lang-80d67ad5.js",
-      "_useFormLocale-3f62e584.js",
-      "_Tag.vue_vue_type_script_setup_true_lang-41e7292d.js",
-      "_useListingFilters-2c20b207.js",
-      "_pickBy-20189d61.js",
-      "__baseIteratee-83fcf11d.js"
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js",
+      "_Multiselect.vue_vue_type_script_setup_true_lang-46a75aec.js",
+      "_Modal.vue_vue_type_script_setup_true_lang-4943ddbb.js",
+      "_useFormLocale-b37cddbd.js",
+      "_Tag.vue_vue_type_script_setup_true_lang-aeb9ea0a.js",
+      "_useListingFilters-6c27c6eb.js",
+      "_pickBy-c3a40573.js",
+      "__baseIteratee-c0aed953.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Product/Index.vue"
   },
   "resources/js/crafter/Pages/Production/ExclusionsTab.vue": {
-    "file": "assets/ExclusionsTab-04b592a3.js",
+    "file": "assets/ExclusionsTab-21f74f31.js",
     "imports": [
-      "_ExclusionsTab.vue_vue_type_script_setup_true_lang-fb35cde7.js",
-      "_vendor-da3a8442.js",
+      "_ExclusionsTab.vue_vue_type_script_setup_true_lang-c5617464.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Production/ExclusionsTab.vue"
   },
   "resources/js/crafter/Pages/Production/GroupsTab.vue": {
-    "file": "assets/GroupsTab-99bd9531.js",
+    "file": "assets/GroupsTab-edcd2ee2.js",
     "imports": [
-      "_GroupsTab.vue_vue_type_script_setup_true_lang-192fb339.js",
-      "_vendor-da3a8442.js",
+      "_GroupsTab.vue_vue_type_script_setup_true_lang-9a0fac02.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts"
     ],
     "isDynamicEntry": true,
@@ -1965,457 +1965,465 @@
     "css": [
       "assets/Index-751d7305.css"
     ],
-    "file": "assets/Index-3245ef1e.js",
+    "file": "assets/Index-db768882.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js",
-      "_DataGrid-af062b83.js",
-      "_ProgressGauge.vue_vue_type_script_setup_true_lang-2e780764.js"
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js",
+      "_DataGrid-b98aa0b1.js",
+      "_ProgressGauge.vue_vue_type_script_setup_true_lang-6f4f1b93.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Production/Index.vue"
   },
   "resources/js/crafter/Pages/Production/ProgressGauge.vue": {
-    "file": "assets/ProgressGauge-08807622.js",
+    "file": "assets/ProgressGauge-285820a5.js",
     "imports": [
-      "_ProgressGauge.vue_vue_type_script_setup_true_lang-2e780764.js",
-      "_vendor-da3a8442.js"
+      "_ProgressGauge.vue_vue_type_script_setup_true_lang-6f4f1b93.js",
+      "_vendor-2e0ac3b3.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Production/ProgressGauge.vue"
   },
   "resources/js/crafter/Pages/Production/Reports.vue": {
-    "file": "assets/Reports-fe310d67.js",
+    "file": "assets/Reports-2eab12d9.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js"
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Production/Reports.vue"
   },
   "resources/js/crafter/Pages/Production/Settings.vue": {
-    "file": "assets/Settings-83f91599.js",
+    "file": "assets/Settings-fb52ccb8.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js",
-      "_GroupsTab.vue_vue_type_script_setup_true_lang-192fb339.js",
-      "_ExclusionsTab.vue_vue_type_script_setup_true_lang-fb35cde7.js"
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js",
+      "_GroupsTab.vue_vue_type_script_setup_true_lang-9a0fac02.js",
+      "_ExclusionsTab.vue_vue_type_script_setup_true_lang-c5617464.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Production/Settings.vue"
   },
+  "resources/js/crafter/Pages/Production/Warehouse.css": {
+    "file": "assets/Warehouse-de450cde.css",
+    "src": "resources/js/crafter/Pages/Production/Warehouse.css"
+  },
   "resources/js/crafter/Pages/Production/Warehouse.vue": {
-    "file": "assets/Warehouse-cd9b445f.js",
+    "css": [
+      "assets/Warehouse-de450cde.css"
+    ],
+    "file": "assets/Warehouse-71b59017.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js"
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js",
+      "_DataGrid-b98aa0b1.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Production/Warehouse.vue"
   },
   "resources/js/crafter/Pages/Roles/Create.vue": {
-    "file": "assets/Create-88054e45.js",
+    "file": "assets/Create-5bf7673a.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js",
-      "_Multiselect.vue_vue_type_script_setup_true_lang-4ba87aea.js",
-      "_useForm-5d6c32e4.js",
-      "_Tag.vue_vue_type_script_setup_true_lang-41e7292d.js"
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js",
+      "_Multiselect.vue_vue_type_script_setup_true_lang-46a75aec.js",
+      "_useForm-f643b7ba.js",
+      "_Tag.vue_vue_type_script_setup_true_lang-aeb9ea0a.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Roles/Create.vue"
   },
   "resources/js/crafter/Pages/Roles/Edit.vue": {
-    "file": "assets/Edit-5338baa1.js",
+    "file": "assets/Edit-a8211172.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js",
-      "_useForm-5d6c32e4.js",
-      "_Form.vue_vue_type_script_setup_true_lang-2ae8720b.js",
-      "_Permission.vue_vue_type_script_setup_true_lang-7cdbfa00.js",
-      "_usePermissionLabels-abd49a99.js",
-      "__baseIteratee-83fcf11d.js",
-      "_toInteger-4e7d1f81.js"
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js",
+      "_useForm-f643b7ba.js",
+      "_Form.vue_vue_type_script_setup_true_lang-f254fe50.js",
+      "_Permission.vue_vue_type_script_setup_true_lang-acf0e471.js",
+      "_usePermissionLabels-0ff7d9c8.js",
+      "__baseIteratee-c0aed953.js",
+      "_toInteger-e1dc2c0e.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Roles/Edit.vue"
   },
   "resources/js/crafter/Pages/Roles/Form.vue": {
-    "file": "assets/Form-7734b3b8.js",
+    "file": "assets/Form-3f57ccc6.js",
     "imports": [
-      "_Form.vue_vue_type_script_setup_true_lang-2ae8720b.js",
-      "_vendor-da3a8442.js",
+      "_Form.vue_vue_type_script_setup_true_lang-f254fe50.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_Permission.vue_vue_type_script_setup_true_lang-7cdbfa00.js",
-      "_usePermissionLabels-abd49a99.js",
-      "__baseIteratee-83fcf11d.js",
-      "_toInteger-4e7d1f81.js"
+      "_Permission.vue_vue_type_script_setup_true_lang-acf0e471.js",
+      "_usePermissionLabels-0ff7d9c8.js",
+      "__baseIteratee-c0aed953.js",
+      "_toInteger-e1dc2c0e.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Roles/Form.vue"
   },
   "resources/js/crafter/Pages/Roles/Index.vue": {
-    "file": "assets/Index-a7c3ac92.js",
+    "file": "assets/Index-321c8239.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js",
-      "_Modal.vue_vue_type_script_setup_true_lang-80d67ad5.js"
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js",
+      "_Modal.vue_vue_type_script_setup_true_lang-4943ddbb.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Roles/Index.vue"
   },
   "resources/js/crafter/Pages/Roles/Permission.vue": {
-    "file": "assets/Permission-fed6c2b1.js",
+    "file": "assets/Permission-c8fe9ce0.js",
     "imports": [
-      "_Permission.vue_vue_type_script_setup_true_lang-7cdbfa00.js",
-      "_vendor-da3a8442.js",
+      "_Permission.vue_vue_type_script_setup_true_lang-acf0e471.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_usePermissionLabels-abd49a99.js",
-      "__baseIteratee-83fcf11d.js",
-      "_toInteger-4e7d1f81.js"
+      "_usePermissionLabels-0ff7d9c8.js",
+      "__baseIteratee-c0aed953.js",
+      "_toInteger-e1dc2c0e.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Roles/Permission.vue"
   },
   "resources/js/crafter/Pages/Scope/Scrapy/Rumuni/Index.vue": {
-    "file": "assets/Index-bfa66357.js",
+    "file": "assets/Index-5ed0653e.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js"
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Scope/Scrapy/Rumuni/Index.vue"
   },
   "resources/js/crafter/Pages/Settings/Index.vue": {
-    "file": "assets/Index-4e8382e6.js",
+    "file": "assets/Index-fb19f223.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js",
-      "_Multiselect.vue_vue_type_script_setup_true_lang-4ba87aea.js",
-      "_Tag.vue_vue_type_script_setup_true_lang-41e7292d.js",
-      "_Tab.vue_vue_type_script_setup_true_lang-593f1688.js",
-      "_TabGroup.vue_vue_type_script_setup_true_lang-43b6ae91.js",
-      "_useForm-5d6c32e4.js"
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js",
+      "_Multiselect.vue_vue_type_script_setup_true_lang-46a75aec.js",
+      "_Tag.vue_vue_type_script_setup_true_lang-aeb9ea0a.js",
+      "_Tab.vue_vue_type_script_setup_true_lang-02c4a265.js",
+      "_TabGroup.vue_vue_type_script_setup_true_lang-eb45ce7d.js",
+      "_useForm-f643b7ba.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Settings/Index.vue"
   },
   "resources/js/crafter/Pages/Source/Create.vue": {
-    "file": "assets/Create-14603737.js",
+    "file": "assets/Create-a0023571.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_useForm-5d6c32e4.js",
-      "_Form.vue_vue_type_script_setup_true_lang-30aeb34a.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js"
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_useForm-f643b7ba.js",
+      "_Form.vue_vue_type_script_setup_true_lang-7325b31e.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Source/Create.vue"
   },
   "resources/js/crafter/Pages/Source/Edit.vue": {
-    "file": "assets/Edit-e5f309cb.js",
+    "file": "assets/Edit-7b5848b8.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_useForm-5d6c32e4.js",
-      "_Form.vue_vue_type_script_setup_true_lang-30aeb34a.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js"
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_useForm-f643b7ba.js",
+      "_Form.vue_vue_type_script_setup_true_lang-7325b31e.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Source/Edit.vue"
   },
   "resources/js/crafter/Pages/Source/Form.vue": {
-    "file": "assets/Form-c73d247b.js",
+    "file": "assets/Form-51cc3a50.js",
     "imports": [
-      "_Form.vue_vue_type_script_setup_true_lang-30aeb34a.js",
-      "_vendor-da3a8442.js",
+      "_Form.vue_vue_type_script_setup_true_lang-7325b31e.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js"
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Source/Form.vue"
   },
   "resources/js/crafter/Pages/Source/Index.vue": {
-    "file": "assets/Index-c5aec066.js",
+    "file": "assets/Index-571caba2.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js",
-      "_Modal.vue_vue_type_script_setup_true_lang-80d67ad5.js",
-      "_Tag.vue_vue_type_script_setup_true_lang-41e7292d.js"
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js",
+      "_Modal.vue_vue_type_script_setup_true_lang-4943ddbb.js",
+      "_Tag.vue_vue_type_script_setup_true_lang-aeb9ea0a.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Source/Index.vue"
   },
   "resources/js/crafter/Pages/Summaries/Index.vue": {
-    "file": "assets/Index-74e1cc56.js",
+    "file": "assets/Index-9439ce6d.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js",
-      "_Modal.vue_vue_type_script_setup_true_lang-80d67ad5.js"
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js",
+      "_Modal.vue_vue_type_script_setup_true_lang-4943ddbb.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Summaries/Index.vue"
   },
   "resources/js/crafter/Pages/Summaries/Show.vue": {
-    "file": "assets/Show-d43281bb.js",
+    "file": "assets/Show-b3e0aa97.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js",
-      "_Modal.vue_vue_type_script_setup_true_lang-80d67ad5.js"
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js",
+      "_Modal.vue_vue_type_script_setup_true_lang-4943ddbb.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Summaries/Show.vue"
   },
   "resources/js/crafter/Pages/Template/Create.vue": {
-    "file": "assets/Create-08e3f8c2.js",
+    "file": "assets/Create-f2bb097e.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_useForm-5d6c32e4.js",
-      "_Form.vue_vue_type_script_setup_true_lang-66f96ddd.js",
-      "_Alert.vue_vue_type_script_setup_true_lang-cbc8ff82.js",
-      "_TextArea.vue_vue_type_script_setup_true_lang-6aaeb8a6.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js",
-      "_Multiselect.vue_vue_type_script_setup_true_lang-4ba87aea.js",
-      "_Tag.vue_vue_type_script_setup_true_lang-41e7292d.js",
-      "_Tab.vue_vue_type_script_setup_true_lang-593f1688.js",
-      "_TabGroup.vue_vue_type_script_setup_true_lang-43b6ae91.js"
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_useForm-f643b7ba.js",
+      "_Form.vue_vue_type_script_setup_true_lang-a39959d7.js",
+      "_Alert.vue_vue_type_script_setup_true_lang-14df72e6.js",
+      "_TextArea.vue_vue_type_script_setup_true_lang-26e648a8.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js",
+      "_Multiselect.vue_vue_type_script_setup_true_lang-46a75aec.js",
+      "_Tag.vue_vue_type_script_setup_true_lang-aeb9ea0a.js",
+      "_Tab.vue_vue_type_script_setup_true_lang-02c4a265.js",
+      "_TabGroup.vue_vue_type_script_setup_true_lang-eb45ce7d.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Template/Create.vue"
   },
   "resources/js/crafter/Pages/Template/Edit.vue": {
-    "file": "assets/Edit-56902f8c.js",
+    "file": "assets/Edit-2cffd495.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_useForm-5d6c32e4.js",
-      "_Form.vue_vue_type_script_setup_true_lang-66f96ddd.js",
-      "_Alert.vue_vue_type_script_setup_true_lang-cbc8ff82.js",
-      "_TextArea.vue_vue_type_script_setup_true_lang-6aaeb8a6.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js",
-      "_Multiselect.vue_vue_type_script_setup_true_lang-4ba87aea.js",
-      "_Tag.vue_vue_type_script_setup_true_lang-41e7292d.js",
-      "_Tab.vue_vue_type_script_setup_true_lang-593f1688.js",
-      "_TabGroup.vue_vue_type_script_setup_true_lang-43b6ae91.js"
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_useForm-f643b7ba.js",
+      "_Form.vue_vue_type_script_setup_true_lang-a39959d7.js",
+      "_Alert.vue_vue_type_script_setup_true_lang-14df72e6.js",
+      "_TextArea.vue_vue_type_script_setup_true_lang-26e648a8.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js",
+      "_Multiselect.vue_vue_type_script_setup_true_lang-46a75aec.js",
+      "_Tag.vue_vue_type_script_setup_true_lang-aeb9ea0a.js",
+      "_Tab.vue_vue_type_script_setup_true_lang-02c4a265.js",
+      "_TabGroup.vue_vue_type_script_setup_true_lang-eb45ce7d.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Template/Edit.vue"
   },
   "resources/js/crafter/Pages/Template/Form.vue": {
-    "file": "assets/Form-98a4e7eb.js",
+    "file": "assets/Form-0072a453.js",
     "imports": [
-      "_Form.vue_vue_type_script_setup_true_lang-66f96ddd.js",
-      "_Alert.vue_vue_type_script_setup_true_lang-cbc8ff82.js",
-      "_vendor-da3a8442.js",
+      "_Form.vue_vue_type_script_setup_true_lang-a39959d7.js",
+      "_Alert.vue_vue_type_script_setup_true_lang-14df72e6.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_TextArea.vue_vue_type_script_setup_true_lang-6aaeb8a6.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js",
-      "_Multiselect.vue_vue_type_script_setup_true_lang-4ba87aea.js",
-      "_Tag.vue_vue_type_script_setup_true_lang-41e7292d.js",
-      "_Tab.vue_vue_type_script_setup_true_lang-593f1688.js",
-      "_TabGroup.vue_vue_type_script_setup_true_lang-43b6ae91.js"
+      "_TextArea.vue_vue_type_script_setup_true_lang-26e648a8.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js",
+      "_Multiselect.vue_vue_type_script_setup_true_lang-46a75aec.js",
+      "_Tag.vue_vue_type_script_setup_true_lang-aeb9ea0a.js",
+      "_Tab.vue_vue_type_script_setup_true_lang-02c4a265.js",
+      "_TabGroup.vue_vue_type_script_setup_true_lang-eb45ce7d.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Template/Form.vue"
   },
   "resources/js/crafter/Pages/Template/Index.vue": {
-    "file": "assets/Index-6cb53c73.js",
+    "file": "assets/Index-000072a2.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js",
-      "_Modal.vue_vue_type_script_setup_true_lang-80d67ad5.js"
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js",
+      "_Modal.vue_vue_type_script_setup_true_lang-4943ddbb.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Template/Index.vue"
   },
   "resources/js/crafter/Pages/Template/Preview.vue": {
-    "file": "assets/Preview-9b41d2ff.js",
+    "file": "assets/Preview-fe64343a.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js"
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Template/Preview.vue"
   },
   "resources/js/crafter/Pages/TranslationLog/Index.vue": {
-    "file": "assets/Index-c6faea76.js",
+    "file": "assets/Index-6e1a9eef.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js"
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/TranslationLog/Index.vue"
   },
   "resources/js/crafter/Pages/TranslationPhrase/Edit.vue": {
-    "file": "assets/Edit-b8730e88.js",
+    "file": "assets/Edit-207b0441.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js"
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/TranslationPhrase/Edit.vue"
   },
   "resources/js/crafter/Pages/TranslationPhrase/Index.vue": {
-    "file": "assets/Index-80bf3df3.js",
+    "file": "assets/Index-dbdf3dbf.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js",
-      "_Tag.vue_vue_type_script_setup_true_lang-41e7292d.js"
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js",
+      "_Tag.vue_vue_type_script_setup_true_lang-aeb9ea0a.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/TranslationPhrase/Index.vue"
   },
   "resources/js/crafter/Pages/TranslationReview/Index.vue": {
-    "file": "assets/Index-2991cd30.js",
+    "file": "assets/Index-ef726e5e.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js",
-      "_Tag.vue_vue_type_script_setup_true_lang-41e7292d.js"
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js",
+      "_Tag.vue_vue_type_script_setup_true_lang-aeb9ea0a.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/TranslationReview/Index.vue"
   },
   "resources/js/crafter/Pages/TranslationSettings/Index.vue": {
-    "file": "assets/Index-2dd9e5ce.js",
+    "file": "assets/Index-9f5eda09.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js"
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/TranslationSettings/Index.vue"
   },
   "resources/js/crafter/Pages/Translations/Components/EditTranslationModal.vue": {
-    "file": "assets/EditTranslationModal-9046e9a6.js",
+    "file": "assets/EditTranslationModal-b75e84ad.js",
     "imports": [
-      "_EditTranslationModal.vue_vue_type_script_setup_true_lang-ab0bf787.js",
-      "_vendor-da3a8442.js",
+      "_EditTranslationModal.vue_vue_type_script_setup_true_lang-003c3b37.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_Modal.vue_vue_type_script_setup_true_lang-80d67ad5.js"
+      "_Modal.vue_vue_type_script_setup_true_lang-4943ddbb.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Translations/Components/EditTranslationModal.vue"
   },
   "resources/js/crafter/Pages/Translations/Components/ExportModal.vue": {
-    "file": "assets/ExportModal-274e12e6.js",
+    "file": "assets/ExportModal-9eb74d51.js",
     "imports": [
-      "_ExportModal.vue_vue_type_script_setup_true_lang-e99844f3.js",
-      "_vendor-da3a8442.js",
+      "_ExportModal.vue_vue_type_script_setup_true_lang-5c80339e.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_Multiselect.vue_vue_type_script_setup_true_lang-4ba87aea.js",
-      "_Tag.vue_vue_type_script_setup_true_lang-41e7292d.js",
-      "_Modal.vue_vue_type_script_setup_true_lang-80d67ad5.js"
+      "_Multiselect.vue_vue_type_script_setup_true_lang-46a75aec.js",
+      "_Tag.vue_vue_type_script_setup_true_lang-aeb9ea0a.js",
+      "_Modal.vue_vue_type_script_setup_true_lang-4943ddbb.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Translations/Components/ExportModal.vue"
   },
   "resources/js/crafter/Pages/Translations/Components/ImportModal.vue": {
-    "file": "assets/ImportModal-ce01ac0d.js",
+    "file": "assets/ImportModal-314f430e.js",
     "imports": [
-      "_ImportModal.vue_vue_type_script_setup_true_lang-153d55fa.js",
-      "_vendor-da3a8442.js",
+      "_ImportModal.vue_vue_type_script_setup_true_lang-90811779.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_Modal.vue_vue_type_script_setup_true_lang-80d67ad5.js",
-      "_ImportModalFirstStep.vue_vue_type_script_setup_true_lang-4e227f94.js",
-      "_Multiselect.vue_vue_type_script_setup_true_lang-4ba87aea.js",
-      "_Tag.vue_vue_type_script_setup_true_lang-41e7292d.js",
-      "_ImportModalThirdStep.vue_vue_type_script_setup_true_lang-6c12e0fd.js",
-      "_ImportModalSecondStep.vue_vue_type_script_setup_true_lang-6bbd75e6.js"
+      "_Modal.vue_vue_type_script_setup_true_lang-4943ddbb.js",
+      "_ImportModalFirstStep.vue_vue_type_script_setup_true_lang-5d03a4f9.js",
+      "_Multiselect.vue_vue_type_script_setup_true_lang-46a75aec.js",
+      "_Tag.vue_vue_type_script_setup_true_lang-aeb9ea0a.js",
+      "_ImportModalThirdStep.vue_vue_type_script_setup_true_lang-56ac102a.js",
+      "_ImportModalSecondStep.vue_vue_type_script_setup_true_lang-a47ee307.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Translations/Components/ImportModal.vue"
   },
   "resources/js/crafter/Pages/Translations/Components/ImportModalFirstStep.vue": {
-    "file": "assets/ImportModalFirstStep-2baf9bdf.js",
+    "file": "assets/ImportModalFirstStep-25b0551b.js",
     "imports": [
-      "_ImportModalFirstStep.vue_vue_type_script_setup_true_lang-4e227f94.js",
-      "_vendor-da3a8442.js",
+      "_ImportModalFirstStep.vue_vue_type_script_setup_true_lang-5d03a4f9.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_Multiselect.vue_vue_type_script_setup_true_lang-4ba87aea.js",
-      "_Tag.vue_vue_type_script_setup_true_lang-41e7292d.js"
+      "_Multiselect.vue_vue_type_script_setup_true_lang-46a75aec.js",
+      "_Tag.vue_vue_type_script_setup_true_lang-aeb9ea0a.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Translations/Components/ImportModalFirstStep.vue"
   },
   "resources/js/crafter/Pages/Translations/Components/ImportModalSecondStep.vue": {
-    "file": "assets/ImportModalSecondStep-ffc8d393.js",
+    "file": "assets/ImportModalSecondStep-e9ae62da.js",
     "imports": [
-      "_ImportModalSecondStep.vue_vue_type_script_setup_true_lang-6bbd75e6.js",
-      "_vendor-da3a8442.js"
+      "_ImportModalSecondStep.vue_vue_type_script_setup_true_lang-a47ee307.js",
+      "_vendor-2e0ac3b3.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Translations/Components/ImportModalSecondStep.vue"
   },
   "resources/js/crafter/Pages/Translations/Components/ImportModalThirdStep.vue": {
-    "file": "assets/ImportModalThirdStep-5188def1.js",
+    "file": "assets/ImportModalThirdStep-18499633.js",
     "imports": [
-      "_ImportModalThirdStep.vue_vue_type_script_setup_true_lang-6c12e0fd.js",
-      "_vendor-da3a8442.js"
+      "_ImportModalThirdStep.vue_vue_type_script_setup_true_lang-56ac102a.js",
+      "_vendor-2e0ac3b3.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Translations/Components/ImportModalThirdStep.vue"
   },
   "resources/js/crafter/Pages/Translations/Index.vue": {
-    "file": "assets/Index-18603582.js",
+    "file": "assets/Index-acb1c54a.js",
     "imports": [
-      "_vendor-da3a8442.js",
+      "_vendor-2e0ac3b3.js",
       "resources/js/crafter/index.ts",
-      "_PageHeader.vue_vue_type_script_setup_true_lang-576e3959.js",
-      "_PageContent.vue_vue_type_script_setup_true_lang-ead8ab92.js",
-      "_Multiselect.vue_vue_type_script_setup_true_lang-4ba87aea.js",
-      "_useListingFilters-2c20b207.js",
-      "_EditTranslationModal.vue_vue_type_script_setup_true_lang-ab0bf787.js",
-      "_ExportModal.vue_vue_type_script_setup_true_lang-e99844f3.js",
-      "_ImportModal.vue_vue_type_script_setup_true_lang-153d55fa.js",
-      "_Tag.vue_vue_type_script_setup_true_lang-41e7292d.js",
-      "_pickBy-20189d61.js",
-      "__baseIteratee-83fcf11d.js",
-      "_Modal.vue_vue_type_script_setup_true_lang-80d67ad5.js",
-      "_ImportModalFirstStep.vue_vue_type_script_setup_true_lang-4e227f94.js",
-      "_ImportModalThirdStep.vue_vue_type_script_setup_true_lang-6c12e0fd.js",
-      "_ImportModalSecondStep.vue_vue_type_script_setup_true_lang-6bbd75e6.js"
+      "_PageHeader.vue_vue_type_script_setup_true_lang-4b11de41.js",
+      "_PageContent.vue_vue_type_script_setup_true_lang-d2386724.js",
+      "_Multiselect.vue_vue_type_script_setup_true_lang-46a75aec.js",
+      "_useListingFilters-6c27c6eb.js",
+      "_EditTranslationModal.vue_vue_type_script_setup_true_lang-003c3b37.js",
+      "_ExportModal.vue_vue_type_script_setup_true_lang-5c80339e.js",
+      "_ImportModal.vue_vue_type_script_setup_true_lang-90811779.js",
+      "_Tag.vue_vue_type_script_setup_true_lang-aeb9ea0a.js",
+      "_pickBy-c3a40573.js",
+      "__baseIteratee-c0aed953.js",
+      "_Modal.vue_vue_type_script_setup_true_lang-4943ddbb.js",
+      "_ImportModalFirstStep.vue_vue_type_script_setup_true_lang-5d03a4f9.js",
+      "_ImportModalThirdStep.vue_vue_type_script_setup_true_lang-56ac102a.js",
+      "_ImportModalSecondStep.vue_vue_type_script_setup_true_lang-a47ee307.js"
     ],
     "isDynamicEntry": true,
     "src": "resources/js/crafter/Pages/Translations/Index.vue"
@@ -2571,9 +2579,9 @@
       "resources/js/crafter/Pages/Translations/Components/ImportModalThirdStep.vue",
       "resources/js/crafter/Pages/Translations/Index.vue"
     ],
-    "file": "assets/index-eced4c15.js",
+    "file": "assets/index-6ef73da3.js",
     "imports": [
-      "_vendor-da3a8442.js"
+      "_vendor-2e0ac3b3.js"
     ],
     "isEntry": true,
     "src": "resources/js/crafter/index.ts"
