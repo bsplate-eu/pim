@@ -295,7 +295,7 @@ class ProductionController extends Controller
                 $excluded[] = [
                     'key' => $item['source'].':'.$item['code'],
                     'source' => $item['source'],
-                    'source_label' => WarehouseCodeMap::SOURCES[$item['source']] ?? $item['source'],
+                    'source_label' => WarehouseCodeExclusion::SOURCES[$item['source']] ?? $item['source'],
                     'source_code' => $item['code'],
                     'name' => $item['name'],
                     'quantity' => $item['qty'],
@@ -340,7 +340,28 @@ class ProductionController extends Controller
             }
         }
 
+        // Wykluczone kody PIM schodza z listy M3R i lada na wspolnej zakladce
+        // „Wykluczone" — razem z odlozonymi wierszami zrodel, bo to jedna decyzja
+        // („nie chce tego widziec"), tylko podjeta w innym miejscu ekranu.
         $rows = $catalog
+            ->reject(function (array $row) use ($excludedKeys, &$excluded, $sums, $hasSnapshot) {
+                $code = $row['product_code'];
+
+                if (! $excludedKeys->has(WarehouseCodeExclusion::key('pim', $code))) {
+                    return false;
+                }
+
+                $excluded[] = [
+                    'key' => 'pim:'.$code,
+                    'source' => 'pim',
+                    'source_label' => WarehouseCodeExclusion::SOURCES['pim'],
+                    'source_code' => $code,
+                    'name' => $row['name'],
+                    'quantity' => $sums[$code]['gt'] ?? (isset($hasSnapshot['gt']) ? 0 : null),
+                ];
+
+                return true;
+            })
             ->map(function (array $row) use ($sums, $attached, $hasSnapshot) {
                 $code = $row['product_code'];
 
@@ -436,7 +457,7 @@ class ProductionController extends Controller
         $data = $request->validate([
             'excluded' => ['required', 'boolean'],
             'rows' => ['required', 'array', 'min:1'],
-            'rows.*.source' => ['required', 'string', Rule::in(array_keys(WarehouseCodeMap::SOURCES))],
+            'rows.*.source' => ['required', 'string', Rule::in(array_keys(WarehouseCodeExclusion::SOURCES))],
             'rows.*.source_code' => ['required', 'string', 'max:100'],
         ]);
 
@@ -566,7 +587,20 @@ class ProductionController extends Controller
     public function warehouseTable(Request $request): Response
     {
         $sheet = WarehouseSheetRow::DEFAULT_SHEET;
-        $rows = WarehouseSheetRow::where('sheet', $sheet)->orderBy('row_no')->get();
+
+        // Wykluczenia sa wspolne dla calego magazynu: kod odlozony tutaj znika
+        // takze z listy M3R i odwrotnie. Przywraca sie je w jednym miejscu —
+        // Magazyn M3R → Wykluczone — zeby nie szukac, gdzie co schowano.
+        $excludedCodes = WarehouseCodeExclusion::where('source', 'sheet')
+            ->pluck('source_code')
+            ->map(fn ($code) => mb_strtoupper($code))
+            ->flip();
+
+        $rows = WarehouseSheetRow::where('sheet', $sheet)
+            ->orderBy('row_no')
+            ->get()
+            ->reject(fn (WarehouseSheetRow $row) => $excludedCodes->has(mb_strtoupper($row->product_code)))
+            ->values();
 
         // Regula dopasowania musi byc DOKLADNIE ta sama co na liscie M3R,
         // inaczej ten sam wiersz jest tam zmapowany, a tu nie. Stad ten sam
@@ -595,6 +629,8 @@ class ProductionController extends Controller
         return Inertia::render('Production/WarehouseTable', [
             'sheet' => $sheet,
             'importedAt' => $rows->max('updated_at')?->format('Y-m-d H:i'),
+            // Ile wierszy arkusza jest odlozonych — inaczej „zniknelo i nie wiadomo gdzie".
+            'excludedCount' => $excludedCodes->count(),
             'rows' => $rows->map(function (WarehouseSheetRow $row) use ($manual, $byUpperCode, $reservations, $productNames) {
                 $upper = mb_strtoupper($row->product_code);
                 $manualTarget = $manual[$upper]->product_code ?? null;

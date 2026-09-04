@@ -1,1 +1,0 @@
-import{_ as o}from"./Form.vue_vue_type_script_setup_true_lang-f5f5335a.js";import"./vendor-a34cc069.js";import"./index-5a0c44fc.js";import"./PageContent.vue_vue_type_script_setup_true_lang-51013f70.js";import"./DataGrid-56a29dc9.js";export{o as default};

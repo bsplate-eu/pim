@@ -13,6 +13,17 @@ class WarehouseCodeExclusion extends Model
 {
     protected $table = 'warehouse_code_exclusions';
 
+    /**
+     * Co wolno odlozyc na bok. Obok zrodel (`gt`, `sheet`) jest tu `pim`:
+     * wiersz LISTY M3R, czyli kod z naszego katalogu. To osobna przestrzen
+     * nazw — `00.004` z Subiekta i `00.004` z PIM to dwie rozne decyzje.
+     */
+    public const SOURCES = [
+        'gt' => 'Subiekt GT',
+        'sheet' => 'Tabela',
+        'pim' => 'Lista M3R',
+    ];
+
     protected $fillable = [
         'source',
         'source_code',

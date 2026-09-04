@@ -89,9 +89,36 @@
                     />
                 </div>
 
+                <!-- Pasek masowy — ten sam wzorzec co na liscie M3R i w Produkcji. -->
+                <div
+                    v-if="selected.size"
+                    class="mb-3 flex flex-wrap items-center gap-3 rounded-md border border-indigo-200 bg-indigo-50 px-4 py-2"
+                >
+                    <span class="text-sm text-indigo-900">
+                        Zaznaczonych: <strong>{{ selected.size }}</strong>
+                    </span>
+                    <div class="ml-auto flex items-center gap-2">
+                        <Button size="sm" :loading="bulkBusy" @click="excludeSelected">
+                            Wyklucz zaznaczone
+                        </Button>
+                        <Button size="sm" color="gray" variant="ghost" @click="clearSelection">
+                            Wyczyść
+                        </Button>
+                    </div>
+                </div>
+
                 <div class="mb-3 text-xs text-gray-500">
                     Widocznych: <strong>{{ visibleCount }}</strong>
                     / Kodów w arkuszu: <strong>{{ rows.length }}</strong>
+                    <span v-if="excludedCount" class="ml-4">
+                        Wykluczonych: <strong>{{ excludedCount }}</strong>
+                        <Link
+                            :href="route('crafter.production.warehouse')"
+                            class="ml-1 text-primary-600 hover:underline"
+                        >
+                            przywróć w M3R →
+                        </Link>
+                    </span>
                     <span class="ml-4">Sztuk w arkuszu: <strong>{{ totalPieces }}</strong></span>
                     <span class="ml-4">
                         Zarezerwowane: <strong class="text-blue-700">{{ totalReserved }}</strong>
@@ -341,6 +368,8 @@ interface Props {
     people: { value: number; label: string }[];
     /** Id zalogowanego — domyślny rezerwujący. */
     me: number | null;
+    /** Ile wierszy arkusza jest odlozonych na bok — przywraca sie je w M3R. */
+    excludedCount?: number;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -350,6 +379,7 @@ const props = withDefaults(defineProps<Props>(), {
     editable: () => [],
     people: () => [],
     me: null,
+    excludedCount: 0,
 });
 
 const toast = useToast();
@@ -1018,7 +1048,78 @@ const columns = computed(() => [
     textColumn("uwagi", "Uwagi", 200),
     textColumn("wymiar", "WYMIAR", 120),
     textColumn("waga", "WAGA", 120),
+    // Zaznaczanie na koncu wiersza — arkusz czyta sie od kodu i miejsc,
+    // a wykluczanie jest czynnoscia okazjonalna.
+    {
+        prop: "__sel__",
+        name: "Wyklucz",
+        readonly: true,
+        sortable: false,
+        size: 90,
+        cellTemplate: (h: any, p: any) => {
+            const code = String(p.model?.product_code ?? "");
+
+            return h("label", { class: "revo-sel-cell" }, [
+                h("input", {
+                    type: "checkbox",
+                    checked: selected.value.has(code),
+                    onClick: (e: any) => e.stopPropagation(),
+                    onChange: (e: any) => toggleSelect(code, !!(e.target as HTMLInputElement).checked),
+                }),
+            ]);
+        },
+    },
 ]);
+
+// === WYKLUCZANIE ===
+// Wspolne z lista M3R: to ta sama tabela `warehouse_code_exclusions` i ten sam
+// endpoint. Kod odlozony tutaj znika takze z „Do zmapowania" na liscie M3R,
+// a przywraca sie go w jednym miejscu — Magazyn M3R → Wykluczone. Jedno miejsce
+// powrotu, zeby nie szukac, gdzie co schowano.
+const selected = ref<Set<string>>(new Set());
+const bulkBusy = ref(false);
+
+function clearSelection(): void {
+    selected.value = new Set();
+    refreshGridSource();
+}
+
+function toggleSelect(code: string, on: boolean): void {
+    const next = new Set(selected.value);
+    on ? next.add(code) : next.delete(code);
+    selected.value = next;
+    refreshGridSource();
+}
+
+/** RevoGrid nie sledzi mutacji — po zmianie zaznaczenia trzeba przerysowac. */
+function refreshGridSource(): void {
+    const grid = gridRef.value;
+    if (grid?.getSource) grid.setSource([...grid.getSource()]);
+}
+
+async function excludeSelected(): Promise<void> {
+    if (!selected.value.size || bulkBusy.value) return;
+
+    bulkBusy.value = true;
+    try {
+        await axios.post(route("crafter.production.warehouse.exclusions.bulk"), {
+            excluded: true,
+            rows: Array.from(selected.value).map((code) => ({
+                source: props.source,
+                source_code: code,
+            })),
+        });
+
+        const count = selected.value.size;
+        clearSelection();
+        toast.success(`Wykluczono ${count} pozycji`);
+        router.reload({ only: ["rows", "excludedCount"] });
+    } catch (e: any) {
+        toast.error(e?.response?.data?.message ?? "Nie udało się wykluczyć");
+    } finally {
+        bulkBusy.value = false;
+    }
+}
 </script>
 
 <style scoped>
@@ -1101,4 +1202,13 @@ const columns = computed(() => [
 :deep(revogr-data .rgRow:nth-of-type(even) .rgCell) {
     background: #f2f2f2;
 }
+:deep(.revo-sel-cell) {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    width: 100%;
+    cursor: pointer;
+}
+
 </style>

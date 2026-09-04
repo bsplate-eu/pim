@@ -71,6 +71,25 @@
                         />
                     </div>
 
+                    <!-- Pasek masowy dziala tak samo na kazdej zakladce; tu wyklucza
+                         kod PIM, czyli zdejmuje wiersz z listy M3R. -->
+                    <div
+                        v-if="selected.size"
+                        class="mb-3 flex flex-wrap items-center gap-3 rounded-md border border-indigo-200 bg-indigo-50 px-4 py-2"
+                    >
+                        <span class="text-sm text-indigo-900">
+                            Zaznaczonych: <strong>{{ selected.size }}</strong>
+                        </span>
+                        <div class="ml-auto flex items-center gap-2">
+                            <Button size="sm" :loading="bulkBusy" @click="bulkExclude(true)">
+                                Wyklucz zaznaczone
+                            </Button>
+                            <Button size="sm" color="gray" variant="ghost" @click="clearSelection">
+                                Wyczyść
+                            </Button>
+                        </div>
+                    </div>
+
                     <div class="mb-3 text-xs text-gray-500">
                         Widocznych: <strong>{{ visibleCount }}</strong>
                         / Wszystkich kodów: <strong>{{ totalCount }}</strong>
@@ -659,6 +678,9 @@ const columns = computed(() => [
     // Rozjazd ma byc widoczny jednym spojrzeniem, bez przewijania w bok.
     qtyColumn("stock", "Stan M3R"),
     qtyColumn("sheet_qty", "Tabela"),
+    // Zaznaczanie na koncu wiersza, nie na poczatku: tu czyta sie kod i ilosci,
+    // a wykluczanie jest czynnoscia okazjonalna — nie ma prawa odpychac danych.
+    selectColumn("Wyklucz"),
 ]);
 
 // Kolumny zakladki „Do zmapowania". Bez nazwy produktu — tych wierszy nie ma
@@ -680,8 +702,8 @@ function toggleRow(key: string, on: boolean): void {
     refreshSideGrids();
 }
 
-function selectAll(list: Array<{ key: string }>): void {
-    selected.value = new Set(list.map((row) => row.key));
+function selectAll(list: any[]): void {
+    selected.value = new Set(list.map((row) => rowKey(row)));
     refreshSideGrids();
 }
 
@@ -692,30 +714,47 @@ function refreshSideGrids(): void {
     });
 }
 
-/** Kolumna z checkboxem — pierwsza, waska, bez nazwy. */
-const selectColumn = {
-    prop: "__sel__",
-    name: "",
-    readonly: true,
-    sortable: false,
-    size: 46,
-    cellTemplate: (h: any, p: any) => {
-        const key = String(p.model?.key ?? "");
+/**
+ * Klucz zaznaczenia. Wiersze zrodel maja go gotowego (`zrodlo:kod`), wiersze
+ * listy M3R nie — dla nich budujemy `pim:<kod>`, bo wykluczenie kodu PIM to
+ * osobna decyzja niz wykluczenie kodu z Subiekta o tej samej nazwie.
+ */
+const rowKey = (row: any): string => String(row?.key ?? "pim:" + (row?.product_code ?? ""));
 
-        return h("label", { class: "revo-sel-cell" }, [
-            h("input", {
-                type: "checkbox",
-                checked: selected.value.has(key),
-                onClick: (e: any) => e.stopPropagation(),
-                onChange: (e: any) => toggleRow(key, !!(e.target as HTMLInputElement).checked),
-            }),
-        ]);
-    },
-};
+/** Kolumna z checkboxem — waska, bez nazwy. */
+function selectColumn(name = "") {
+    return {
+        prop: "__sel__",
+        name,
+        readonly: true,
+        sortable: false,
+        // Bez naglowka wystarczy szerokosc checkboxa; z naglowkiem musi sie zmiescic slowo.
+        size: name === "" ? 46 : 90,
+        cellTemplate: (h: any, p: any) => {
+            const key = rowKey(p.model);
+
+            return h("label", { class: "revo-sel-cell" }, [
+                h("input", {
+                    type: "checkbox",
+                    checked: selected.value.has(key),
+                    onClick: (e: any) => e.stopPropagation(),
+                    onChange: (e: any) => toggleRow(key, !!(e.target as HTMLInputElement).checked),
+                }),
+            ]);
+        },
+    };
+}
 
 async function bulkExclude(excludedFlag: boolean): Promise<void> {
-    const list = excludedFlag ? unmapped.value : excluded.value;
-    const picked = list.filter((row: any) => selected.value.has(row.key));
+    // Zakladka decyduje, co wykluczamy: na liscie M3R kod PIM, na pozostalych
+    // wiersz zrodla. Przywracanie zawsze leci z zakladki „Wykluczone".
+    const list: any[] = excludedFlag
+        ? activeTab.value === "mapped"
+            ? rows.value
+            : unmapped.value
+        : excluded.value;
+
+    const picked = list.filter((row: any) => selected.value.has(rowKey(row)));
 
     if (!picked.length || bulkBusy.value) return;
 
@@ -724,10 +763,11 @@ async function bulkExclude(excludedFlag: boolean): Promise<void> {
         await axios.post(route("crafter.production.warehouse.exclusions.bulk"), {
             excluded: excludedFlag,
             rows: picked.map((row: any) => ({
+                // Lista M3R nie ma pola `source` — to kod z naszego katalogu.
                 // „Do zmapowania" niesie klucz techniczny w `source_key`,
-                // „Wykluczone" wprost w `source` — etykieta jest osobno.
-                source: row.source_key ?? row.source,
-                source_code: row.source_code,
+                // „Wykluczone" wprost w `source`; etykieta jest osobno.
+                source: row.source_key ?? row.source ?? "pim",
+                source_code: row.source_code ?? row.product_code,
             })),
         });
 
@@ -762,7 +802,7 @@ watch(
 );
 
 const unmappedColumns = computed(() => [
-    selectColumn,
+    selectColumn(),
     { prop: "source_code", name: "Kod ze źródła", readonly: true, size: 200, sortable: true },
     // Nazwa PO STRONIE ZRODLA — jedyny trop, po ktorym da sie rozpoznac, czym
     // ten wiersz w ogole jest, skoro w PIM go nie ma.
@@ -782,7 +822,7 @@ const unmappedColumns = computed(() => [
 
 // Wykluczone: to samo bez kolumny „Dlaczego" — powod jest jeden i wynika z zakladki.
 const excludedColumns = computed(() => [
-    selectColumn,
+    selectColumn(),
     { prop: "source_code", name: "Kod ze źródła", readonly: true, size: 200, sortable: true },
     { prop: "name", name: "Nazwa w źródle", readonly: true, size: 380, sortable: true },
     { prop: "source_label", name: "Źródło", readonly: true, size: 140, sortable: true },
