@@ -159,6 +159,82 @@
                 <Button variant="outline" color="gray" @click="closeMap">Zamknij</Button>
             </template>
         </Modal>
+
+        <!-- === REZERWACJE === -->
+        <!-- Rezerwacja nie rusza stanu. Stan mowi, ile fizycznie lezy na polce,
+             rezerwacja ile z tego jest juz komus obiecane — zlanie tych dwoch
+             liczb w jedna konczy sie tym, ze nikt nie wie, czy towaru brakuje,
+             czy tylko ktos go trzyma. -->
+        <Modal :open="resModal.show" externalOpen size="md" alignButtons="right" @toggleOpen="closeRes">
+            <template #title> Rezerwacje pozycji {{ resModal.source_code }} </template>
+
+            <template #content>
+                <p class="text-sm text-gray-500">
+                    Rezerwacja odkłada sztuki dla konkretnej osoby. Stan w tabeli
+                    zostaje bez zmian — pokazuje, ile leży na półce, nie ile jest wolne.
+                </p>
+
+                <div v-if="resModal.list.length" class="mt-4 space-y-2">
+                    <div
+                        v-for="item in resModal.list"
+                        :key="item.id"
+                        class="flex items-center justify-between rounded border border-gray-200 px-3 py-2"
+                    >
+                        <span class="text-sm text-gray-900">
+                            {{ item.user_name ?? "nieznany" }}
+                            <strong class="ml-1">{{ item.quantity }} szt.</strong>
+                            <span v-if="item.note" class="ml-2 text-gray-400">{{ item.note }}</span>
+                        </span>
+                        <button
+                            type="button"
+                            class="text-sm text-gray-400 hover:text-red-600"
+                            :disabled="resModal.busy"
+                            @click="releaseRes(item.id)"
+                        >
+                            Zwolnij
+                        </button>
+                    </div>
+                </div>
+                <div
+                    v-else
+                    class="mt-4 rounded border border-dashed border-gray-300 px-3 py-4 text-center text-sm text-gray-400"
+                >
+                    Nic nie jest zarezerwowane
+                </div>
+
+                <div class="mt-4 flex items-end gap-2">
+                    <div class="w-28">
+                        <TextInput
+                            v-model="resModal.quantity"
+                            name="reservation_quantity"
+                            label="Ilość"
+                            type="number"
+                            inputClass="bg-white"
+                        />
+                    </div>
+                    <div class="flex-1">
+                        <TextInput
+                            v-model="resModal.note"
+                            name="reservation_note"
+                            label="Uwaga (opcjonalnie)"
+                            placeholder="np. zamówienie 12345"
+                            inputClass="bg-white"
+                            @keyup.enter="saveRes"
+                        />
+                    </div>
+                    <Button class="mb-1" :loading="resModal.busy" @click="saveRes">Zarezerwuj</Button>
+                </div>
+
+                <p class="mt-2 text-sm text-gray-500">
+                    Rezerwacja pójdzie na Ciebie — nazwisko bierze się z zalogowanego
+                    konta, żeby w logach było widać, kto co odłożył.
+                </p>
+            </template>
+
+            <template #buttons>
+                <Button variant="outline" color="gray" @click="closeRes">Zamknij</Button>
+            </template>
+        </Modal>
     </PageContent>
 </template>
 
@@ -204,6 +280,18 @@ interface SheetRow {
     mapped_auto: boolean;
     /** Do czego wiersz wróci po odpięciu ręcznego przypisania. */
     auto_to: string | null;
+    /** Żywe rezerwacje tej pozycji — stan mówi ile leży, rezerwacja ile obiecane. */
+    reservations: Reservation[];
+    reserved: number;
+}
+
+interface Reservation {
+    id: number;
+    user_name: string | null;
+    quantity: number;
+    note: string | null;
+    /** „Maciej Zając 1" — gotowa etykieta, ta sama co w aplikacji mobilnej. */
+    label: string;
 }
 
 interface Props {
@@ -416,6 +504,88 @@ async function onRowsChange(next: SheetRow[]): Promise<void> {
     }
 }
 
+// === REZERWACJE ===
+const resModal = reactive({
+    show: false,
+    source_code: "",
+    list: [] as Reservation[],
+    quantity: "1",
+    note: "",
+    busy: false,
+});
+
+function openRes(row: SheetRow): void {
+    resModal.show = true;
+    resModal.source_code = row.product_code;
+    resModal.list = [...(row.reservations ?? [])];
+    resModal.quantity = "1";
+    resModal.note = "";
+}
+
+function closeRes(): void {
+    resModal.show = false;
+}
+
+/** Odpowiedz serwera niesie komplet rezerwacji kodu — wpisujemy ja w wiersz. */
+function applyReservations(sourceCode: string, list: Reservation[]): void {
+    const row = rows.value.find((r) => r.product_code === sourceCode);
+
+    if (row) {
+        row.reservations = list;
+        row.reserved = list.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+    }
+
+    resModal.list = list;
+    refreshGrid();
+}
+
+async function saveRes(): Promise<void> {
+    const quantity = Number(String(resModal.quantity).replace(",", "."));
+
+    if (!Number.isFinite(quantity) || quantity < 1) {
+        toast.error("Ilość musi być liczbą większą od zera.");
+
+        return;
+    }
+
+    resModal.busy = true;
+
+    try {
+        const { data } = await axios.post(route("crafter.production.warehouse.reservation.store"), {
+            source_code: resModal.source_code,
+            quantity: Math.round(quantity),
+            note: resModal.note || null,
+            area: "tabela",
+        });
+
+        applyReservations(resModal.source_code, data?.reservations ?? []);
+        resModal.quantity = "1";
+        resModal.note = "";
+        toast.success("Zarezerwowano.");
+    } catch (error: any) {
+        toast.error(error?.response?.data?.message ?? "Nie udało się zarezerwować.");
+    } finally {
+        resModal.busy = false;
+    }
+}
+
+async function releaseRes(id: number): Promise<void> {
+    resModal.busy = true;
+
+    try {
+        const { data } = await axios.delete(route("crafter.production.warehouse.reservation.release"), {
+            data: { id, area: "tabela" },
+        });
+
+        applyReservations(resModal.source_code, data?.reservations ?? []);
+        toast.success("Zwolniono rezerwację.");
+    } catch {
+        toast.error("Nie udało się zwolnić rezerwacji.");
+    } finally {
+        resModal.busy = false;
+    }
+}
+
 // === MAPOWANIE ===
 const mapModal = reactive({
     show: false,
@@ -476,6 +646,7 @@ async function saveMap(): Promise<void> {
             product_code: productCode,
             source: props.source,
             source_code: mapModal.source_code,
+            area: "tabela",
         });
 
         applyMapping(mapModal.source_code, productCode);
@@ -506,6 +677,7 @@ async function removeMap(): Promise<void> {
                 product_code: mapModal.current,
                 source: props.source,
                 source_code: mapModal.source_code,
+                area: "tabela",
             },
         });
 
@@ -628,6 +800,51 @@ const columns = computed(() => [
             return h("span", { style: value ? { fontWeight: "600" } : { color: "#9ca3af" } }, String(value));
         },
     },
+    {
+        // Rezerwacja stoi OBOK ilosci, nie zamiast niej — „Razem" mowi ile lezy,
+        // ta kolumna ile z tego jest juz komus obiecane.
+        prop: "reserved",
+        name: "Rezerwacja",
+        readonly: true,
+        size: 190,
+        sortable: true,
+        cellCompare: (key: string, a: any, b: any): number =>
+            (Number(a?.[key]) || 0) - (Number(b?.[key]) || 0),
+        cellTemplate: (h: any, p: any) => {
+            const row = p.model as SheetRow;
+            const list: Reservation[] = Array.isArray(row?.reservations) ? row.reservations : [];
+            const open = (e: any) => {
+                e.stopPropagation();
+                openRes(row);
+            };
+
+            if (!list.length) {
+                return h(
+                    "button",
+                    {
+                        class: "revo-map-chip revo-map-empty",
+                        title: "Odłóż sztuki z tej pozycji",
+                        onClick: open,
+                    },
+                    "rezerwuj +"
+                );
+            }
+
+            // W komorce miesci sie jedna rezerwacja; reszta jest w „+N" i pod
+            // najechaniem, zeby wiersz nie rosl w pionie.
+            const extra = list.length - 1;
+
+            return h(
+                "button",
+                {
+                    class: "revo-map-chip revo-res-chip",
+                    title: list.map((item) => item.label).join(", "),
+                    onClick: open,
+                },
+                extra > 0 ? `${list[0].label} +${extra}` : list[0].label
+            );
+        },
+    },
     textColumn("steel_team", "steel team", 180),
     textColumn("uwagi", "Uwagi", 200),
     textColumn("wymiar", "WYMIAR", 120),
@@ -651,6 +868,12 @@ const columns = computed(() => [
     border: 1px solid #bbf7d0;
     background: #f0fdf4;
     color: #15803d;
+}
+
+:deep(.revo-res-chip) {
+    border: 1px solid #bfdbfe;
+    background: #eff6ff;
+    color: #1d4ed8;
 }
 
 :deep(.revo-map-empty) {

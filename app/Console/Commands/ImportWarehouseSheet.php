@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Models\WarehouseLog;
 use App\Models\WarehouseSheetRow;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
@@ -95,6 +96,22 @@ class ImportWarehouseSheet extends Command
                 WarehouseSheetRow::insert($chunk);
             }
         });
+
+        // Import jest podmiana calej zakladki, wiec musi zostawic slad w dzienniku —
+        // inaczej „skad sie wzielo 40 sztuk" po tygodniu nie ma odpowiedzi.
+        WarehouseLog::write(
+            'import',
+            'sheet.import',
+            sprintf(
+                'Import arkusza „%s”: %d kodów, %d szt. (plik %s)',
+                $tab,
+                count($rows),
+                array_sum(array_column($rows, 'quantity_total')),
+                basename($file),
+            ),
+            ['meta' => ['plik' => $file, 'kodow' => count($rows)]],
+            actor: 'konsola',
+        );
 
         $this->info('Zapisano ' . count($rows) . " wierszy do zakladki: $tab");
 

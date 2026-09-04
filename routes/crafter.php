@@ -871,6 +871,10 @@ Route::middleware(['crafter.base', 'auth', 'crafter.verified'])->prefix('admin')
         ->name('production.warehouse.table');
     Route::post('production/magazyn/tabela/komorki', [App\Http\Controllers\Admin\ProductionController::class, 'updateWarehouseSheetCells'])
         ->name('production.warehouse.table.cells');
+    Route::post('production/magazyn/rezerwacje', [App\Http\Controllers\Admin\ProductionController::class, 'storeWarehouseReservation'])
+        ->name('production.warehouse.reservation.store');
+    Route::delete('production/magazyn/rezerwacje', [App\Http\Controllers\Admin\ProductionController::class, 'releaseWarehouseReservation'])
+        ->name('production.warehouse.reservation.release');
     Route::get('production/magazyn/ustawienia', [App\Http\Controllers\Admin\ProductionController::class, 'warehouseSettings'])
         ->name('production.warehouse.settings');
     Route::put('production/magazyn/ustawienia/bridge', [App\Http\Controllers\Admin\ProductionController::class, 'updateWarehouseBridge'])

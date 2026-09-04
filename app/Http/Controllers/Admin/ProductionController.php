@@ -9,6 +9,8 @@ use App\Models\ProductionItem;
 use App\Models\ProductionStage;
 use App\Models\WarehouseBridge;
 use App\Models\WarehouseCodeMap;
+use App\Models\WarehouseLog;
+use App\Models\WarehouseReservation;
 use App\Models\WarehouseSheetRow;
 use App\Models\WarehouseSourceStock;
 use App\Services\Production\CodeGrouper;
@@ -35,13 +37,6 @@ use Inertia\Response;
 class ProductionController extends Controller
 {
     /**
-     * Znaczniki przestawiane z gridu: nazwa z frontu => kolumna w bazie.
-     * Bialalista — bez niej `setFlag` pozwalalby pisac po dowolnej kolumnie.
-     *
-     * Etapow tu nie ma: od czasu slownika `production_stages` etap wynika
-     * wylacznie ze sprzedazy i przelicza go StageAssigner, a nie klikniecie.
-     */
-    /**
      * Kolumny arkusza, ktore wolno poprawic recznie z gridu Magazyn → Tabela.
      * Bialalista, nie „wszystko poza kilkoma": bez niej edycja pozwalalaby
      * pisac po `product_code` i `row_no`, czyli po tozsamosci wiersza.
@@ -54,6 +49,25 @@ class ProductionController extends Controller
         'steel_team', 'uwagi', 'wymiar', 'waga',
     ];
 
+    /** Nazwy pol arkusza w logach — „qty_3" nikomu nic nie mowi po tygodniu. */
+    private const SHEET_FIELD_LABELS = [
+        'place_1' => 'Miejsce 1', 'qty_1' => 'Ilość 1',
+        'place_2' => 'Miejsce 2', 'qty_2' => 'Ilość 2',
+        'place_3' => 'Miejsce 3', 'qty_3' => 'Ilość 3',
+        'place_4' => 'Miejsce 4', 'qty_4' => 'Ilość 4',
+        'place_5' => 'Miejsce 5', 'qty_5' => 'Ilość 5',
+        'place_6' => 'Miejsce 6', 'qty_6' => 'Ilość 6',
+        'steel_team' => 'steel team', 'uwagi' => 'Uwagi',
+        'wymiar' => 'WYMIAR', 'waga' => 'WAGA',
+    ];
+
+    /**
+     * Znaczniki przestawiane z gridu: nazwa z frontu => kolumna w bazie.
+     * Bialalista — bez niej `setFlag` pozwalalby pisac po dowolnej kolumnie.
+     *
+     * Etapow tu nie ma: od czasu slownika `production_stages` etap wynika
+     * wylacznie ze sprzedazy i przelicza go StageAssigner, a nie klikniecie.
+     */
     private const FLAGS = [
         'project' => 'has_project',
         'team_steel' => 'team_steel',
@@ -350,6 +364,24 @@ class ProductionController extends Controller
             ['product_code' => $data['product_code'], 'manual' => true],
         );
 
+        // Obszar bierzemy z frontu, bo to samo przypisanie da sie zrobic
+        // z listy M3R i z Tabeli — w dzienniku ma byc widac, skad padlo.
+        WarehouseLog::write(
+            $request->input('area', 'm3r'),
+            'map.store',
+            sprintf(
+                '%s (%s) → %s',
+                $data['source_code'],
+                WarehouseCodeMap::SOURCES[$data['source']] ?? $data['source'],
+                $data['product_code'],
+            ),
+            [
+                'source_code' => $data['source_code'],
+                'product_code' => $data['product_code'],
+                'meta' => ['zrodlo' => $data['source']],
+            ],
+        );
+
         return response()->json($this->mapPayload($data['product_code']));
     }
 
@@ -367,6 +399,22 @@ class ProductionController extends Controller
         WarehouseCodeMap::where('source', $data['source'])
             ->where('source_code', $data['source_code'])
             ->delete();
+
+        WarehouseLog::write(
+            $request->input('area', 'm3r'),
+            'map.destroy',
+            sprintf(
+                'odpięto %s (%s) od %s',
+                $data['source_code'],
+                WarehouseCodeMap::SOURCES[$data['source']] ?? $data['source'],
+                $data['product_code'],
+            ),
+            [
+                'source_code' => $data['source_code'],
+                'product_code' => $data['product_code'],
+                'meta' => ['zrodlo' => $data['source']],
+            ],
+        );
 
         return response()->json($this->mapPayload($data['product_code']));
     }
@@ -450,13 +498,22 @@ class ProductionController extends Controller
             ->get(['product_code', 'source_code'])
             ->keyBy(fn ($row) => mb_strtoupper($row->source_code));
 
+        // Rezerwacje sa OBOK ilosci, nie zamiast nich — stan mowi, ile lezy,
+        // rezerwacja ile z tego jest obiecane.
+        $reservations = WarehouseReservation::active()
+            ->where('source', 'sheet')
+            ->orderBy('id')
+            ->get()
+            ->groupBy('source_code');
+
         return Inertia::render('Production/WarehouseTable', [
             'sheet' => $sheet,
             'importedAt' => $rows->max('updated_at')?->format('Y-m-d H:i'),
-            'rows' => $rows->map(function (WarehouseSheetRow $row) use ($manual, $byUpperCode) {
+            'rows' => $rows->map(function (WarehouseSheetRow $row) use ($manual, $byUpperCode, $reservations) {
                 $upper = mb_strtoupper($row->product_code);
                 $manualTarget = $manual[$upper]->product_code ?? null;
                 $autoTarget = $byUpperCode[$upper] ?? null;
+                $reserved = $reservations[$row->product_code] ?? collect();
 
                 return [
                     'id' => $row->id,
@@ -484,6 +541,14 @@ class ProductionController extends Controller
                     // bez tego ekran po „Odepnij" pokazywalby „do zmapowania"
                     // tam, gdzie automat i tak zaraz dopasuje kod.
                     'auto_to' => $autoTarget,
+                    'reservations' => $reserved->map(fn (WarehouseReservation $item) => [
+                        'id' => $item->id,
+                        'user_name' => $item->user_name,
+                        'quantity' => $item->quantity,
+                        'note' => $item->note,
+                        'label' => $item->label(),
+                    ])->values()->all(),
+                    'reserved' => (int) $reserved->sum('quantity'),
                 ];
             })->values(),
             'source' => 'sheet',
@@ -530,13 +595,29 @@ class ProductionController extends Controller
         }
 
         $rows = WarehouseSheetRow::whereIn('id', array_column($data['changes'], 'id'))->get()->keyBy('id');
+        $entries = [];
 
         foreach ($data['changes'] as $change) {
             $row = $rows[$change['id']] ?? null;
 
-            if ($row !== null) {
-                $row->{$change['field']} = $this->sheetCellValue($change['field'], $change['value']);
+            if ($row === null) {
+                continue;
             }
+
+            $field = $change['field'];
+            $before = $row->{$field};
+            $after = $this->sheetCellValue($field, $change['value']);
+
+            $row->{$field} = $after;
+
+            // Log powstaje z wartosci PRZED przypisaniem — po zapisie nie ma juz
+            // z czego odtworzyc, co bylo w komorce.
+            $entries[] = [
+                'code' => $row->product_code,
+                'field' => $field,
+                'before' => $before,
+                'after' => $after,
+            ];
         }
 
         DB::transaction(function () use ($rows) {
@@ -551,6 +632,21 @@ class ProductionController extends Controller
                 $row->save();
             }
         });
+
+        foreach ($entries as $entry) {
+            $label = self::SHEET_FIELD_LABELS[$entry['field']] ?? $entry['field'];
+
+            WarehouseLog::write('tabela', 'cell.update', sprintf(
+                '%s — %s: %s → %s',
+                $entry['code'],
+                $label,
+                $this->logValue($entry['before']),
+                $this->logValue($entry['after']),
+            ), [
+                'source_code' => $entry['code'],
+                'meta' => ['pole' => $entry['field'], 'przed' => $entry['before'], 'po' => $entry['after']],
+            ]);
+        }
 
         // Oddajemy przeliczone sumy — grid podmienia kolumne „Razem" bez
         // przeladowania calej listy.
@@ -585,6 +681,111 @@ class ProductionController extends Controller
         $value = is_string($value) ? trim($value) : $value;
 
         return ($value === null || $value === '') ? null : mb_substr((string) $value, 0, 255);
+    }
+
+    /** Wartosc do zdania w logu. Puste pole musi byc widoczne jako puste. */
+    private function logValue(mixed $value): string
+    {
+        return ($value === null || $value === '') ? '(puste)' : (string) $value;
+    }
+
+    /**
+     * Rezerwacja pozycji: ktos odklada X sztuk dla siebie.
+     *
+     * Rezerwacja NIE rusza stanu — stan mowi, ile lezy na polce, rezerwacja ile
+     * z tego jest obiecane. Gdyby odejmowac ja od stanu, nikt by juz nie odroznil
+     * „nie ma towaru" od „jest, ale ktos go trzyma".
+     */
+    public function storeWarehouseReservation(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'source_code' => ['required', 'string', 'max:100'],
+            'quantity' => ['required', 'integer', 'min:1'],
+            'note' => ['nullable', 'string', 'max:255'],
+            'area' => ['nullable', 'string', Rule::in(array_keys(WarehouseLog::AREAS))],
+        ]);
+
+        $user = $request->user();
+        $sourceCode = trim($data['source_code']);
+
+        $reservation = WarehouseReservation::create([
+            'source' => 'sheet',
+            'source_code' => $sourceCode,
+            'product_code' => WarehouseCodeMap::where('source', 'sheet')
+                ->where('source_code', $sourceCode)
+                ->value('product_code'),
+            'quantity' => $data['quantity'],
+            'user_id' => $user?->id,
+            'user_name' => WarehouseLog::actorName($user),
+            'note' => $data['note'] ?? null,
+        ]);
+
+        WarehouseLog::write(
+            $data['area'] ?? 'tabela',
+            'reservation.create',
+            "{$sourceCode} — rezerwacja {$reservation->quantity} szt. dla {$reservation->user_name}",
+            [
+                'source_code' => $sourceCode,
+                'product_code' => $reservation->product_code,
+                'meta' => ['ilosc' => $reservation->quantity, 'uwaga' => $reservation->note],
+            ],
+        );
+
+        return response()->json($this->reservationPayload($sourceCode));
+    }
+
+    /**
+     * Zwolnienie rezerwacji. Wiersz zostaje w bazie ze znacznikiem — znika
+     * z ekranu, ale nie z historii; inaczej przepada odpowiedz na pytanie,
+     * kto trzymal towar przez tydzien.
+     */
+    public function releaseWarehouseReservation(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'id' => ['required', 'integer'],
+            'area' => ['nullable', 'string', Rule::in(array_keys(WarehouseLog::AREAS))],
+        ]);
+
+        $reservation = WarehouseReservation::active()->findOrFail($data['id']);
+        $user = $request->user();
+
+        $reservation->forceFill([
+            'released_at' => now(),
+            'released_by' => WarehouseLog::actorName($user),
+        ])->save();
+
+        WarehouseLog::write(
+            $data['area'] ?? 'tabela',
+            'reservation.release',
+            "{$reservation->source_code} — zwolniono rezerwację {$reservation->quantity} szt. ({$reservation->user_name})",
+            [
+                'source_code' => $reservation->source_code,
+                'product_code' => $reservation->product_code,
+                'meta' => ['ilosc' => $reservation->quantity],
+            ],
+        );
+
+        return response()->json($this->reservationPayload($reservation->source_code));
+    }
+
+    /** Zywe rezerwacje jednego kodu — tym ekran odswieza wiersz po zmianie. */
+    private function reservationPayload(string $sourceCode): array
+    {
+        return [
+            'source_code' => $sourceCode,
+            'reservations' => WarehouseReservation::active()
+                ->where('source', 'sheet')
+                ->where('source_code', $sourceCode)
+                ->orderBy('id')
+                ->get()
+                ->map(fn (WarehouseReservation $row) => [
+                    'id' => $row->id,
+                    'user_name' => $row->user_name,
+                    'quantity' => $row->quantity,
+                    'note' => $row->note,
+                    'label' => $row->label(),
+                ])->values()->all(),
+        ];
     }
 
     /**
@@ -631,7 +832,16 @@ class ProductionController extends Controller
             'warehouse_symbol' => ['nullable', 'string', 'max:100'],
         ]);
 
-        WarehouseBridge::current()->fill($data)->save();
+        $bridge = WarehouseBridge::current();
+        $before = ['enabled' => $bridge->enabled, 'warehouse_symbol' => $bridge->warehouse_symbol];
+
+        $bridge->fill($data)->save();
+
+        WarehouseLog::write('ustawienia', 'bridge.settings', sprintf(
+            'Połączenie z ARGO Bridge: %s, magazyn „%s”',
+            $bridge->enabled ? 'włączone' : 'wyłączone',
+            $bridge->warehouse_symbol ?? '—',
+        ), ['meta' => ['przed' => $before, 'po' => $data]]);
 
         return back();
     }
@@ -646,6 +856,10 @@ class ProductionController extends Controller
             ->forceFill(['api_token' => bin2hex(random_bytes(32))])
             ->save();
 
+        // Tokenu do logu NIE wpisujemy — dziennik oglada wiecej osob niz
+        // ekran Ustawien, a token jest haslem do wejscia po naszej stronie.
+        WarehouseLog::write('ustawienia', 'bridge.token', 'Wygenerowano nowy token dla ARGO Bridge (poprzedni unieważniony)');
+
         return back();
     }
 
@@ -654,7 +868,30 @@ class ProductionController extends Controller
      */
     public function warehouseLogs(Request $request): Response
     {
-        return Inertia::render('Production/WarehouseLogs');
+        // Ostatnie 2000 wpisow — dziennik ma odpowiadac na „co sie stalo dzis
+        // i wczoraj", a nie byc archiwum przewijanym w nieskonczonosc. Filtry
+        // dziala na tym samym zestawie po stronie przegladarki, wiec przelaczenie
+        // zakladki nie kosztuje round-tripu.
+        $logs = WarehouseLog::query()
+            ->orderByDesc('id')
+            ->limit(2000)
+            ->get();
+
+        return Inertia::render('Production/WarehouseLogs', [
+            'areas' => WarehouseLog::AREAS,
+            'logs' => $logs->map(fn (WarehouseLog $log) => [
+                'id' => $log->id,
+                'at' => $log->created_at?->format('Y-m-d H:i'),
+                'user' => $log->user_name ?? 'system',
+                'area' => $log->area,
+                'area_label' => WarehouseLog::AREAS[$log->area] ?? $log->area,
+                'action' => $log->action,
+                'source_code' => $log->source_code,
+                'product_code' => $log->product_code,
+                'description' => $log->description,
+            ])->values(),
+            'users' => $logs->pluck('user_name')->filter()->unique()->sort()->values(),
+        ]);
     }
 
     /**

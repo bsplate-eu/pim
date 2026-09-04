@@ -52,6 +52,14 @@
             <div class="truncate text-sm text-gray-500">
               {{ row.places.length ? placesSummary(row) : 'brak miejsca w arkuszu' }}
             </div>
+            <!-- Rezerwacja pod sztukami: ilosc mowi ile lezy, ta linijka ile
+                 z tego jest juz komus obiecane. -->
+            <div
+              v-if="reservationsOf(row).length"
+              class="truncate text-sm font-medium text-blue-700"
+            >
+              Rezerwacja: {{ reservationsOf(row).map((r) => r.label).join(', ') }}
+            </div>
           </div>
 
           <span
@@ -98,6 +106,56 @@
           <div v-if="row.uwagi" class="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
             {{ row.uwagi }}
           </div>
+
+          <!-- Rezerwacje: lista + odlozenie sztuk. Rezerwacja NIE zmienia stanu,
+               tylko mowi, ile z lezacego towaru jest juz obiecane. -->
+          <div class="rounded-lg border border-blue-100 bg-blue-50 px-3 py-2">
+            <div class="text-xs font-semibold uppercase tracking-wide text-blue-700">
+              Rezerwacje
+            </div>
+
+            <div v-if="reservationsOf(row).length" class="mt-2 space-y-1.5">
+              <div
+                v-for="item in reservationsOf(row)"
+                :key="item.id"
+                class="flex items-center justify-between gap-2"
+              >
+                <span class="truncate text-sm text-blue-900">
+                  {{ item.user_name || 'nieznany' }}
+                  <strong class="ml-1">{{ item.quantity }} szt.</strong>
+                </span>
+                <button
+                  type="button"
+                  class="shrink-0 rounded-lg px-2 py-1 text-sm text-blue-700 active:bg-blue-100"
+                  :disabled="busy"
+                  @click.stop="release(row, item.id)"
+                >
+                  Zwolnij
+                </button>
+              </div>
+            </div>
+            <div v-else class="mt-1 text-sm text-blue-900/60">Nic nie jest odłożone</div>
+
+            <div class="mt-2 flex items-center gap-2">
+              <input
+                v-model="qty[row.id]"
+                type="number"
+                min="1"
+                inputmode="numeric"
+                class="w-20 rounded-lg border border-blue-200 bg-white px-2 py-1.5 text-sm"
+                placeholder="1"
+                @click.stop
+              />
+              <button
+                type="button"
+                class="rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white active:bg-blue-700"
+                :disabled="busy"
+                @click.stop="reserve(row)"
+              >
+                Zarezerwuj
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -122,6 +180,7 @@ export default { layout: MobileLayout };
 <script setup>
 import { ref, computed, watch } from "vue";
 import { Head } from "@inertiajs/vue3";
+import axios from "axios";
 import {
   MagnifyingGlassIcon,
   XMarkIcon,
@@ -165,6 +224,56 @@ watch(q, () => {
   limit.value = PAGE;
   open.value = null;
 });
+
+/* Rezerwacje trzymamy lokalnie obok wiersza: propsy Inertii sa zamrozone,
+   a po zapisie ma sie odswiezyc jedna karta, nie caly ekran. */
+const overrides = ref({});
+const qty = ref({});
+const busy = ref(false);
+
+const reservationsOf = (row) => overrides.value[row.id] ?? row.reservations ?? [];
+
+const reserve = async (row) => {
+  const value = Number(String(qty.value[row.id] ?? "1").replace(",", "."));
+
+  if (!Number.isFinite(value) || value < 1) return;
+
+  busy.value = true;
+
+  try {
+    const { data } = await axios.post(
+      route("crafter.production.warehouse.reservation.store"),
+      {
+        source_code: row.code,
+        quantity: Math.round(value),
+        area: "mobile",
+      }
+    );
+    overrides.value = { ...overrides.value, [row.id]: data?.reservations ?? [] };
+    qty.value = { ...qty.value, [row.id]: "" };
+  } catch (e) {
+    /* Telefon w hali bywa bez zasiegu — cisza jest lepsza niz alert,
+       ktory trzeba klikac w rekawicach. Stan zostaje niezmieniony. */
+  } finally {
+    busy.value = false;
+  }
+};
+
+const release = async (row, id) => {
+  busy.value = true;
+
+  try {
+    const { data } = await axios.delete(
+      route("crafter.production.warehouse.reservation.release"),
+      { data: { id, area: "mobile" } }
+    );
+    overrides.value = { ...overrides.value, [row.id]: data?.reservations ?? [] };
+  } catch (e) {
+    /* jak wyzej */
+  } finally {
+    busy.value = false;
+  }
+};
 
 const toggle = (id) => {
   open.value = open.value === id ? null : id;

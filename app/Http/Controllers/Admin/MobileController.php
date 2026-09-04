@@ -6,6 +6,7 @@ use App\Models\Mail\Account;
 use App\Models\Mail\Catalog;
 use App\Models\Mail\Category;
 use App\Models\Mail\Message;
+use App\Models\WarehouseReservation;
 use App\Models\WarehouseSheetRow;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -49,6 +50,14 @@ class MobileController extends Controller
             ->orderBy('product_code')
             ->get();
 
+        // Rezerwacje ida OBOK ilosci, nie zamiast nich: ilosc mowi, ile lezy
+        // na polce, rezerwacja ile z tego jest juz komus obiecane.
+        $reservations = WarehouseReservation::active()
+            ->where('source', 'sheet')
+            ->orderBy('id')
+            ->get()
+            ->groupBy('source_code');
+
         return Inertia::render('Mobile/Warehouse', [
             'sheet'      => WarehouseSheetRow::DEFAULT_SHEET,
             'importedAt' => $rows->max('updated_at')?->format('Y-m-d H:i'),
@@ -61,6 +70,13 @@ class MobileController extends Controller
                 'waga'   => $row->waga,
                 'uwagi'  => $row->uwagi,
                 'team'   => $row->steel_team,
+                'reservations' => ($reservations[$row->product_code] ?? collect())
+                    ->map(fn (WarehouseReservation $item) => [
+                        'id'        => $item->id,
+                        'user_name' => $item->user_name,
+                        'quantity'  => $item->quantity,
+                        'label'     => $item->label(),
+                    ])->values(),
             ])->values(),
         ]);
     }
