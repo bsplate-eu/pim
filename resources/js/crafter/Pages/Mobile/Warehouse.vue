@@ -136,6 +136,13 @@
             </div>
             <div v-else class="mt-1 text-sm text-blue-900/60">Nic nie jest odłożone</div>
 
+            <!-- Ile zostaje po odjeciu rezerwacji — to jest liczba, ktora
+                 interesuje czlowieka stojacego przy regale. -->
+            <div v-if="reservedOf(row)" class="mt-2 text-sm text-blue-900">
+              Wolne: <strong>{{ (row.total ?? 0) - reservedOf(row) }} szt.</strong>
+              <span class="text-blue-900/60">z {{ row.total ?? 0 }}</span>
+            </div>
+
             <div class="mt-2 flex items-center gap-2">
               <!-- Rezerwować można dla kogoś innego: przy terminalu stoi jedna
                    osoba, a odkłada dla całej zmiany. -->
@@ -246,6 +253,9 @@ const forUser = ref({});
 const busy = ref(false);
 
 const reservationsOf = (row) => overrides.value[row.id] ?? row.reservations ?? [];
+
+const reservedOf = (row) =>
+  reservationsOf(row).reduce((sum, item) => sum + Number(item.quantity || 0), 0);
 
 const reserve = async (row) => {
   const value = Number(String(qty.value[row.id] ?? "1").replace(",", "."));

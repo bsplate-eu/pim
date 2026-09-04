@@ -81,7 +81,13 @@
                 <div class="mb-3 text-xs text-gray-500">
                     Widocznych: <strong>{{ visibleCount }}</strong>
                     / Kodów w arkuszu: <strong>{{ rows.length }}</strong>
-                    <span class="ml-4">Sztuk łącznie: <strong>{{ totalPieces }}</strong></span>
+                    <span class="ml-4">Sztuk w arkuszu: <strong>{{ totalPieces }}</strong></span>
+                    <span class="ml-4">
+                        Zarezerwowane: <strong class="text-blue-700">{{ totalReserved }}</strong>
+                    </span>
+                    <span class="ml-4">
+                        Dostępne: <strong>{{ totalPieces - totalReserved }}</strong>
+                    </span>
                     <span class="ml-4">Ze stanem 0: <strong>{{ zeroCount }}</strong></span>
                 </div>
 
@@ -384,6 +390,16 @@ const placesOf = (row: SheetRow): string[] =>
 
 const totalPieces = computed(() => props.rows.reduce((sum, r) => sum + (r.quantity_total || 0), 0));
 const zeroCount = computed(() => props.rows.filter((r) => r.quantity_total === 0).length);
+
+/* Rezerwacje licza sie z ZYWYCH wierszy, nie z propsow — licznik ma spadac
+   od razu po odlozeniu sztuk, a nie dopiero po przeladowaniu ekranu. */
+const totalReserved = computed(() =>
+    rows.value.reduce((sum, row) => sum + Number(row.reserved || 0), 0)
+);
+
+/** Ile z pozycji zostaje po odjeciu rezerwacji — „ile moge wziac". */
+const availableOf = (row: SheetRow): number =>
+    Number(row?.quantity_total || 0) - Number(row?.reserved || 0);
 // Liczone tym samym predykatem, ktorym filtruje grid — inaczej licznik potrafi
 // pokazac co innego niz widac na ekranie.
 const visibleCount = computed(() => rows.value.filter(filterFn).length);
@@ -928,6 +944,44 @@ const columns = computed(() => [
             }
 
             return h("span", { class: "revo-code-cell revo-res-cell" }, chips);
+        },
+    },
+    {
+        // „Razem" zostaje suma Z ARKUSZA — ta kolumna mowi, ile z tego jest
+        // jeszcze wolne. Dwie osobne liczby, bo zlanie ich w jedna zabiera
+        // odpowiedz na pytanie, czy towaru brakuje, czy tylko ktos go trzyma.
+        //
+        // Lista M3R celowo tego NIE widzi: tam kolumna „Tabela" pokazuje pelny
+        // stan z arkusza, bo rezerwacja nie zdejmuje niczego z polki.
+        prop: "__available__",
+        name: "Dostępne",
+        readonly: true,
+        size: 110,
+        sortable: true,
+        cellCompare: (key: string, a: any, b: any): number => availableOf(a) - availableOf(b),
+        cellTemplate: (h: any, p: any) => {
+            const row = p.model as SheetRow;
+            const value = availableOf(row);
+            const reserved = Number(row?.reserved || 0);
+
+            // Ujemne = zarezerwowano wiecej, niz lezy. To nie jest blad ekranu,
+            // tylko realny konflikt do rozwiazania — wiec ma krzyczec.
+            const style = value < 0
+                ? { color: "#b91c1c", fontWeight: "700" }
+                : reserved > 0
+                    ? { fontWeight: "600", color: "#1d4ed8" }
+                    : { color: "#9ca3af" };
+
+            return h(
+                "span",
+                {
+                    style,
+                    title: reserved > 0
+                        ? `${row.quantity_total} szt. w arkuszu minus ${reserved} zarezerwowane`
+                        : "Nic nie jest zarezerwowane",
+                },
+                String(value)
+            );
         },
     },
     textColumn("steel_team", "steel team", 180),
