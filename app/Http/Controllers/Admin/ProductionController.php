@@ -311,6 +311,11 @@ class ProductionController extends Controller
         $sheet = WarehouseSheetRow::DEFAULT_SHEET;
         $rows = WarehouseSheetRow::where('sheet', $sheet)->orderBy('row_no')->get();
 
+        // Mapowanie czytamy z tej samej tabeli, do ktorej pisze lista M3R —
+        // dlatego dziala w obie strony bez zadnej synchronizacji. Kluczem jest
+        // kod ZRODLOWY, bo tutaj kazdy wiersz jest wierszem arkusza.
+        $maps = WarehouseCodeMap::where('source', 'sheet')->pluck('product_code', 'source_code');
+
         // Porownanie po znormalizowanym kodzie zdejmuje rozjazdy typu
         // „25.159 ALU" vs „25.159ALU", ktore nie sa realnym brakiem produktu.
         $normalize = fn (?string $code) => strtoupper(str_replace(' ', '', trim((string) $code)));
@@ -337,7 +342,12 @@ class ProductionController extends Controller
                 'wymiar' => $row->wymiar,
                 'waga' => $row->waga,
                 'in_pim' => $known->has($normalize($row->product_code)),
+                // Kod PIM, na ktory ten wiersz arkusza zostal recznie wskazany.
+                // NULL nie znaczy „brak pary" — kod moze sie zgadzac 1:1
+                // (`in_pim`), a wtedy mapowanie jest po prostu niepotrzebne.
+                'mapped_to' => $maps[$row->product_code] ?? null,
             ])->values(),
+            'source' => 'sheet',
         ]);
     }
 
