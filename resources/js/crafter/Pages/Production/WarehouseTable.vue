@@ -20,6 +20,11 @@
                         <code class="rounded bg-white px-1 py-0.5 text-xs">
                             php artisan warehouse:import-sheet plik.xlsx
                         </code>
+                        <span class="mt-1 block text-gray-500">
+                            Miejsca, ilości i uwagi poprawisz wprost w tabeli — dwuklik
+                            w komórkę, zapis od razu. To korekta na wierzchu importu:
+                            kolejny arkusz ją nadpisze.
+                        </span>
                     </div>
                     <Button
                         :as="Link"
@@ -94,6 +99,8 @@
                     keyField="id"
                     height="max(360px, calc(100vh - 330px))"
                     :frameSize="rows.length + 100"
+                    :refreshAfterEdit="true"
+                    @update:modelValue="onRowsChange"
                 />
             </Card>
         </div>
@@ -202,12 +209,15 @@ interface Props {
     rows: SheetRow[];
     /** Klucz źródła w `warehouse_code_map` — dla tego ekranu zawsze „sheet". */
     source: string;
+    /** Pola, które wolno poprawić ręcznie. Białą listę trzyma serwer. */
+    editable: string[];
 }
 
 const props = withDefaults(defineProps<Props>(), {
     rows: () => [],
     importedAt: null,
     source: "sheet",
+    editable: () => [],
 });
 
 const toast = useToast();
@@ -295,10 +305,12 @@ function filterFn(row: SheetRow): boolean {
     }
 }
 
+const isEditable = (prop: string): boolean => props.editable.includes(prop);
+
 const textColumn = (prop: string, name: string, size: number) => ({
     prop,
     name,
-    readonly: true,
+    readonly: !isEditable(prop),
     size,
     sortable: true,
     cellTemplate: (h: any, p: any) => {
@@ -313,7 +325,7 @@ const textColumn = (prop: string, name: string, size: number) => ({
 const qtyColumn = (prop: string) => ({
     prop,
     name: "il.",
-    readonly: true,
+    readonly: !isEditable(prop),
     size: 70,
     sortable: true,
     cellCompare: (key: string, a: any, b: any): number =>
@@ -326,6 +338,80 @@ const qtyColumn = (prop: string) => ({
         return h("span", { style: value === 0 ? { color: "#9ca3af" } : {} }, String(value));
     },
 });
+
+// === RECZNE POPRAWKI KOMOREK ===
+// Grid oddaje po edycji cala tablice, nie „ta komorka sie zmienila", wiec
+// trzymamy migawke ostatniego ZAPISANEGO stanu i liczymy roznice. Przy okazji
+// zalatwia to wklejanie zakresu: jedno zdarzenie, jedna paczka do serwera.
+const snapshot = new Map<number, Record<string, any>>();
+
+function takeSnapshot(list: SheetRow[]): void {
+    snapshot.clear();
+
+    for (const row of list) {
+        const cells: Record<string, any> = {};
+        for (const key of props.editable) cells[key] = (row as any)[key];
+        snapshot.set(row.id, cells);
+    }
+}
+
+takeSnapshot(props.rows);
+
+/** RevoGrid oddaje z edytora stringi, a z bazy przychodza liczby i nulle —
+ *  bez tej normalizacji samo wejscie w komorke wygladaloby jak zmiana. */
+const sameCell = (a: any, b: any): boolean =>
+    (a === null || a === undefined ? "" : String(a).trim()) ===
+    (b === null || b === undefined ? "" : String(b).trim());
+
+function refreshGrid(): void {
+    const grid = gridRef.value;
+    if (grid?.getSource) grid.setSource([...grid.getSource()]);
+}
+
+async function onRowsChange(next: SheetRow[]): Promise<void> {
+    const changes: { id: number; field: string; value: any }[] = [];
+
+    for (const row of next) {
+        const before = snapshot.get(row.id);
+        if (!before) continue;
+
+        for (const key of props.editable) {
+            const value = (row as any)[key];
+            if (!sameCell(before[key], value)) {
+                changes.push({ id: row.id, field: key, value: value === "" ? null : value });
+            }
+        }
+    }
+
+    if (!changes.length) return;
+
+    try {
+        const { data } = await axios.post(route("crafter.production.warehouse.table.cells"), {
+            changes,
+        });
+
+        // „Razem" liczy serwer — podmieniamy je z odpowiedzi, zamiast sumowac
+        // drugi raz po swojemu.
+        for (const updated of data?.rows ?? []) {
+            const row = rows.value.find((r) => r.id === updated.id);
+            if (row) row.quantity_total = updated.quantity_total;
+        }
+
+        takeSnapshot(rows.value);
+        refreshGrid();
+        toast.success(changes.length === 1 ? "Zapisano." : `Zapisano ${changes.length} komórek.`);
+    } catch (error: any) {
+        // Nieudany zapis cofamy do ostatniego stanu z bazy — ekran nie moze
+        // pokazywac wartosci, ktorej na serwerze nie ma.
+        for (const row of rows.value) {
+            const before = snapshot.get(row.id);
+            if (before) Object.assign(row, before);
+        }
+
+        refreshGrid();
+        toast.error(error?.response?.data?.message ?? "Nie udało się zapisać zmiany.");
+    }
+}
 
 // === MAPOWANIE ===
 const mapModal = reactive({
