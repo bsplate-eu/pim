@@ -80,13 +80,20 @@
                     <span class="ml-4">Ze stanem 0: <strong>{{ zeroCount }}</strong></span>
                 </div>
 
+                <!-- Stala wysokosc zamiast "auto": grid scrolluje sie w srodku,
+                     wiec naglowek zostaje przyklejony na gorze i przy 615
+                     wierszach ciagle widac, ktora kolumna jest ktora.
+                     `frameSize` trzyma KOMPLET wierszy w DOM mimo scrolla —
+                     bez tego RevoGrid recyklinguje wiersze i naprzemienne tlo
+                     (liczone z kolejnosci w DOM) skakaloby przy przewijaniu. -->
                 <DataGrid
                     ref="gridRef"
                     v-model="rows"
                     :columns="columns"
                     :filter="filterFn"
                     keyField="id"
-                    height="auto"
+                    height="max(360px, calc(100vh - 330px))"
+                    :frameSize="rows.length + 100"
                 />
             </Card>
         </div>

@@ -1,1 +1,0 @@
-import{_ as o}from"./PermissionTableRow.vue_vue_type_script_setup_true_lang-c5ccb55a.js";import"./vendor-fd962ee3.js";import"./index-4b922a88.js";import"./usePermissionLabels-4d2ba2e8.js";export{o as default};
