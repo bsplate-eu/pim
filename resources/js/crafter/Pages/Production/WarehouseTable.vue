@@ -107,9 +107,16 @@
                     </div>
                 </div>
 
-                <div class="mb-3 text-xs text-gray-500">
+                <div class="mb-3 flex flex-wrap items-center gap-x-4 text-xs text-gray-500">
+                    <!-- Zaznacza to, co widac po filtrze — przy 615 wierszach
+                         zaznaczanie na slepo byloby proszeniem sie o wypadek. -->
+                    <button type="button" class="text-primary-600 hover:underline" @click="selectAllVisible">
+                        Zaznacz wszystkie widoczne
+                    </button>
+                    <span>
                     Widocznych: <strong>{{ visibleCount }}</strong>
                     / Kodów w arkuszu: <strong>{{ rows.length }}</strong>
+                    </span>
                     <span v-if="excludedCount" class="ml-4">
                         Wykluczonych: <strong>{{ excludedCount }}</strong>
                         <Link
@@ -1095,6 +1102,14 @@ function toggleSelect(code: string, on: boolean): void {
 function refreshGridSource(): void {
     const grid = gridRef.value;
     if (grid?.getSource) grid.setSource([...grid.getSource()]);
+}
+
+/** Zaznacza dokladnie to, co widac po filtrze — nie caly arkusz. */
+function selectAllVisible(): void {
+    selected.value = new Set(
+        rows.value.filter(filterFn).map((row: SheetRow) => row.product_code)
+    );
+    refreshGridSource();
 }
 
 async function excludeSelected(): Promise<void> {

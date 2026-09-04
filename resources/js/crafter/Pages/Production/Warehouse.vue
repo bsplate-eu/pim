@@ -90,9 +90,16 @@
                         </div>
                     </div>
 
-                    <div class="mb-3 text-xs text-gray-500">
+                    <div class="mb-3 flex flex-wrap items-center gap-x-4 text-xs text-gray-500">
+                        <!-- Zaznacza to, co WIDAC po filtrze — inaczej jedno klikniecie
+                             przy wpisanej frazie braloby wszystkie 707 kodow. -->
+                        <button type="button" class="text-primary-600 hover:underline" @click="selectAll(visibleRows)">
+                            Zaznacz wszystkie{{ isNarrowed ? " widoczne" : "" }}
+                        </button>
+                        <span>
                         Widocznych: <strong>{{ visibleCount }}</strong>
                         / Wszystkich kodów: <strong>{{ totalCount }}</strong>
+                        </span>
                         <span class="ml-4">
                             Zmapowanych z Subiekta: <strong>{{ mappedCount("gt") }}</strong>
                         </span>
@@ -197,10 +204,10 @@
                         </div>
 
                         <div class="mb-3 flex items-center gap-4 text-xs text-gray-500">
-                            <span>Wykluczonych: <strong>{{ excluded.length }}</strong></span>
                             <button type="button" class="text-primary-600 hover:underline" @click="selectAll(excluded)">
                                 Zaznacz wszystkie
                             </button>
+                            <span>Wykluczonych: <strong>{{ excluded.length }}</strong></span>
                         </div>
 
                         <DataGrid
@@ -885,10 +892,17 @@ const filterFn = computed<((row: any) => boolean) | null>(() => {
 
 const allRows = computed<any[]>(() => gridRef.value?.getSource?.() ?? rows.value);
 
-const visibleCount = computed<number>(() => {
+// Wiersze po filtrze — to samo, co widac w gridzie, i to samo, co bierze
+// „Zaznacz wszystkie". Bez tego zaznaczenie objeloby tez ukryte kody.
+const visibleRows = computed<any[]>(() => {
     const filter = filterFn.value;
-    return filter ? allRows.value.filter(filter).length : allRows.value.length;
+    return filter ? allRows.value.filter(filter) : allRows.value;
 });
+
+const visibleCount = computed<number>(() => visibleRows.value.length);
+
+/** Widok zawezony = cokolwiek wpisane w wyszukiwarce. */
+const isNarrowed = computed<boolean>(() => filterFn.value !== null);
 
 const totalCount = computed<number>(() => allRows.value.length);
 </script>

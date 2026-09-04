@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\WarehouseCodeExclusion;
 use App\Models\WarehouseBridge;
 use App\Models\WarehouseSourceStock;
 use Illuminate\Http\JsonResponse;
@@ -45,6 +46,12 @@ class ArgoBridgeController extends Controller
             // Bridge dostaje symbol magazynu z PIM, zeby nie trzymac go w dwoch
             // miejscach — zmiana w Ustawieniach dociera do niego sama.
             'warehouse_symbol' => $bridge->warehouse_symbol,
+            // Kody odlozone na bok. PIM i tak je odrzuca przy zapisie, ale majac
+            // te liste Bridge moze ich w ogole nie czytac z Subiekta.
+            'excluded_codes' => WarehouseCodeExclusion::where('source', 'gt')
+                ->orderBy('source_code')
+                ->pluck('source_code')
+                ->all(),
             'server_time' => Carbon::now()->toIso8601String(),
         ]);
     }
@@ -105,6 +112,30 @@ class ArgoBridgeController extends Controller
             $items[$code]['name'] = $items[$code]['name'] ?? ($item['name'] ?? null);
         }
 
+        // Kody odlozone na bok nie wchodza w ogole — nie zapisujemy ich, wiec nie
+        // wracaja przy kolejnej paczce. Filtr stoi TUTAJ, a nie tylko po stronie
+        // Bridge'a: dzieki temu dziala niezaleznie od tego, jaka wersje ma
+        // maszyna po drugiej stronie. Przywrocenie kodu wpuszcza go z powrotem
+        // przy najblizszej paczce.
+        $excluded = WarehouseCodeExclusion::where('source', 'gt')
+            ->pluck('source_code')
+            ->map(fn ($code) => mb_strtoupper($code))
+            ->flip();
+
+        $skipped = 0;
+        foreach (array_keys($items) as $code) {
+            if ($excluded->has(mb_strtoupper($code))) {
+                unset($items[$code]);
+                $skipped++;
+            }
+        }
+
+        if (! count($items)) {
+            return response()->json([
+                'error' => 'Cala paczka to kody wykluczone w PIM — nic do zapisania.',
+            ], 422);
+        }
+
         DB::transaction(function () use ($items, $now) {
             foreach (array_chunk($items, 500, true) as $chunk) {
                 $rows = [];
@@ -125,8 +156,13 @@ class ArgoBridgeController extends Controller
 
             // Wszystko, czego w tej paczce nie bylo, znika — migawka zastepuje
             // poprzednia w calosci.
+            //
+            // Kasujemy po LISCIE KODOW, nie po znaczniku czasu: `synced_at` ma
+            // dokladnosc sekundy, wiec dwie paczki w tej samej sekundzie
+            // (ponowienie po timeoucie, wykluczenie i natychmiastowy retry)
+            // byly nieodroznialne i zostawialy wiersze z poprzedniej.
             WarehouseSourceStock::where('source', 'gt')
-                ->where(fn ($query) => $query->whereNull('synced_at')->orWhere('synced_at', '<', $now))
+                ->whereNotIn('source_code', array_keys($items))
                 ->delete();
         });
 
@@ -141,6 +177,9 @@ class ArgoBridgeController extends Controller
             'ok' => true,
             'received' => count($data['items']),
             'stored' => count($items),
+            // Ile pozycji odrzucilismy jako wykluczone — Bridge moze to pokazac
+            // w logu, zeby roznica miedzy „wyslano" a „zapisano" nie dziwila.
+            'skipped_excluded' => $skipped,
             'server_time' => $now->toIso8601String(),
         ]);
     }
